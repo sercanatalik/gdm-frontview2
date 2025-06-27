@@ -1,3 +1,4 @@
+"use client"
 import {
   Calendar,
   ChevronDown,
@@ -54,6 +55,12 @@ const items = [
   },
 ]
 
+import Image from "next/image"
+import hsbcLightLogo from "@/public/hsbc-light.svg"
+import hsbcDarkLogo from "@/public/hsbc-dark.svg"
+import { useTheme } from "next-themes"
+
+
 export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
@@ -63,16 +70,26 @@ export function AppSidebar() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
-                    Select Workspace
+                  
+                    <Image
+                      src={useTheme().resolvedTheme === "dark" ? hsbcDarkLogo : hsbcLightLogo}
+                      alt="HSBC Logo"
+                      width={36 }
+                      height={36}
+                      className="rounded-sm"></Image>
+                     <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-semibold">GDM FrontView</span>
+                      <span className="truncate text-xs">Financing</span>
+                    </div>
                     <ChevronDown className="ml-auto" />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-[--radix-popper-anchor-width]">
                   <DropdownMenuItem>
-                    <span>Acme Inc</span>
+                    <span>Structured Credit</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                    <span>Acme Corp.</span>
+                    <span>Financing</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
