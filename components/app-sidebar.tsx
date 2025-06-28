@@ -14,6 +14,11 @@ import {
   Settings,
 } from "lucide-react"
 
+import { items, teams } from "@/lib/menu-items"
+import { cn } from "@/lib/utils"
+import hsbcDark from "@/public/hsbc-dark.svg"
+import hsbcLight from "@/public/hsbc-light.svg"
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "./ui/dropdown-menu"
 import {
   Sidebar,
   SidebarContent,
@@ -34,54 +39,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar"
-import { cn } from "@/lib/utils"
-
-import { Globe, CreditCard } from "lucide-react"
-import hsbcLight from "@/public/hsbc-light.svg"
-import hsbcDark from "@/public/hsbc-dark.svg"
-
-const teams = [
-  {
-    name: "Financing",
-    plan: "Financing",
-    icon: Globe,
-  },
-  {
-    name: "Structured Credit",
-    plan: "Structured Credit",
-    icon: CreditCard,
-  },
-]
-
-// Menu items.
-const items = [
-  {
-    title: "Home",
-    url: "#",
-    icon: Home,
-  },
-  {
-    title: "Inbox",
-    url: "#",
-    icon: Inbox,
-  },
-  {
-    title: "Calendar",
-    url: "#",
-    icon: Calendar,
-  },
-  {
-    title: "Search",
-    url: "#",
-    icon: Search,
-  },
-  {
-    title: "Settings",
-    url: "#",
-    icon: Settings,
-  },
-]
+} from "./ui/sidebar"
 
 export function AppSidebar() {
   const [activeTeam, setActiveTeam] = useState(teams[0])
