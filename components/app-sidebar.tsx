@@ -33,7 +33,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
+import { cn } from "@/lib/utils"
 
 import { Globe, File } from "lucide-react"
 import hsbcLight from "@/public/hsbc-light.svg"
@@ -86,6 +88,7 @@ const items = [
 export function AppSidebar() {
   const [activeTeam, setActiveTeam] = useState(teams[0])
   const { theme } = useTheme()
+  const { state } = useSidebar()
 
   return (
     <Sidebar collapsible="icon">
@@ -98,19 +101,32 @@ export function AppSidebar() {
                   size="lg"
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
-                  <div className="flex aspect-square size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                    <Image
-                      src={theme === "light" ? hsbcLight : hsbcDark}
-                      alt="HSBC Logo"
-                      className="size-7"
-                    />
-                  </div>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
+                  {state === "expanded" && (
+                    <div className="flex aspect-square size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                      <Image
+                        src={theme === "light" ? hsbcLight : hsbcDark}
+                        alt="HSBC Logo"
+                        className="size-7"
+                      />
+                    </div>
+                  )}
+                   {state === "collapsed" && (
+                      <Image
+                        src={theme === "light" ? hsbcLight : hsbcDark}
+                        alt="HSBC Logo"
+                        className="size-7"
+                      />
+                  
+                  )}
+
+
+                  <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:-ml-1">
                     <span className="truncate font-semibold">
                       GDM FrontView
                     </span>
                     <span className="truncate text-xs">{activeTeam.plan}</span>
                   </div>
+                 
                   <ChevronsUpDown className="ml-auto" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
@@ -130,7 +146,7 @@ export function AppSidebar() {
                     className="gap-2 p-2"
                   >
                     <div className="flex size-6 items-center justify-center rounded-sm border">
-                      <team.icon className="size-4" />
+                      <team.icon className="size-4 shrink-0" />
                     </div>
                     {team.name}
                   
