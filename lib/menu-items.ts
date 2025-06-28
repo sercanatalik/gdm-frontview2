@@ -13,11 +13,13 @@ export const teams = [
     name: "Financing",
     plan: "Financing",
     icon: Globe,
+    route: "/financing",
   },
   {
     name: "Structured Credit",
     plan: "Structured Credit",
     icon: CreditCard,
+    route: "/credit",
   },
 ];
 

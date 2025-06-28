@@ -1,8 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
+import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import {
   Calendar,
@@ -40,11 +41,26 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "./ui/sidebar"
-
 export function AppSidebar() {
-  const [activeTeam, setActiveTeam] = useState(teams[0])
+  const router = useRouter()
+  const pathname = usePathname()
+  const [activeTeam, setActiveTeam] = useState(() => {
+    // Initialize state based on the current path.
+    // Default to the first team to prevent errors if no team matches.
+    return teams.find((team) => team.route === pathname) ?? teams[0]
+  })
+
+  // Effect to sync the active team with the URL path when it changes.
+  // This handles cases like using the browser's back/forward buttons.
+  useEffect(() => {
+    const currentTeam = teams.find((team) => team.route === pathname)
+    if (currentTeam) {
+      setActiveTeam(currentTeam)
+    }
+  }, [pathname])
   const { theme } = useTheme()
   const { state } = useSidebar()
+ 
 
   return (
     <Sidebar collapsible="icon">
@@ -98,7 +114,10 @@ export function AppSidebar() {
                 {teams.map((team, index) => (
                   <DropdownMenuItem
                     key={team.name}
-                    onClick={() => setActiveTeam(team)}
+                    onClick={() => {
+                      setActiveTeam(team)
+                      router.push(team.route)
+                    }}
                     className="gap-2 p-2"
                   >
                     <div className="flex size-6 items-center justify-center rounded-sm border">
