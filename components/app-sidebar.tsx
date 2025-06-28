@@ -106,7 +106,7 @@ export function AppSidebar() {
                       <Image
                         src={theme === "light" ? hsbcLight : hsbcDark}
                         alt="HSBC Logo"
-                        className="size-7"
+                        className="size-8"
                       />
                     </div>
                   )}
