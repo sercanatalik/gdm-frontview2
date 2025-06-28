@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 
-import { Globe, File } from "lucide-react"
+import { Globe, CreditCard } from "lucide-react"
 import hsbcLight from "@/public/hsbc-light.svg"
 import hsbcDark from "@/public/hsbc-dark.svg"
 
@@ -50,7 +50,7 @@ const teams = [
   {
     name: "Structured Credit",
     plan: "Structured Credit",
-    icon: File,
+    icon: CreditCard,
   },
 ]
 
@@ -82,8 +82,6 @@ const items = [
     icon: Settings,
   },
 ]
-
-
 
 export function AppSidebar() {
   const [activeTeam, setActiveTeam] = useState(teams[0])
