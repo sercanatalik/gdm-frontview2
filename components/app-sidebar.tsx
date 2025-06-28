@@ -1,9 +1,15 @@
 "use client"
+
+import * as React from "react"
+import { useState } from "react"
+import Image from "next/image"
+import { useTheme } from "next-themes"
 import {
   Calendar,
-  ChevronDown,
+  ChevronsUpDown,
   Home,
   Inbox,
+  Plus,
   Search,
   Settings,
 } from "lucide-react"
@@ -12,6 +18,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -25,6 +34,23 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+
+import { Globe, File } from "lucide-react"
+import hsbcLight from "@/public/hsbc-light.svg"
+import hsbcDark from "@/public/hsbc-dark.svg"
+
+const teams = [
+  {
+    name: "Financing",
+    plan: "Financing",
+    icon: Globe,
+  },
+  {
+    name: "Structured Credit",
+    plan: "Structured Credit",
+    icon: File,
+  },
+]
 
 // Menu items.
 const items = [
@@ -55,47 +81,68 @@ const items = [
   },
 ]
 
-import Image from "next/image"
-import hsbcLightLogo from "@/public/hsbc-light.svg"
-import hsbcDarkLogo from "@/public/hsbc-dark.svg"
-import { useTheme } from "next-themes"
 
 
 export function AppSidebar() {
+  const [activeTeam, setActiveTeam] = useState(teams[0])
+  const { theme } = useTheme()
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
-                  
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                >
+                  <div className="flex aspect-square size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                     <Image
-                      src={useTheme().resolvedTheme === "dark" ? hsbcDarkLogo : hsbcLightLogo}
+                      src={theme === "light" ? hsbcLight : hsbcDark}
                       alt="HSBC Logo"
-                      width={36 }
-                      height={36}
-                      className="rounded-sm"></Image>
-                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">GDM FrontView</span>
-                      <span className="truncate text-xs">Financing</span>
+                      className="size-7"
+                    />
+                  </div>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-semibold">
+                      GDM FrontView
+                    </span>
+                    <span className="truncate text-xs">{activeTeam.plan}</span>
+                  </div>
+                  <ChevronsUpDown className="ml-auto" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                align="start"
+                side="bottom"
+                sideOffset={4}
+              >
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                 Teams
+                </DropdownMenuLabel>
+                {teams.map((team, index) => (
+                  <DropdownMenuItem
+                    key={team.name}
+                    onClick={() => setActiveTeam(team)}
+                    className="gap-2 p-2"
+                  >
+                    <div className="flex size-6 items-center justify-center rounded-sm border">
+                      <team.icon className="size-4" />
                     </div>
-                    <ChevronDown className="ml-auto" />
-                  </SidebarMenuButton>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-[--radix-popper-anchor-width]">
-                  <DropdownMenuItem>
-                    <span>Structured Credit</span>
+                    {team.name}
+                  
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <span>Financing</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarHeader>
+                ))}
+                <DropdownMenuSeparator />
+                
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
