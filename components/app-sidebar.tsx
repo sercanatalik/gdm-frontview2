@@ -17,8 +17,6 @@ import {
 
 import { items, teams } from "@/lib/menu-items"
 import { cn } from "@/lib/utils"
-import hsbcDark from "@/public/hsbc-dark.svg"
-import hsbcLight from "@/public/hsbc-light.svg"
 
 import {
   DropdownMenu,
@@ -76,17 +74,29 @@ export function AppSidebar() {
                   {state === "expanded" && (
                     <div className="flex aspect-square size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                       <Image
-                        src={theme === "light" ? hsbcLight : hsbcDark}
+                        src={
+                          theme === "light"
+                            ? "/hsbc-light.svg"
+                            : "/hsbc-dark.svg"
+                        }
                         alt="HSBC Logo"
-                        className="size-8"
+                        width={32}
+                        height={32}
+                        priority
                       />
                     </div>
                   )}
                    {state === "collapsed" && (
                       <Image
-                        src={theme === "light" ? hsbcLight : hsbcDark}
+                        src={
+                          theme === "light"
+                            ? "/hsbc-light.svg"
+                            : "/hsbc-dark.svg"
+                        }
                         alt="HSBC Logo"
-                        className="size-7"
+                        width={28}
+                        height={28}
+                        priority
                       />
                   
                   )}
