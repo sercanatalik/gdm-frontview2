@@ -23,30 +23,32 @@ export const teams = [
   },
 ];
 
-export const items = [
+export const creditItems = [
   {
-    title: "Home",
+    title: "Exposure 4T",
     url: "#",
     icon: Home,
   },
-  {
-    title: "Inbox",
-    url: "#",
-    icon: Inbox,
-  },
-  {
-    title: "Calendar",
-    url: "#",
-    icon: Calendar,
-  },
-  {
-    title: "Search",
-    url: "#",
-    icon: Search,
-  },
+ 
   {
     title: "Settings",
     url: "#",
     icon: Settings,
   },
 ];
+
+export const financingItems = [
+  {
+    title: "Dashboard",
+    url: "#",
+    icon: Home,
+  },
+ 
+  {
+    title: "Settings",
+    url: "#",
+    icon: Settings,
+  },
+];
+
+

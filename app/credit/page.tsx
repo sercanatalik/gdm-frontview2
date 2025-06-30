@@ -1,10 +1,9 @@
-import Image from "next/image";
-import { ContentLayout } from "@/components/ui/content-layout";
-export default function Home() {
-  return (
-    
-    <ContentLayout title="Structured Credit">
-     
-    </ContentLayout>
-  );
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Credit",
+};
+
+export default function CreditPage() {
+  return <div>Credit</div>;
 }

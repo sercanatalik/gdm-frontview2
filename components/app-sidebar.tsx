@@ -15,7 +15,7 @@ import {
   Settings,
 } from "lucide-react"
 
-import { items, teams } from "@/lib/menu-items"
+import { creditItems,financingItems, teams } from "@/lib/menu-items"
 import { cn } from "@/lib/utils"
 
 import {
@@ -47,6 +47,7 @@ export function AppSidebar() {
     // Default to the first team to prevent errors if no team matches.
     return teams.find((team) => team.route === pathname) ?? teams[0]
   })
+  const [items, setItems] = useState<{ title: string; url: string; icon: React.ElementType }[]>([])
 
   // Effect to sync the active team with the URL path when it changes.
   // This handles cases like using the browser's back/forward buttons.
@@ -54,8 +55,19 @@ export function AppSidebar() {
     const currentTeam = teams.find((team) => team.route === pathname)
     if (currentTeam) {
       setActiveTeam(currentTeam)
+
     }
   }, [pathname])
+
+  useEffect(() => {
+    if (activeTeam.name === "Financing") {
+      setItems(financingItems)
+    } else if (activeTeam.name === "Structured Credit") {
+      setItems(creditItems)
+    } else {
+      setItems([])
+    }
+  }, [activeTeam])
   const { theme } = useTheme()
   const { state } = useSidebar()
  
