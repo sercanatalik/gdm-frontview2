@@ -42,12 +42,13 @@ import {
 export function AppSidebar() {
   const router = useRouter()
   const pathname = usePathname()
-  const [activeTeam, setActiveTeam] = useState(() => {
-    // Initialize state based on the current path.
-    // Default to the first team to prevent errors if no team matches.
-    return teams.find((team) => team.route === pathname) ?? teams[0]
-  })
+  const [activeTeam, setActiveTeam] = useState(teams[0])
   const [items, setItems] = useState<{ title: string; url: string; icon: React.ElementType }[]>([])
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Effect to sync the active team with the URL path when it changes.
   // This handles cases like using the browser's back/forward buttons.
@@ -81,10 +82,12 @@ export function AppSidebar() {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  className={cn(
+                    "bg-transparent hover:bg-transparent focus:bg-transparent active:bg-transparent border-none shadow-none"
+                  )}
                 >
-                  {state === "expanded" && (
-                    <div className="flex aspect-square size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                  {mounted && state === "expanded" && (
+                    <div className="flex aspect-square size-10 items-center justify-center ">
                       <Image
                         src={
                           theme === "light"
@@ -98,19 +101,20 @@ export function AppSidebar() {
                       />
                     </div>
                   )}
-                   {state === "collapsed" && (
-                      <Image
-                        src={
-                          theme === "light"
-                            ? "/hsbc-light.svg"
-                            : "/hsbc-dark.svg"
-                        }
-                        alt="HSBC Logo"
-                        width={28}
-                        height={28}
-                        priority
-                      />
-                  
+                  {mounted && state === "collapsed" && (
+                    <div className="flex aspect-square size-9 items-center justify-center ">
+                    <Image
+                      src={
+                        theme === "light"
+                          ? "/hsbc-dark.svg"
+                          : "/hsbc-light.svg"
+                      }
+                      alt="HSBC Logo"
+                      width={28}
+                      height={28}
+                      priority
+                    />
+                    </div>
                   )}
 
 

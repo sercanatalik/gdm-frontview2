@@ -7,6 +7,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar";
+import { ThemeProvider } from "@/components/theme-provider";
 
 
 import { Header } from "@/components/header";
@@ -34,22 +35,31 @@ export const metadata: Metadata = {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SidebarProvider>
-          <AppSidebar />
-          <SidebarInset>
-            <main>
-             <Header  />
-              <Separator orientation="horizontal" className="my-1" />
-             <div className="h-full flex flex-col">
-      <div className="container-fluid pt-4 pb-4 px-4">{children}</div>
-    </div>
-            </main>
-          </SidebarInset>
-        </SidebarProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset>
+              <main>
+                <Header />
+                <Separator orientation="horizontal" className="my-1" />
+                <div className="h-full flex flex-col">
+                  <div className="container-fluid pt-4 pb-4 px-4">
+                    {children}
+                  </div>
+                </div>
+              </main>
+            </SidebarInset>
+          </SidebarProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
