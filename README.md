@@ -20,17 +20,104 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Learn More
+## ClickHouse with Redis Caching
 
-To learn more about Next.js, take a look at the following resources:
+This project includes a ClickHouse wrapper with Redis caching to reduce database workload and improve performance.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Environment Variables
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Create a `.env.local` file with your database credentials:
 
-## Deploy on Vercel
+```env
+# ClickHouse Configuration
+CLICKHOUSE_HOST=localhost:8123
+CLICKHOUSE_USER=default
+CLICKHOUSE_PASSWORD=your_password
+CLICKHOUSE_DB=default
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Redis Configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=your_redis_password
+REDIS_DB=0
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Usage Examples
+
+```typescript
+import clickhouseCacheService from '@/lib/clickhouse-cache'
+
+// Basic query with automatic caching (5 min TTL in production, 1 min in dev)
+const users = await clickhouseCacheService.query<User>(
+  'SELECT * FROM users WHERE active = 1'
+)
+
+// Query with custom cache settings
+const stats = await clickhouseCacheService.query<Stats>(
+  'SELECT count(*) as total FROM orders WHERE date >= ?',
+  { date: '2024-01-01' },
+  { 
+    ttl: 3600, // 1 hour cache
+    cacheKey: 'orders:stats:2024' // custom cache key
+  }
+)
+
+// Skip cache for real-time data
+const liveData = await clickhouseCacheService.query<LiveData>(
+  'SELECT * FROM live_metrics ORDER BY timestamp DESC LIMIT 10',
+  {},
+  { skipCache: true }
+)
+
+// Insert data with cache invalidation
+await clickhouseCacheService.insert('users', [
+  { id: 1, name: 'John', active: true },
+  { id: 2, name: 'Jane', active: false }
+], {
+  invalidatePattern: 'ch:*users*' // Clear all user-related cache
+})
+
+// Execute queries with targeted cache invalidation
+await clickhouseCacheService.execute(
+  'UPDATE users SET active = 0 WHERE last_login < ?',
+  { date: '2023-01-01' },
+  {
+    invalidateKeys: ['ch:active-users', 'ch:user-stats']
+  }
+)
+
+// Check service health
+const stats = await clickhouseCacheService.getStats()
+console.log('ClickHouse connected:', stats.clickhouseConnected)
+console.log('Redis connected:', stats.redisConnected)
+console.log('Cache enabled:', stats.cacheEnabled)
+
+// Clear all cache
+await clickhouseCacheService.clearCache()
+```
+
+### Direct Client Usage
+
+You can also use the individual clients directly:
+
+```typescript
+import { clickhouseClient } from '@/lib/clickhouse'
+import { redisClient } from '@/lib/redis'
+
+// Direct ClickHouse queries
+const result = await clickhouseClient.query('SELECT version()')
+await clickhouseClient.insert('events', eventData)
+
+// Direct Redis operations
+await redisClient.set('key', { data: 'value' }, 300) // 5 min TTL
+const cached = await redisClient.get('key')
+```
+
+### Connection Management
+
+The service uses singleton patterns optimized for development:
+
+- **Single connection per service** - Prevents connection proliferation
+- **Hot reload support** - Survives Next.js development server restarts
+- **Environment-aware settings** - Reduced connection limits and TTL in development
+- **Automatic reconnection** - Built-in retry logic and error handling
