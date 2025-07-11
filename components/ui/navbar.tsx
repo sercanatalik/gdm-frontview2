@@ -34,19 +34,7 @@ export function Navbar({ title }: NavbarProps) {
           <div className="flex items-center space-x-4 lg:space-x-0">
         
             {/* <h1 className="font-bold">{title}</h1> */}
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink asChild>
-                    <Link href="/financing/dashboard">Home</Link>
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{title}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
+        
           </div>
           <div className="flex flex-1 items-center justify-end">
             <Button
@@ -57,7 +45,7 @@ export function Navbar({ title }: NavbarProps) {
             >
               <MessageCircle className="ml-1 h-4 w-4" />
             </Button>
-            <ModeToggle />
+            {/* <ModeToggle /> */}
             
             {/* <UserNav /> */}
           </div>

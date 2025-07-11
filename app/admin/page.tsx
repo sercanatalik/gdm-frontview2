@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "Home",
 };
 
-export default function Home() {
+export default function Admin() {
   return (
     <div className="min-h-screen bg-background p-2 text-foreground">
       <div className="container">
@@ -14,8 +14,8 @@ export default function Home() {
          GDM FrontView Apps
         </h1>
         <div className="grid grid-cols-1 md:grid-cols-7 gap-2">
-          <NavigationCard  href="/credit" title="Credit"  />
-          <NavigationCard href="/financing" title="Financing" />
+          <NavigationCard  href="/admin/cache" title="Redis "  />
+          {/* <NavigationCard href="/financing" title="Financing" /> */}
         </div>
       </div>
     </div>
