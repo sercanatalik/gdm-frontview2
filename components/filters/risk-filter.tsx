@@ -39,10 +39,10 @@ const fetchFilterOptions = async (tableName: string, columnName: string): Promis
     
     const response = await fetch(`/gdm-frontview/api/tables/distinct?table=${tableName}&column=${columnName}`)
     const values = await response.json()
-    return values.map((value: string) => ({
+    return Array.isArray(values) ? values.map((value: string) => ({
       name: value,
       icon: undefined,
-    }))
+    })) : []
   } catch (error) {
     console.error(`Error fetching filter options for ${tableName}.${columnName}:`, error)
     return []

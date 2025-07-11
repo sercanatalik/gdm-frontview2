@@ -33,10 +33,10 @@ export class ClickHouseCacheService {
     const result = await this.clickhouse.query({
       query,
       query_params: params,
-      format: 'JSON',
+      format: 'JSONEachRow',
     })
 
-    const data = await result.json<T[]>()
+    const data = await result.json<T>()
 
     try {
       await this.redis.setex(actualCacheKey, cacheTTL, JSON.stringify(data))

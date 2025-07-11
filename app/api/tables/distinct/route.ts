@@ -34,15 +34,25 @@ export async function GET(request: NextRequest) {
     const cacheService = getClickHouseCacheService(3600) // Cache for 1 hour
     
     // Query to get distinct values from the specified column
+    // Check if this is a date column that needs special formatting
+    const isDateColumn = columnName.toLowerCase().includes('date')
+    
     const query = `
-      SELECT DISTINCT ${columnName} as value
-      FROM ${tableName}
-      WHERE ${columnName} IS NOT NULL 
-        AND ${columnName} != ''
-      ORDER BY ${columnName}
+      SELECT DISTINCT value
+      FROM (
+        SELECT 
+          CASE 
+            WHEN ${columnName} IS NULL THEN NULL
+            ELSE ${isDateColumn ? `formatDateTime(${columnName}, '%Y-%m-%d')` : `toString(${columnName})`}
+          END as value
+        FROM ${tableName}
+      )
+      WHERE value IS NOT NULL 
+        AND value != ''
+      ORDER BY value
       LIMIT 1000
     `
-    
+    console.log('Executing query:', query)
     // Generate cache key based on table and column
     const cacheKey = `distinct:${tableName}:${columnName}`
     
@@ -54,7 +64,7 @@ export async function GET(request: NextRequest) {
     )
     
     // Extract just the values from the result
-    const distinctValues = rows.map(row => row.value)
+    const distinctValues = Array.isArray(rows) ? rows.map(row => row.value) : []
     
     return NextResponse.json(distinctValues)
     
