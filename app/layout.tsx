@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
-
+import { Providers } from "@/components/providers";
 
 import { Header } from "@/components/header";
 import { Separator } from "@/components/ui/separator";
@@ -38,27 +38,29 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset>
-              <main>
-                <Header />
-                <Separator orientation="horizontal" className="my-1" />
-                <div className="h-full flex flex-col">
-                  <div className="container-fluid pt-4 pb-4 px-4">
-                    {children}
+        <Providers>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <SidebarProvider>
+              <AppSidebar />
+              <SidebarInset>
+                <main>
+                  <Header />
+                  <Separator orientation="horizontal" className="my-1" />
+                  <div className="h-full flex flex-col">
+                    <div className="container-fluid pt-4 pb-4 px-4">
+                      {children}
+                    </div>
                   </div>
-                </div>
-              </main>
-            </SidebarInset>
-          </SidebarProvider>
-        </ThemeProvider>
+                </main>
+              </SidebarInset>
+            </SidebarProvider>
+          </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );

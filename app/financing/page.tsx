@@ -1,21 +1,19 @@
 
 "use client"
 
-import { useState } from "react"
 import { RiskFilter } from "@/components/filters/risk-filter"
 import { riskFilterConfig } from "@/components/filters/risk-filter.config"
-import { type Filter } from "@/components/ui/filters"
+import { useStore } from "@tanstack/react-store"
+import { filtersStore } from "@/lib/store/filters"
 
 export default function FinancingPage() {
-  const [filters, setFilters] = useState<Filter[]>([])
+  const filters = useStore(filtersStore, (state) => state.filters)
 
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Financing</h1>
         <RiskFilter
-          filters={filters}
-          setFilters={setFilters}
           tableName={riskFilterConfig.tableName}
           filterTypes={riskFilterConfig.filterTypes}
           filterOperators={riskFilterConfig.filterOperators}

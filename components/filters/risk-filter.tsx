@@ -18,13 +18,13 @@ import {
 } from "lucide-react"
 import { nanoid } from "nanoid"
 import * as React from "react"
+import { useStore } from "@tanstack/react-store"
 import { AnimateChangeInHeight } from "@/components/ui/filters"
 import Filters, { type Filter, type FilterOption, type FilterConfig } from "@/components/ui/filters"
+import { filtersStore, filtersActions, filtersSelectors } from "@/lib/store/filters"
 
 // Types
 interface RiskFilterProps {
-  filters: Filter[]
-  setFilters: React.Dispatch<React.SetStateAction<Filter[]>>
   tableName?: string
   filterTypes?: Record<string, string>
   filterOperators?: Record<string, string>
@@ -33,26 +33,10 @@ interface RiskFilterProps {
   dateValues?: string[]
 }
 
-// Helper functions
-const fetchFilterOptions = async (tableName: string, columnName: string): Promise<FilterOption[]> => {
-  try {
-    
-    const response = await fetch(`/gdm-frontview/api/tables/distinct?table=${tableName}&column=${columnName}`)
-    const values = await response.json()
-    return Array.isArray(values) ? values.map((value: string) => ({
-      name: value,
-      icon: undefined,
-    })) : []
-  } catch (error) {
-    console.error(`Error fetching filter options for ${tableName}.${columnName}:`, error)
-    return []
-  }
-}
+// Helper functions - moved to /lib/query/filter-options.ts
 
 // Main component
 export function RiskFilter({ 
-  filters, 
-  setFilters, 
   tableName = "risk_f_mv",
   filterTypes = {},
   filterOperators = {},
@@ -64,6 +48,27 @@ export function RiskFilter({
   const [selectedView, setSelectedView] = React.useState<string | null>(null)
   const [commandInput, setCommandInput] = React.useState("")
   const commandInputRef = React.useRef<HTMLInputElement | null>(null)
+
+  // Use store for filters
+  const filters = useStore(filtersStore, (state) => state.filters)
+  const activeTable = useStore(filtersStore, (state) => state.activeTable)
+
+  // Set active table when component mounts
+  React.useEffect(() => {
+    if (tableName !== activeTable) {
+      filtersActions.setActiveTable(tableName)
+    }
+  }, [tableName, activeTable])
+
+  // Wrapper for setFilters to match React.Dispatch type
+  const setFilters = React.useCallback((value: React.SetStateAction<Filter[]>) => {
+    if (typeof value === 'function') {
+      const newFilters = value(filters)
+      filtersActions.setFilters(newFilters)
+    } else {
+      filtersActions.setFilters(value)
+    }
+  }, [filters])
 
   const [filterOptions, setFilterOptions] = React.useState<{
     [key: string]: FilterOption[]
@@ -77,14 +82,21 @@ export function RiskFilter({
       const options: { [key: string]: FilterOption[] } = {}
       
       for (const [key, columnName] of Object.entries(filterTypes)) {
-        options[key] = await fetchFilterOptions(tableName, columnName)
+        const response = await fetch(`/gdm-frontview/api/tables/distinct?table=${tableName}&column=${columnName}`)
+        const values = await response.json()
+        const filterOptionValues = Array.isArray(values) ? values.map((value: string) => ({
+          name: value,
+          icon: undefined,
+        })) : []
         
         // Apply icon mapping if provided
         if (iconMapping) {
-          options[key] = options[key].map((option) => ({
+          options[key] = filterOptionValues.map((option) => ({
             name: option.name,
             icon: iconMapping[option.name] || iconMapping[key],
           }))
+        } else {
+          options[key] = filterOptionValues
         }
       }
 
@@ -112,15 +124,14 @@ export function RiskFilter({
   const handleAddFilter = (filterType: string, filterValue: string) => {
     const defaultOperator = Object.keys(filterOperators)[0] || "is"
     
-    setFilters((prev: Filter[]) => [
-      ...prev,
-      {
-        id: nanoid(),
-        type: filterType,
-        operator: defaultOperator,
-        value: [filterValue],
-      },
-    ])
+    const newFilter = {
+      id: nanoid(),
+      type: filterType,
+      operator: defaultOperator,
+      value: [filterValue],
+    }
+    
+    filtersActions.addFilter(newFilter)
     
     setTimeout(() => {
       setSelectedView(null)
@@ -150,7 +161,7 @@ export function RiskFilter({
           variant="outline"
           size="sm"
           className="transition h-6 border-none text-xs text-muted-foreground hover:bg-transparent hover:text-red-500"
-          onClick={() => setFilters([])}
+          onClick={() => filtersActions.clearFilters()}
         >
           <Trash2 className="size-3 mr-0" />
           Reset

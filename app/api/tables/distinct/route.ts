@@ -52,7 +52,6 @@ export async function GET(request: NextRequest) {
       ORDER BY value
       LIMIT 1000
     `
-    console.log('Executing query:', query)
     // Generate cache key based on table and column
     const cacheKey = `distinct:${tableName}:${columnName}`
     
