@@ -16,7 +16,7 @@ import {
 } from "lucide-react"
 
 import { creditItems,financingItems, teams } from "@/lib/menu-items"
-import { cn } from "@/lib/utils"
+import { cn, assetPath } from "@/lib/utils"
 
 import {
   DropdownMenu,
@@ -91,8 +91,8 @@ export function AppSidebar() {
                       <Image
                         src={
                           theme === "light"
-                            ? "/hsbc-light.svg"
-                            : "/hsbc-dark.svg"
+                            ? assetPath("/hsbc-light.svg")
+                            : assetPath("/hsbc-dark.svg")
                         }
                         alt="HSBC Logo"
                         width={32}
@@ -106,8 +106,8 @@ export function AppSidebar() {
                     <Image
                       src={
                         theme === "light"
-                          ? "/hsbc-dark.svg"
-                          : "/hsbc-light.svg"
+                          ? assetPath("/hsbc-dark.svg")
+                          : assetPath("/hsbc-light.svg")
                       }
                       alt="HSBC Logo"
                       width={28}

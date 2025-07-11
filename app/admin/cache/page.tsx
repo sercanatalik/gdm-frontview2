@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Trash2, Edit3, Plus, RefreshCw, Search, Database, AlertCircle, Eye, Copy } from 'lucide-react'
 import { toast } from 'sonner'
+import { apiPath } from '@/lib/utils'
+import JsonView from '@uiw/react-json-view'
 
 interface CacheEntry {
   key: string
@@ -46,7 +48,7 @@ export default function CacheAdminPage() {
   const fetchCacheData = async (pattern: string = '*') => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/cache?pattern=${encodeURIComponent(pattern)}`)
+      const response = await fetch(apiPath(`/api/cache?pattern=${encodeURIComponent(pattern)}`))
       const result = await response.json()
       
       if (result.success) {
@@ -72,7 +74,7 @@ export default function CacheAdminPage() {
         value = JSON.parse(formData.value)
       }
 
-      const response = await fetch('/api/cache', {
+      const response = await fetch(apiPath('/api/cache'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -105,7 +107,7 @@ export default function CacheAdminPage() {
         value = JSON.parse(formData.value)
       }
 
-      const response = await fetch('/api/cache', {
+      const response = await fetch(apiPath('/api/cache'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -131,7 +133,7 @@ export default function CacheAdminPage() {
 
   const handleDeleteEntry = async (key: string) => {
     try {
-      const response = await fetch(`/api/cache?key=${encodeURIComponent(key)}`, {
+      const response = await fetch(apiPath(`/api/cache?key=${encodeURIComponent(key)}`), {
         method: 'DELETE'
       })
 
@@ -149,7 +151,7 @@ export default function CacheAdminPage() {
 
   const handleDeleteAll = async () => {
     try {
-      const response = await fetch('/api/cache?action=flush', {
+      const response = await fetch(apiPath('/api/cache?action=flush'), {
         method: 'DELETE'
       })
 
@@ -167,7 +169,7 @@ export default function CacheAdminPage() {
 
   const handleDeletePattern = async () => {
     try {
-      const response = await fetch(`/api/cache?pattern=${encodeURIComponent(searchPattern)}`, {
+      const response = await fetch(apiPath(`/api/cache?pattern=${encodeURIComponent(searchPattern)}`), {
         method: 'DELETE'
       })
 
@@ -217,6 +219,18 @@ export default function CacheAdminPage() {
     if (ttl < 60) return `${ttl}s`
     if (ttl < 3600) return `${Math.floor(ttl / 60)}m ${ttl % 60}s`
     return `${Math.floor(ttl / 3600)}h ${Math.floor((ttl % 3600) / 60)}m`
+  }
+
+  const isObject = (value: any): boolean => {
+    return value !== null && typeof value === 'object' && !Array.isArray(value)
+  }
+
+  const isArray = (value: any): boolean => {
+    return Array.isArray(value)
+  }
+
+  const isJsonValue = (value: any): boolean => {
+    return isObject(value) || isArray(value)
   }
 
   useEffect(() => {
@@ -366,7 +380,14 @@ export default function CacheAdminPage() {
                   {cacheData.keys.map((entry) => (
                     <TableRow key={entry.key}>
                       <TableCell className="font-mono max-w-xs truncate">
-                        {entry.key}
+                        <div className="flex items-center gap-2">
+                          {entry.key}
+                          {isJsonValue(entry.value) && (
+                            <Badge variant="outline" className="text-xs">
+                              {isObject(entry.value) ? 'Object' : 'Array'}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={entry.ttl ? 'secondary' : 'outline'}>
@@ -431,7 +452,7 @@ export default function CacheAdminPage() {
 
       {/* Add Entry Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Cache Entry</DialogTitle>
           </DialogHeader>
@@ -487,7 +508,7 @@ export default function CacheAdminPage() {
 
       {/* Edit Entry Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Cache Entry: {selectedKey?.key}</DialogTitle>
           </DialogHeader>
@@ -532,7 +553,7 @@ export default function CacheAdminPage() {
 
       {/* View Entry Dialog */}
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>View Cache Entry</DialogTitle>
           </DialogHeader>
@@ -546,11 +567,37 @@ export default function CacheAdminPage() {
               </div>
               <div>
                 <Label>Value</Label>
-                <pre className="text-sm bg-muted p-2 rounded overflow-auto max-h-64">
-                  {typeof selectedKey.value === 'string' 
-                    ? selectedKey.value 
-                    : JSON.stringify(selectedKey.value, null, 2)}
-                </pre>
+                {isJsonValue(selectedKey.value) ? (
+                  <div className="bg-muted p-2 rounded overflow-auto max-h-96">
+                    <JsonView 
+                      value={selectedKey.value}
+                      style={{
+                        '--w-rjv-font-family': 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+                        '--w-rjv-font-size': '12px',
+                        '--w-rjv-line-height': '1.4',
+                        '--w-rjv-color-text': 'hsl(var(--foreground))',
+                        '--w-rjv-color-background': 'transparent',
+                        '--w-rjv-color-string': 'hsl(var(--primary))',
+                        '--w-rjv-color-number': 'hsl(var(--chart-1))',
+                        '--w-rjv-color-boolean': 'hsl(var(--chart-2))',
+                        '--w-rjv-color-null': 'hsl(var(--muted-foreground))',
+                        '--w-rjv-color-key': 'hsl(var(--foreground))',
+                        '--w-rjv-color-brackets': 'hsl(var(--muted-foreground))',
+                      } as any}
+                      displayDataTypes={false}
+                      displayObjectSize={false}
+                      enableClipboard={false}
+                      collapsed={false}
+                      shortenTextAfterLength={50}
+                    />
+                  </div>
+                ) : (
+                  <pre className="text-sm bg-muted p-2 rounded overflow-auto max-h-96">
+                    {typeof selectedKey.value === 'string' 
+                      ? selectedKey.value 
+                      : JSON.stringify(selectedKey.value, null, 2)}
+                  </pre>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
