@@ -13,7 +13,7 @@ let globalClickHouseClient: ClickHouseClient
 export function getClickHouseClient(): ClickHouseClient {
   if (!globalClickHouseClient) {
     globalClickHouseClient = createClient({
-      host: `http://${host}:${port}`,
+      url: `http://${host}:${port}`,
       database,
       username,
       password,

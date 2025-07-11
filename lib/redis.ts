@@ -17,6 +17,21 @@ export function getRedisClient(): RedisClient {
       enableOfflineQueue: false,
       maxRetriesPerRequest: 3,
       lazyConnect: true,
+      connectTimeout: 5000,
+      commandTimeout: 3000,
+    })
+
+    // Handle connection events
+    globalRedisClient.on('error', (error) => {
+      console.warn('Redis connection error:', error.message)
+    })
+
+    globalRedisClient.on('connect', () => {
+      console.log('Redis connected successfully')
+    })
+
+    globalRedisClient.on('ready', () => {
+      console.log('Redis ready for commands')
     })
   }
   

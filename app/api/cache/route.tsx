@@ -8,6 +8,15 @@ export async function GET(request: NextRequest) {
     const pattern = searchParams.get('pattern') || '*'
     const key = searchParams.get('key')
 
+    // Check Redis connection status
+    if (redis.status !== 'ready') {
+      return NextResponse.json({
+        success: false,
+        error: 'Redis connection not ready',
+        status: redis.status
+      }, { status: 503 })
+    }
+
     if (key) {
       // Get specific key value
       const value = await redis.get(key)
@@ -70,6 +79,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { key, value, ttl } = body
 
+    // Check Redis connection status
+    if (redis.status !== 'ready') {
+      return NextResponse.json({
+        success: false,
+        error: 'Redis connection not ready',
+        status: redis.status
+      }, { status: 503 })
+    }
+
     if (!key || value === undefined) {
       return NextResponse.json({
         success: false,
@@ -110,6 +128,15 @@ export async function DELETE(request: NextRequest) {
     const key = searchParams.get('key')
     const pattern = searchParams.get('pattern')
     const action = searchParams.get('action')
+
+    // Check Redis connection status
+    if (redis.status !== 'ready') {
+      return NextResponse.json({
+        success: false,
+        error: 'Redis connection not ready',
+        status: redis.status
+      }, { status: 503 })
+    }
 
     if (action === 'flush') {
       // Flush all cache
@@ -171,6 +198,15 @@ export async function PUT(request: NextRequest) {
     const redis = getRedisClient()
     const body = await request.json()
     const { key, ttl } = body
+
+    // Check Redis connection status
+    if (redis.status !== 'ready') {
+      return NextResponse.json({
+        success: false,
+        error: 'Redis connection not ready',
+        status: redis.status
+      }, { status: 503 })
+    }
 
     if (!key) {
       return NextResponse.json({

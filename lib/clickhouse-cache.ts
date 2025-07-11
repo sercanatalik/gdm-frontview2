@@ -21,10 +21,13 @@ export class ClickHouseCacheService {
     const actualCacheKey = cacheKey || this.generateCacheKey(query, params)
     const cacheTTL = ttl || this.defaultTTL
 
+    // Check Redis connection before trying to read
     try {
-      const cached = await this.redis.get(actualCacheKey)
-      if (cached) {
-        return JSON.parse(cached)
+      if (this.redis.status === 'ready') {
+        const cached = await this.redis.get(actualCacheKey)
+        if (cached) {
+          return JSON.parse(cached)
+        }
       }
     } catch (error) {
       console.warn('Redis cache read failed:', error)
@@ -38,8 +41,11 @@ export class ClickHouseCacheService {
 
     const data = await result.json<T>()
 
+    // Check Redis connection before trying to write
     try {
-      await this.redis.setex(actualCacheKey, cacheTTL, JSON.stringify(data))
+      if (this.redis.status === 'ready') {
+        await this.redis.setex(actualCacheKey, cacheTTL, JSON.stringify(data))
+      }
     } catch (error) {
       console.warn('Redis cache write failed:', error)
     }
@@ -49,13 +55,15 @@ export class ClickHouseCacheService {
 
   async invalidateCache(pattern?: string): Promise<void> {
     try {
-      if (pattern) {
-        const keys = await this.redis.keys(pattern)
-        if (keys.length > 0) {
-          await this.redis.del(...keys)
+      if (this.redis.status === 'ready') {
+        if (pattern) {
+          const keys = await this.redis.keys(pattern)
+          if (keys.length > 0) {
+            await this.redis.del(...keys)
+          }
+        } else {
+          await this.redis.flushdb()
         }
-      } else {
-        await this.redis.flushdb()
       }
     } catch (error) {
       console.warn('Cache invalidation failed:', error)
