@@ -36,7 +36,8 @@ interface RiskFilterProps {
 // Helper functions
 const fetchFilterOptions = async (tableName: string, columnName: string): Promise<FilterOption[]> => {
   try {
-    const response = await fetch(`/api/tables/distinct?table=${tableName}&column=${columnName}`)
+    
+    const response = await fetch(`/gdm-frontview/api/tables/distinct?table=${tableName}&column=${columnName}`)
     const values = await response.json()
     return values.map((value: string) => ({
       name: value,
@@ -62,7 +63,7 @@ export function RiskFilter({
   const [open, setOpen] = React.useState(false)
   const [selectedView, setSelectedView] = React.useState<string | null>(null)
   const [commandInput, setCommandInput] = React.useState("")
-  const commandInputRef = React.useRef<HTMLInputElement>(null)
+  const commandInputRef = React.useRef<HTMLInputElement | null>(null)
 
   const [filterOptions, setFilterOptions] = React.useState<{
     [key: string]: FilterOption[]
@@ -182,7 +183,7 @@ interface FilterPopoverProps {
   setSelectedView: (view: string | null) => void
   commandInput: string
   setCommandInput: (input: string) => void
-  commandInputRef: React.RefObject<HTMLInputElement>
+  commandInputRef: React.RefObject<HTMLInputElement | null>
   filterOptions: Record<string, FilterOption[]>
   filters: Filter[]
   onAddFilter: (filterType: string, filterValue: string) => void
@@ -280,7 +281,7 @@ function FilterPopover({
 // Filter type groups component
 interface FilterTypeGroupsProps {
   setSelectedView: (view: string) => void
-  commandInputRef: React.RefObject<HTMLInputElement>
+  commandInputRef: React.RefObject<HTMLInputElement | null>
   filterTypes: Record<string, string>
   iconMapping: Record<string, React.ReactNode>
 }
