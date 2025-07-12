@@ -27,15 +27,11 @@ export default function FinancingPage() {
       <div className="space-y-6">
         {/* Stat Cards */}
         <StatCards 
-          measures={defaultStatConfigs.trading}
-          period="1d"
+          measures={defaultStatConfigs}
+          relativeDt="-6m"
         />
         
-        {/* Content placeholder */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Trading Overview</h2>
-          <p className="text-muted-foreground">Trading dashboard content goes here...</p>
-        </div>
+   
         
         {/* Debug: Show active filters */}
         {filters.length > 0 && (

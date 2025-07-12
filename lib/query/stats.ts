@@ -29,17 +29,17 @@ export interface StatData {
 // React Query hook for fetching stats data
 export const useStatsData = (
   measures: StatMeasure[],
-  period: string
+  relativeDt: string
 ) => {
   return useQuery({
-    queryKey: ['stats', measures.map(m => m.key), period],
+    queryKey: ['stats', measures.map(m => m.key), relativeDt],
     queryFn: async () => {
-      const response = await fetch('/gdm-frontview/api/stats', {
+      const response = await fetch('api/stats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           measures,
-          period
+          relativeDt
         }),
       })
 
@@ -51,7 +51,7 @@ export const useStatsData = (
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
-    enabled: Boolean(measures.length > 0 && period),
+    enabled: Boolean(measures.length > 0 && relativeDt),
   })
 }
 

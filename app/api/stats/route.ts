@@ -9,105 +9,87 @@ interface StatMeasure {
   aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min'
 }
 
-interface StatData {
-  [key: string]: {
-    current: number
-    previous: number
-    change: number
-    changePercent: number
-  }
-}
 
-function parsePeriod(period: string) {
+
+const formatDate = (date: Date): string => date.toISOString().split('T')[0]
+
+// Helper function to parse relative date
+const parseRelativeDate = (relativeDate: string): string => {
   const now = new Date()
-  const today = now.toISOString().split('T')[0]
   
-  switch (period) {
-    case '1d': {
-      const yesterday = new Date(now)
-      yesterday.setDate(yesterday.getDate() - 1)
-      return {
-        current: { start: today, end: today },
-        previous: { start: yesterday.toISOString().split('T')[0], end: yesterday.toISOString().split('T')[0] }
-      }
+  switch (relativeDate) {
+    case 'latest':
+      return formatDate(now)
+    
+    case '-1d': {
+      const date = new Date(now)
+      date.setDate(date.getDate() - 1)
+      return formatDate(date)
     }
     
-    case '1w': {
-      const startOfWeek = new Date(now)
-      startOfWeek.setDate(now.getDate() - now.getDay())
-      const endOfWeek = new Date(startOfWeek)
-      endOfWeek.setDate(startOfWeek.getDate() + 6)
-      
-      const startOfLastWeek = new Date(startOfWeek)
-      startOfLastWeek.setDate(startOfLastWeek.getDate() - 7)
-      const endOfLastWeek = new Date(endOfWeek)
-      endOfLastWeek.setDate(endOfLastWeek.getDate() - 7)
-      
-      return {
-        current: { 
-          start: startOfWeek.toISOString().split('T')[0], 
-          end: endOfWeek.toISOString().split('T')[0] 
-        },
-        previous: { 
-          start: startOfLastWeek.toISOString().split('T')[0], 
-          end: endOfLastWeek.toISOString().split('T')[0] 
-        }
-      }
+    case '-1w': {
+      const date = new Date(now)
+      date.setDate(date.getDate() - 7)
+      return formatDate(date)
     }
     
-    case '1m': {
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-      
-      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
-      
-      return {
-        current: { 
-          start: startOfMonth.toISOString().split('T')[0], 
-          end: endOfMonth.toISOString().split('T')[0] 
-        },
-        previous: { 
-          start: startOfLastMonth.toISOString().split('T')[0], 
-          end: endOfLastMonth.toISOString().split('T')[0] 
-        }
-      }
+    case '-1m': {
+      const date = new Date(now)
+      date.setMonth(date.getMonth() - 1)
+      return formatDate(date)
     }
     
-    case '1y': {
-      const startOfYear = new Date(now.getFullYear(), 0, 1)
-      const endOfYear = new Date(now.getFullYear(), 11, 31)
-      
-      const startOfLastYear = new Date(now.getFullYear() - 1, 0, 1)
-      const endOfLastYear = new Date(now.getFullYear() - 1, 11, 31)
-      
-      return {
-        current: { 
-          start: startOfYear.toISOString().split('T')[0], 
-          end: endOfYear.toISOString().split('T')[0] 
-        },
-        previous: { 
-          start: startOfLastYear.toISOString().split('T')[0], 
-          end: endOfLastYear.toISOString().split('T')[0] 
-        }
-      }
+    case '-6m': {
+      const date = new Date(now)
+      date.setMonth(date.getMonth() - 6)
+      return formatDate(date)
+    }
+    
+    case '-1y': {
+      const date = new Date(now)
+      date.setFullYear(date.getFullYear() - 1)
+      return formatDate(date)
     }
     
     default:
-      return {
-        current: { start: today, end: today },
-        previous: { start: today, end: today }
+      // If it's already a date string (YYYY-MM-DD), return as is
+      if (/^\d{4}-\d{2}-\d{2}$/.test(relativeDate)) {
+        return relativeDate
       }
+      // Otherwise, default to today
+      return formatDate(now)
   }
 }
 
-function buildQuery(measures: StatMeasure[], period: { start: string, end: string }, tableName: string, dateField: string = 'date') {
+// Helper function to find closest available date
+const findClosestDate = async (relativeDate: string, tableName: string): Promise<string> => {
+  const cacheService = getClickHouseCacheService(300)
+  
+  const query = `
+    SELECT asOfDate
+    FROM ${tableName}
+    WHERE asOfDate <= '${relativeDate}'
+    ORDER BY asOfDate DESC
+    LIMIT 1
+  `
+  
+  try {
+    const result = await cacheService.query<{ asOfDate: string }>(query, undefined, `closest_date:${tableName}:${relativeDate}`, 300)
+    return result[0]?.asOfDate || relativeDate
+  } catch (error) {
+    console.warn(`Could not find closest date for ${relativeDate} in ${tableName}, using original date`)
+    return relativeDate
+  }
+}
+
+function buildQuery(measures: StatMeasure[], asOfDate: string, tableName: string) {
   const aggregations = measures.map(m => {
     let field = m.field
     
-    // Handle numeric aggregations - cast to numeric if needed
+    // For numeric aggregations, ensure the field is treated as numeric
+    // Use toFloat64OrZero for safe conversion that handles both string and numeric types
     if (['sum', 'avg', 'max', 'min'].includes(m.aggregation)) {
-      field = `toFloat64OrNull(${m.field})`
+      field = `toFloat64OrZero(toString(${m.field}))`
     }
     
     return `${m.aggregation}(${field}) as ${m.key}`
@@ -116,14 +98,14 @@ function buildQuery(measures: StatMeasure[], period: { start: string, end: strin
   return `
     SELECT ${aggregations}
     FROM ${tableName}
-    WHERE ${dateField} >= '${period.start}' AND ${dateField} <= '${period.end}'
+    WHERE asOfDate = '${asOfDate}'
   `
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { measures, period } = body
+    const { measures, relativeDt } = body
     
     if (!measures || !Array.isArray(measures) || measures.length === 0) {
       return NextResponse.json(
@@ -132,15 +114,14 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    if (!period) {
+    if (!relativeDt) {
       return NextResponse.json(
-        { error: 'Period is required' },
+        { error: 'relativeDt is required' },
         { status: 400 }
       )
     }
     
     const cacheService = getClickHouseCacheService(300) // 5 minutes cache
-    const periods = parsePeriod(period)
     
     // Group measures by table
     const measuresByTable = measures.reduce((acc: Record<string, StatMeasure[]>, measure) => {
@@ -151,27 +132,40 @@ export async function POST(request: NextRequest) {
       return acc
     }, {})
     
-    const result: StatData = {}
+    const result: Record<string, {
+      current: number
+      previous: number
+      change: number
+      changePercent: number
+    }> = {}
+    
+    // Convert relative dates to actual dates
+    const requestedDate = parseRelativeDate(relativeDt)
+    const latestDate = parseRelativeDate('latest')
     
     // Process each table separately
     for (const [tableName, tableMeasures] of Object.entries(measuresByTable)) {
-      // Determine date field - use 'asOfDate' for risk_f_mv, 'date' for others
-      const dateField = tableName === 'risk_f_mv' ? 'asOfDate' : 'date'
+      // Find the closest available dates for this table
+      const actualRequestedDate = await findClosestDate(requestedDate, tableName)
+      const actualLatestDate = await findClosestDate(latestDate, tableName)
       
-      const currentQuery = buildQuery(tableMeasures, periods.current, tableName, dateField)
-      const previousQuery = buildQuery(tableMeasures, periods.previous, tableName, dateField)
+      // Build queries for both dates
+      const requestedQuery = buildQuery(tableMeasures, actualRequestedDate, tableName)
+      const latestQuery = buildQuery(tableMeasures, actualLatestDate, tableName)
       
-      const cacheKey = `stats:${tableName}:${period}:${Buffer.from(JSON.stringify(tableMeasures.map(m => m.key))).toString('base64').slice(0, 16)}`
+      const cacheKeyRequested = `stats:${tableName}:${relativeDt}:${Buffer.from(JSON.stringify(tableMeasures.map(m => m.key))).toString('base64').slice(0, 16)}`
+      const cacheKeyLatest = `stats:${tableName}:latest:${Buffer.from(JSON.stringify(tableMeasures.map(m => m.key))).toString('base64').slice(0, 16)}`
       
-      const [currentData, previousData] = await Promise.all([
-        cacheService.query<Record<string, number>>(currentQuery, undefined, `${cacheKey}:current`, 300),
-        cacheService.query<Record<string, number>>(previousQuery, undefined, `${cacheKey}:previous`, 300)
+      // Execute both queries in parallel
+      const [requestedData, latestData] = await Promise.all([
+        cacheService.query<Record<string, number>>(requestedQuery, undefined, cacheKeyRequested, 300),
+        cacheService.query<Record<string, number>>(latestQuery, undefined, cacheKeyLatest, 300)
       ])
       
-      // Process results for each measure in this table
+      // Calculate comparison for each measure in this table
       tableMeasures.forEach(measure => {
-        const current = currentData[0]?.[measure.key] || 0
-        const previous = previousData[0]?.[measure.key] || 0
+        const previous = requestedData[0]?.[measure.key] || 0
+        const current = latestData[0]?.[measure.key] || 0
         const change = current - previous
         const changePercent = previous !== 0 ? (change / previous) * 100 : 0
         
