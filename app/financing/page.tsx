@@ -3,6 +3,7 @@
 
 import { RiskFilter } from "@/components/filters/risk-filter"
 import { riskFilterConfig } from "@/components/filters/risk-filter.config"
+import { StatCards, defaultStatConfigs } from "@/components/stats/stat-cards"
 import { useStore } from "@tanstack/react-store"
 import { filtersStore } from "@/lib/store/filters"
 
@@ -23,8 +24,18 @@ export default function FinancingPage() {
         />
       </div>
       
-      <div className="space-y-4">
-        <p>Financing content here</p>
+      <div className="space-y-6">
+        {/* Stat Cards */}
+        <StatCards 
+          measures={defaultStatConfigs.trading}
+          period="1d"
+        />
+        
+        {/* Content placeholder */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Trading Overview</h2>
+          <p className="text-muted-foreground">Trading dashboard content goes here...</p>
+        </div>
         
         {/* Debug: Show active filters */}
         {filters.length > 0 && (
