@@ -85,7 +85,7 @@ export const riskFilterConfig = {
       operators: ["is", "is not", "contains", "does not contain"],
       type: "text",
     },
-    "As Of Date": {
+    "asOfDate": {
       operators: ["is", "is greater than", "is less than", "is between"],
       type: "date",
     },

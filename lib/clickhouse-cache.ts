@@ -21,18 +21,29 @@ export class ClickHouseCacheService {
     const actualCacheKey = cacheKey || this.generateCacheKey(query, params)
     const cacheTTL = ttl || this.defaultTTL
 
-    // Check Redis connection before trying to read
+    // Try to connect and read from cache
     try {
+      // Ensure Redis connection
+      if (this.redis.status === 'wait') {
+        await this.redis.connect()
+      }
+      
       if (this.redis.status === 'ready') {
         const cached = await this.redis.get(actualCacheKey)
         if (cached) {
+          console.log(`Cache HIT for key: ${actualCacheKey}`)
           return JSON.parse(cached)
+        } else {
+          console.log(`Cache MISS for key: ${actualCacheKey}`)
         }
+      } else {
+        console.warn(`Redis not ready. Status: ${this.redis.status}`)
       }
     } catch (error) {
       console.warn('Redis cache read failed:', error)
     }
 
+    // Execute ClickHouse query
     const result = await this.clickhouse.query({
       query,
       query_params: params,
@@ -41,10 +52,13 @@ export class ClickHouseCacheService {
 
     const data = await result.json<T>()
 
-    // Check Redis connection before trying to write
+    // Try to write to cache
     try {
       if (this.redis.status === 'ready') {
         await this.redis.setex(actualCacheKey, cacheTTL, JSON.stringify(data))
+        console.log(`Cache WRITE for key: ${actualCacheKey}, TTL: ${cacheTTL}s`)
+      } else {
+        console.warn(`Cannot write to cache. Redis status: ${this.redis.status}`)
       }
     } catch (error) {
       console.warn('Redis cache write failed:', error)
@@ -67,6 +81,36 @@ export class ClickHouseCacheService {
       }
     } catch (error) {
       console.warn('Cache invalidation failed:', error)
+    }
+  }
+
+  async getCacheStatus(): Promise<{
+    redis: {
+      status: string
+      connected: boolean
+    }
+    clickhouse: {
+      connected: boolean
+    }
+  }> {
+    let redisConnected = false
+    try {
+      if (this.redis.status === 'ready') {
+        await this.redis.ping()
+        redisConnected = true
+      }
+    } catch (error) {
+      console.warn('Redis ping failed:', error)
+    }
+
+    return {
+      redis: {
+        status: this.redis.status,
+        connected: redisConnected,
+      },
+      clickhouse: {
+        connected: true, // ClickHouse connection is checked when queries are made
+      }
     }
   }
 

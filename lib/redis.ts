@@ -16,7 +16,7 @@ export function getRedisClient(): RedisClient {
       password,
       enableOfflineQueue: false,
       maxRetriesPerRequest: 3,
-      lazyConnect: true,
+      lazyConnect: false, // Changed to false for immediate connection
       connectTimeout: 5000,
       commandTimeout: 3000,
     })
@@ -32,6 +32,14 @@ export function getRedisClient(): RedisClient {
 
     globalRedisClient.on('ready', () => {
       console.log('Redis ready for commands')
+    })
+
+    globalRedisClient.on('close', () => {
+      console.warn('Redis connection closed')
+    })
+
+    globalRedisClient.on('reconnecting', () => {
+      console.log('Redis reconnecting...')
     })
   }
   
