@@ -11,9 +11,9 @@ export default function FinancingPage() {
   const filters = useStore(filtersStore, (state) => state.filters)
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Financing</h1>
+    <div className="p-0">
+      <div className="flex justify-between items-center mb-4">
+         <h2 className="text-3xl font-bold tracking-tight">Financing Frontview</h2>
         <RiskFilter
           tableName={riskFilterConfig.tableName}
           filterTypes={riskFilterConfig.filterTypes}
@@ -29,6 +29,7 @@ export default function FinancingPage() {
         <StatCards 
           measures={defaultStatConfigs}
           relativeDt="-6m"
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
         />
         
    
