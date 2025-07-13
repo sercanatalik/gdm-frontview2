@@ -72,13 +72,13 @@ function StatCard({ measure, data, isLoading, error, relativeDt }: {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
         <CardTitle className="text-sm font-medium">{measure.label}</CardTitle>
         {measure.icon || <BarChart3 className="size-4 text-muted-foreground" />}
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0 space-y-0">
         {isLoading ? (
-          <div className="flex justify-center items-center h-16">
+          <div className="flex justify-center items-center h-10">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : error ? (
@@ -91,7 +91,7 @@ function StatCard({ measure, data, isLoading, error, relativeDt }: {
             <div className="text-2xl font-bold">
               {formatNumber(data.current)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] text-muted-foreground">
               {data.change >= 0 ? "+ " : "- "}
               {formatNumber(Math.abs(data.change))} since {getDaysText(relativeDt)} days ago
             </p>
