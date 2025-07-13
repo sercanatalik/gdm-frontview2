@@ -105,8 +105,8 @@ function buildQuery(measures: StatMeasure[], asOfDate: string, tableName: string
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { measures, relativeDt } = body
-    
+    const { measures, relativeDt, filters } = body
+
     if (!measures || !Array.isArray(measures) || measures.length === 0) {
       return NextResponse.json(
         { error: 'Measures array is required' },

@@ -104,8 +104,8 @@ function StatCard({ measure, data, isLoading, error, relativeDt }: {
   )
 }
 
-export function StatCards({ measures, relativeDt, className }: StatCardsProps) {
-  const { data, isLoading, error } = useStatsData(measures, relativeDt)
+export function StatCards({ measures, relativeDt, className, filters }: StatCardsProps) {
+  const { data, isLoading, error } = useStatsData(measures, relativeDt, filters)
 
   return (
     <div className={cn("grid gap-4 md:grid-cols-2 lg:grid-cols-6", className)}>

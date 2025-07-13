@@ -29,7 +29,8 @@ export interface StatData {
 // React Query hook for fetching stats data
 export const useStatsData = (
   measures: StatMeasure[],
-  relativeDt: string
+  relativeDt: string,
+  filters: any[] = []
 ) => {
   return useQuery({
     queryKey: ['stats', measures.map(m => m.key), relativeDt],
@@ -39,7 +40,8 @@ export const useStatsData = (
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           measures,
-          relativeDt
+          relativeDt,
+          filters
         }),
       })
 
