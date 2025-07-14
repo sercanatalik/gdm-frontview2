@@ -210,8 +210,8 @@ export async function POST(request: NextRequest) {
       const requestedQuery = buildQuery(tableMeasures, actualRequestedDate, tableName, filters)
       const latestQuery = buildQuery(tableMeasures, actualLatestDate, tableName, filters)
       
-      const filterHash = Buffer.from(JSON.stringify(filters || [])).toString('base64')
-      const measureHash = Buffer.from(JSON.stringify(tableMeasures.map(m => m.key))).toString('base64')
+      const filterHash = Buffer.from(JSON.stringify(filters || [])).toString('base64').slice(-15)
+      const measureHash = Buffer.from(JSON.stringify(tableMeasures.map(m => m.key))).toString('base64').slice(-15)
       const cacheKeyRequested = `stats:${tableName}:${relativeDt}:${measureHash}:${filterHash}`
       const cacheKeyLatest = `stats:${tableName}:latest:${measureHash}:${filterHash}`
       console.log(`Cache keys - Requested: ${cacheKeyRequested}, Latest: ${cacheKeyLatest}`)
