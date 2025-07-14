@@ -160,16 +160,30 @@ export function RiskFilter({
   const handleAddFilter = (filterType: string, filterValue: string) => {
     const config = operatorConfig[filterType]
     const defaultOperator = config?.operators?.[0] || "is"
+    const field = config?.field || filterType
     
-    const newFilter = {
-      id: nanoid(),
-      type: filterType,
-      operator: defaultOperator,
-      value: [filterValue],
-      field: config?.field || filterType,
+    // Check if a filter with the same type and field already exists
+    const existingFilter = filters.find(f => f.type === filterType && f.field === field)
+    
+    if (existingFilter) {
+      // If filter exists, update its value instead of creating a new one
+      const updatedValues = existingFilter.value.includes(filterValue) 
+        ? existingFilter.value 
+        : [...existingFilter.value, filterValue]
+      
+      filtersActions.updateFilter(existingFilter.id, { value: updatedValues })
+    } else {
+      // Create new filter if none exists
+      const newFilter = {
+        id: nanoid(),
+        type: filterType,
+        operator: defaultOperator,
+        value: [filterValue],
+        field,
+      }
+      
+      filtersActions.addFilter(newFilter)
     }
-    
-    filtersActions.addFilter(newFilter)
     
     setTimeout(() => {
       setSelectedView(null)
