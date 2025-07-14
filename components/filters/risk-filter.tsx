@@ -165,6 +165,7 @@ export function RiskFilter({
       type: filterType,
       operator: defaultOperator,
       value: [filterValue],
+      field: operatorConfig[filterType]?.field || filterType,
     }
     
     filtersActions.addFilter(newFilter)

@@ -68,30 +68,37 @@ export const riskFilterConfig = {
     "Desk": {
       operators: ["is", "is not"],
       type: "select",
+      field: "desk",
     },
     "SL1": {
       operators: ["is", "is not"],
       type: "select",
+      field: "SL1",
     },
     "Portfolio": {
       operators: ["is", "is not"],
       type: "select",
+      field: "portfolio",
     },
     "CCY": {
       operators: ["is", "is not"],
       type: "select",
+      field: "ccy",
     },
     "Counterparty": {
       operators: ["is", "is not", "contains", "does not contain"],
       type: "text",
+      field: "counterparty",
     },
     "asOfDate": {
       operators: ["is", "is greater than", "is less than", "is between"],
       type: "date",
+      field: "asOfDate",
     },
     "VC Product": {
       operators: ["is", "is not"],
       type: "select",
+      field: "vcProduct",
     },
   },
 

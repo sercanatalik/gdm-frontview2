@@ -13,6 +13,7 @@ interface FilterCondition {
   type: string
   operator: string
   value: string[]
+  field?: string
 }
 
 
@@ -95,33 +96,41 @@ function buildFilterConditions(filters: FilterCondition[]): string {
   }
   
   const conditions = filters.map(filter => {
-    const { type, operator, value } = filter
+    const { type, operator, value, field } = filter
+    // Use field if provided, otherwise fall back to type
+    const fieldName = field || type
     
     switch (operator) {
       case 'is':
         if (value.length === 1) {
-          return `${type} = '${value[0]}'`
+          return `${fieldName} = '${value[0]}'`
         } else {
           const values = value.map(v => `'${v}'`).join(', ')
-          return `${type} IN (${values})`
+          return `${fieldName} IN (${values})`
         }
       case 'is not':
         if (value.length === 1) {
-          return `${type} != '${value[0]}'`
+          return `${fieldName} != '${value[0]}'`
         } else {
           const values = value.map(v => `'${v}'`).join(', ')
-          return `${type} NOT IN (${values})`
+          return `${fieldName} NOT IN (${values})`
         }
       case 'contains':
-        return value.map(v => `${type} LIKE '%${v}%'`).join(' OR ')
+        return value.map(v => `${fieldName} LIKE '%${v}%'`).join(' OR ')
       case 'does not contain':
-        return value.map(v => `${type} NOT LIKE '%${v}%'`).join(' AND ')
+        return value.map(v => `${fieldName} NOT LIKE '%${v}%'`).join(' AND ')
       case 'starts with':
-        return value.map(v => `${type} LIKE '${v}%'`).join(' OR ')
+        return value.map(v => `${fieldName} LIKE '${v}%'`).join(' OR ')
       case 'ends with':
-        return value.map(v => `${type} LIKE '%${v}'`).join(' OR ')
+        return value.map(v => `${fieldName} LIKE '%${v}'`).join(' OR ')
+      case 'is greater than':
+        return `${fieldName} > '${value[0]}'`
+      case 'is less than':
+        return `${fieldName} < '${value[0]}'`
+      case 'is between':
+        return `${fieldName} BETWEEN '${value[0]}' AND '${value[1]}'`
       default:
-        return `${type} = '${value[0]}'`
+        return `${fieldName} = '${value[0]}'`
     }
   }).filter(Boolean)
   
@@ -201,11 +210,11 @@ export async function POST(request: NextRequest) {
       const requestedQuery = buildQuery(tableMeasures, actualRequestedDate, tableName, filters)
       const latestQuery = buildQuery(tableMeasures, actualLatestDate, tableName, filters)
       
-      const filterHash = Buffer.from(JSON.stringify(filters || [])).toString('base64').slice(0, 8)
-      const measureHash = Buffer.from(JSON.stringify(tableMeasures.map(m => m.key))).toString('base64').slice(0, 8)
+      const filterHash = Buffer.from(JSON.stringify(filters || [])).toString('base64')
+      const measureHash = Buffer.from(JSON.stringify(tableMeasures.map(m => m.key))).toString('base64')
       const cacheKeyRequested = `stats:${tableName}:${relativeDt}:${measureHash}:${filterHash}`
       const cacheKeyLatest = `stats:${tableName}:latest:${measureHash}:${filterHash}`
-      
+      console.log(`Cache keys - Requested: ${cacheKeyRequested}, Latest: ${cacheKeyLatest}`)
       // Execute both queries in parallel
       const [requestedData, latestData] = await Promise.all([
         cacheService.query<Record<string, number>>(requestedQuery, undefined, cacheKeyRequested, 300),

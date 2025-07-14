@@ -5,6 +5,7 @@ export interface Filter {
   type: string
   operator: string
   value: string[]
+  field?: string
 }
 
 export interface FiltersState {
