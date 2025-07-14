@@ -99,11 +99,16 @@ const getFilterOperators = ({
 }: {
   filterType: string
   filterValues: string[]
-  operatorConfig: Record<string, Record<string, string[]>>
+  operatorConfig: Record<string, any>
   dateValues: string[]
 }): string[] => {
   const config = operatorConfig[filterType]
   if (!config) return []
+
+  // Return operators array directly if it exists
+  if (config.operators && Array.isArray(config.operators)) {
+    return config.operators
+  }
 
   if (filterType.includes("DATE")) {
     if (filterValues?.some((value) => dateValues.includes(value))) {

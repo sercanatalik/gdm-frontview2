@@ -22,6 +22,21 @@ import {
   Info,
 } from "lucide-react"
 
+// Filter operators constants
+export const FilterOperators = {
+  IS: "is",
+  IS_NOT: "is not",
+  IS_ANY_OF: "is any of",
+  INCLUDE: "include",
+  DO_NOT_INCLUDE: "do not include",
+  INCLUDE_ALL_OF: "include all of",
+  INCLUDE_ANY_OF: "include any of",
+  EXCLUDE_ALL_OF: "exclude all of",
+  EXCLUDE_IF_ANY_OF: "exclude if any of",
+  BEFORE: "before",
+  AFTER: "after",
+}
+
 // Risk filter configuration
 export const riskFilterConfig = {
   // Filter types mapping to database columns
@@ -39,15 +54,15 @@ export const riskFilterConfig = {
   filterOperators: {
     "is": "=",
     "is not": "!=",
-    "contains": "ILIKE",
-    "does not contain": "NOT ILIKE",
-    "starts with": "ILIKE",
-    "ends with": "ILIKE",
-    "is greater than": ">",
-    "is less than": "<",
-    "is between": "BETWEEN",
-    "is empty": "IS NULL",
-    "is not empty": "IS NOT NULL",
+    "is any of": "IN",
+    "include": "ILIKE",
+    "do not include": "NOT ILIKE",
+    "include all of": "ILIKE",
+    "include any of": "ILIKE",
+    "exclude all of": "NOT ILIKE",
+    "exclude if any of": "NOT ILIKE",
+    "before": "<",
+    "after": ">",
   },
 
   // Icon mapping for filter types and values
@@ -66,37 +81,37 @@ export const riskFilterConfig = {
   // Operator configuration for different field types
   operatorConfig: {
     "Desk": {
-      operators: ["is", "is not"],
+      operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
       type: "select",
       field: "desk",
     },
     "SL1": {
-      operators: ["is", "is not"],
+      operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
       type: "select",
       field: "SL1",
     },
     "Portfolio": {
-      operators: ["is", "is not"],
+      operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
       type: "select",
       field: "portfolio",
     },
     "CCY": {
-      operators: ["is", "is not"],
+      operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
       type: "select",
       field: "ccy",
     },
     "Counterparty": {
-      operators: ["is", "is not", "contains", "does not contain"],
+      operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.INCLUDE, FilterOperators.DO_NOT_INCLUDE],
       type: "text",
       field: "counterparty",
     },
-    "asOfDate": {
-      operators: ["is", "is greater than", "is less than", "is between"],
+    "As Of Date": {
+      operators: [FilterOperators.IS, FilterOperators.BEFORE, FilterOperators.AFTER],
       type: "date",
       field: "asOfDate",
     },
     "VC Product": {
-      operators: ["is", "is not"],
+      operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
       type: "select",
       field: "vcProduct",
     },

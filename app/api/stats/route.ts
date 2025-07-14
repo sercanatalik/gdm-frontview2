@@ -79,7 +79,7 @@ const findClosestDate = async (relativeDate: string, tableName: string): Promise
     ORDER BY asOfDate DESC
     LIMIT 1
   `
-  
+  console.log(`Executing query: ${query} in ${tableName}`)
   try {
     const result = await cacheService.query<{ asOfDate: string }>(query, undefined, `closest_date:${tableName}:${relativeDate}`, 300)
     return result[0]?.asOfDate || relativeDate
@@ -115,20 +115,25 @@ function buildFilterConditions(filters: FilterCondition[]): string {
           const values = value.map(v => `'${v}'`).join(', ')
           return `${fieldName} NOT IN (${values})`
         }
-      case 'contains':
+      case 'is any of':
+        const values = value.map(v => `'${v}'`).join(', ')
+        return `${fieldName} IN (${values})`
+      case 'include':
         return value.map(v => `${fieldName} LIKE '%${v}%'`).join(' OR ')
-      case 'does not contain':
+      case 'do not include':
         return value.map(v => `${fieldName} NOT LIKE '%${v}%'`).join(' AND ')
-      case 'starts with':
-        return value.map(v => `${fieldName} LIKE '${v}%'`).join(' OR ')
-      case 'ends with':
-        return value.map(v => `${fieldName} LIKE '%${v}'`).join(' OR ')
-      case 'is greater than':
-        return `${fieldName} > '${value[0]}'`
-      case 'is less than':
+      case 'include all of':
+        return value.map(v => `${fieldName} LIKE '%${v}%'`).join(' AND ')
+      case 'include any of':
+        return value.map(v => `${fieldName} LIKE '%${v}%'`).join(' OR ')
+      case 'exclude all of':
+        return value.map(v => `${fieldName} NOT LIKE '%${v}%'`).join(' AND ')
+      case 'exclude if any of':
+        return value.map(v => `${fieldName} NOT LIKE '%${v}%'`).join(' OR ')
+      case 'before':
         return `${fieldName} < '${value[0]}'`
-      case 'is between':
-        return `${fieldName} BETWEEN '${value[0]}' AND '${value[1]}'`
+      case 'after':
+        return `${fieldName} > '${value[0]}'`
       default:
         return `${fieldName} = '${value[0]}'`
     }
@@ -210,11 +215,11 @@ export async function POST(request: NextRequest) {
       const requestedQuery = buildQuery(tableMeasures, actualRequestedDate, tableName, filters)
       const latestQuery = buildQuery(tableMeasures, actualLatestDate, tableName, filters)
       
-      const filterHash = Buffer.from(JSON.stringify(filters || [])).toString('base64').slice(-15)
-      const measureHash = Buffer.from(JSON.stringify(tableMeasures.map(m => m.key))).toString('base64').slice(-15)
+      const filterHash = Buffer.from(JSON.stringify(filters || [])).toString('base64')
+      const measureHash = Buffer.from(JSON.stringify(tableMeasures.map(m => m.key))).toString('base64')
       const cacheKeyRequested = `stats:${tableName}:${relativeDt}:${measureHash}:${filterHash}`
       const cacheKeyLatest = `stats:${tableName}:latest:${measureHash}:${filterHash}`
-      console.log(`Cache keys - Requested: ${cacheKeyRequested}, Latest: ${cacheKeyLatest}`)
+     
       // Execute both queries in parallel
       const [requestedData, latestData] = await Promise.all([
         cacheService.query<Record<string, number>>(requestedQuery, undefined, cacheKeyRequested, 300),

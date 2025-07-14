@@ -158,14 +158,15 @@ export function RiskFilter({
 
   // Handle adding a new filter
   const handleAddFilter = (filterType: string, filterValue: string) => {
-    const defaultOperator = Object.keys(filterOperators)[0] || "is"
+    const config = operatorConfig[filterType]
+    const defaultOperator = config?.operators?.[0] || "is"
     
     const newFilter = {
       id: nanoid(),
       type: filterType,
       operator: defaultOperator,
       value: [filterValue],
-      field: operatorConfig[filterType]?.field || filterType,
+      field: config?.field || filterType,
     }
     
     filtersActions.addFilter(newFilter)
