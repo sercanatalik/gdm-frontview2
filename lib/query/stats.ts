@@ -33,7 +33,7 @@ export const useStatsData = (
   filters: any[] = []
 ) => {
   return useQuery({
-    queryKey: ['stats', measures.map(m => m.key), relativeDt],
+    queryKey: ['stats', measures.map(m => m.key), relativeDt, filters],
     queryFn: async () => {
       const response = await fetch('api/stats', {
         method: 'POST',

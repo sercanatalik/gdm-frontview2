@@ -9,6 +9,12 @@ interface StatMeasure {
   aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min'
 }
 
+interface FilterCondition {
+  type: string
+  operator: string
+  value: string[]
+}
+
 
 
 const formatDate = (date: Date): string => date.toISOString().split('T')[0]
@@ -82,7 +88,47 @@ const findClosestDate = async (relativeDate: string, tableName: string): Promise
   }
 }
 
-function buildQuery(measures: StatMeasure[], asOfDate: string, tableName: string) {
+// Helper function to build filter conditions for ClickHouse
+function buildFilterConditions(filters: FilterCondition[]): string {
+  if (!filters || filters.length === 0) {
+    return ''
+  }
+  
+  const conditions = filters.map(filter => {
+    const { type, operator, value } = filter
+    
+    switch (operator) {
+      case 'is':
+        if (value.length === 1) {
+          return `${type} = '${value[0]}'`
+        } else {
+          const values = value.map(v => `'${v}'`).join(', ')
+          return `${type} IN (${values})`
+        }
+      case 'is not':
+        if (value.length === 1) {
+          return `${type} != '${value[0]}'`
+        } else {
+          const values = value.map(v => `'${v}'`).join(', ')
+          return `${type} NOT IN (${values})`
+        }
+      case 'contains':
+        return value.map(v => `${type} LIKE '%${v}%'`).join(' OR ')
+      case 'does not contain':
+        return value.map(v => `${type} NOT LIKE '%${v}%'`).join(' AND ')
+      case 'starts with':
+        return value.map(v => `${type} LIKE '${v}%'`).join(' OR ')
+      case 'ends with':
+        return value.map(v => `${type} LIKE '%${v}'`).join(' OR ')
+      default:
+        return `${type} = '${value[0]}'`
+    }
+  }).filter(Boolean)
+  
+  return conditions.length > 0 ? ` AND (${conditions.join(' AND ')})` : ''
+}
+
+function buildQuery(measures: StatMeasure[], asOfDate: string, tableName: string, filters: FilterCondition[] = []) {
   const aggregations = measures.map(m => {
     let field = m.field
     
@@ -95,10 +141,12 @@ function buildQuery(measures: StatMeasure[], asOfDate: string, tableName: string
     return `${m.aggregation}(${field}) as ${m.key}`
   }).join(', ')
   
+  const filterConditions = buildFilterConditions(filters)
+  
   return `
     SELECT ${aggregations}
     FROM ${tableName}
-    WHERE asOfDate = '${asOfDate}'
+    WHERE asOfDate = '${asOfDate}'${filterConditions}
   `
 }
 
@@ -149,12 +197,14 @@ export async function POST(request: NextRequest) {
       const actualRequestedDate = await findClosestDate(requestedDate, tableName)
       const actualLatestDate = await findClosestDate(latestDate, tableName)
       
-      // Build queries for both dates
-      const requestedQuery = buildQuery(tableMeasures, actualRequestedDate, tableName)
-      const latestQuery = buildQuery(tableMeasures, actualLatestDate, tableName)
+      // Build queries for both dates with filters
+      const requestedQuery = buildQuery(tableMeasures, actualRequestedDate, tableName, filters)
+      const latestQuery = buildQuery(tableMeasures, actualLatestDate, tableName, filters)
       
-      const cacheKeyRequested = `stats:${tableName}:${relativeDt}:${Buffer.from(JSON.stringify(tableMeasures.map(m => m.key))).toString('base64').slice(0, 16)}`
-      const cacheKeyLatest = `stats:${tableName}:latest:${Buffer.from(JSON.stringify(tableMeasures.map(m => m.key))).toString('base64').slice(0, 16)}`
+      const filterHash = Buffer.from(JSON.stringify(filters || [])).toString('base64').slice(0, 8)
+      const measureHash = Buffer.from(JSON.stringify(tableMeasures.map(m => m.key))).toString('base64').slice(0, 8)
+      const cacheKeyRequested = `stats:${tableName}:${relativeDt}:${measureHash}:${filterHash}`
+      const cacheKeyLatest = `stats:${tableName}:latest:${measureHash}:${filterHash}`
       
       // Execute both queries in parallel
       const [requestedData, latestData] = await Promise.all([

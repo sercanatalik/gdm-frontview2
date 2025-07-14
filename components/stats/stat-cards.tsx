@@ -10,6 +10,7 @@ interface StatCardsProps {
   measures: StatMeasure[]
   relativeDt: string
   className?: string
+  filters?: any[]
 }
 
 interface StatData {
