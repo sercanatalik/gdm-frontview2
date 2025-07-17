@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
       // Build queries for both dates with filters
       const requestedQuery = buildQuery(tableMeasures, actualRequestedDate, tableName, filters)
       const latestQuery = buildQuery(tableMeasures, actualLatestDate, tableName, filters)
-      console.log(`Executing queries for ${tableName} Latest: ${latestQuery}`)
+      // console.log(`Executing queries for ${tableName} Latest: ${latestQuery}`)
       const filterHash = Buffer.from(JSON.stringify(filters || [])).toString('base64')
       const measureHash = Buffer.from(JSON.stringify(tableMeasures.map(m => m.key))).toString('base64')
       const cacheKeyRequested = `stats:${tableName}:${relativeDt}:${measureHash}:${filterHash}`

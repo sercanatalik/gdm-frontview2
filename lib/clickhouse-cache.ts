@@ -31,7 +31,7 @@ export class ClickHouseCacheService {
       if (this.redis.status === 'ready') {
         const cached = await this.redis.get(actualCacheKey)
         if (cached) {
-          console.log(`Cache HIT for key: ${actualCacheKey}`)
+          // console.log(`Cache HIT for key: ${actualCacheKey}`)
           return JSON.parse(cached)
         } else {
           console.log(`Cache MISS for key: ${actualCacheKey}`)
