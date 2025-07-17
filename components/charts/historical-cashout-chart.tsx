@@ -35,7 +35,7 @@ interface HistoricalCashoutChartProps {
   className?: string
 }
 
-// Generate a consistent color palette for vcProduct
+// Generate a consistent color palette for any groupBy field
 const generateChartConfig = (data: any[], isStacked: boolean = false): ChartConfig => {
   const multiColors = [
     "hsl(var(--chart-1))",
@@ -43,32 +43,60 @@ const generateChartConfig = (data: any[], isStacked: boolean = false): ChartConf
     "hsl(var(--chart-3))",
     "hsl(var(--chart-4))",
     "hsl(var(--chart-5))",
+    "hsl(var(--chart-6))",
+    "hsl(var(--chart-7))",
+    "hsl(var(--chart-8))",
+    "hsl(var(--chart-9))",
+    "hsl(var(--chart-10))",
+    "hsl(var(--chart-11))", 
  
   ]
+  
+  // Extract unique group values from processed chart data
+  // The processed data has keys like 'date', 'fullDate', and then the actual group values
+  const uniqueGroups = [...new Set(
+    data.flatMap(item => 
+      Object.keys(item).filter(key => key !== 'date' && key !== 'fullDate')
+    )
+  )].filter(Boolean)
   
   // Generate monochrome colors for stacked bars (from primary to lighter)
   const generateMonochromeColors = (count: number): string[] => {
     const colors: string[] = []
+    const baseHue = 220 // Blue base color
+    const baseSaturation = 70
+    const baseLightness = 45
+    
     for (let i = 0; i < count; i++) {
-      const lightness = 25 + (i * 15) // Start at 25% (primary) and increase by 15% each step
-      const saturation = 80 - (i * 5) // Start high saturation and decrease slightly
-      colors.push(`hsl(1100, ${Math.max(saturation, 40)}%, ${Math.min(lightness, 85)}%)`)
+      // Create a gradient from dark to light
+      const lightnessStep = Math.min(40 / Math.max(count - 1, 1), 25) // Ensure good contrast
+      const lightness = baseLightness + (i * lightnessStep)
+      const saturation = Math.max(baseSaturation - (i * 5), 30) // Maintain some saturation
+      
+      colors.push(`hsl(${baseHue}, ${saturation}%, ${Math.min(lightness, 80)}%)`)
     }
     return colors
   }
   
-  const uniqueProducts = [...new Set(data.map(item => item.vcProduct))]
   const config: ChartConfig = {}
   
   const colors = isStacked 
-    ? generateMonochromeColors(uniqueProducts.length)
+    ? generateMonochromeColors(uniqueGroups.length)
     : multiColors
   
-  uniqueProducts.forEach((product, index) => {
-    config[product] = {
-      label: product,
+  uniqueGroups.forEach((group, index) => {
+    config[group] = {
+      label: group,
       color: colors[index % colors.length],
     }
+  })
+  
+  // Debug logging for color generation
+  console.log('Color Debug:', {
+    uniqueGroups,
+    isStacked,
+    colorsGenerated: colors,
+    finalConfig: config
   })
   
   return config
@@ -82,30 +110,36 @@ const formatCurrency = (value: number): string => {
 
 // Process data for the chart
 const processChartData = (data: any[]) => {
-  // Group by date and sum by vcProduct
+  // Group by date and sum by groupBy field
   const groupedData: Record<string, Record<string, number>> = {}
   
   data.forEach(item => {
-    const date = item.asOfDate
-    const product = item.vcProduct || 'Unknown'
+    // Handle datetime format from API (e.g., "2025-04-30 00:00:00")
+    const dateStr = item.asOfDate.split(' ')[0] // Get just the date part
+    
+    // Find the groupBy field value (could be desk, vcProduct, etc.)
+    const groupByField = Object.keys(item).find(key => 
+      key !== 'asOfDate' && key !== 'value'
+    )
+    const groupValue = groupByField ? (item[groupByField] || 'Unknown') : 'Total'
     const value = item.value || 0
     
-    if (!groupedData[date]) {
-      groupedData[date] = {}
+    if (!groupedData[dateStr]) {
+      groupedData[dateStr] = {}
     }
     
-    groupedData[date][product] = (groupedData[date][product] || 0) + value
+    groupedData[dateStr][groupValue] = (groupedData[dateStr][groupValue] || 0) + value
   })
   
   // Convert to array format for recharts
   return Object.entries(groupedData)
-    .map(([date, products]) => ({
+    .map(([date, groups]) => ({
       date: new Date(date).toLocaleDateString('en-US', { 
         month: 'short', 
         day: 'numeric' 
       }),
       fullDate: date,
-      ...products
+      ...groups
     }))
     .sort((a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime())
     .slice(-30) // Show last 30 data points
@@ -143,7 +177,6 @@ export function HistoricalCashoutChart({
     if (!data?.data) return
     
     const csvData = data.data.map(row => ({
-      asOfDate: row.asOfDate,
       ...row
     }))
     
@@ -228,8 +261,16 @@ export function HistoricalCashoutChart({
 
   const chartData = processChartData(data.data)
   const isStacked = Boolean(data.meta.groupBy)
-  const chartConfig = generateChartConfig(data.data, isStacked)
-  const uniqueProducts = Object.keys(chartConfig)
+  const chartConfig = generateChartConfig(chartData, isStacked)
+  const uniqueGroups = Object.keys(chartConfig)
+  
+  // Debug logging
+  console.log('Chart Debug:', {
+    isStacked,
+    uniqueGroups,
+    chartConfig,
+    groupByField: data.meta.groupBy
+  })
 
   // Toolbar component
   const ChartToolbar = () => (
@@ -307,11 +348,11 @@ export function HistoricalCashoutChart({
             <ChartToolbar />
           </div>
         </div>
-        <CardContent className={isFullscreen ? "pt-4 pb-8" : "pt-4"}>
+        <CardContent className={isFullscreen ? "pt-4 pb-8 px-0" : "pt-4 px-0"}>
           <ChartContainer config={chartConfig} className={isFullscreen ? "h-[calc(100vh-250px)]" : "h-[500px]"}>
             <BarChart
               data={chartData}
-         
+              margin={{ top: 20, right: 20, left: 20, bottom: 5 }}
           >
             <CartesianGrid vertical={false} />
             <XAxis
@@ -374,12 +415,12 @@ export function HistoricalCashoutChart({
               }}
             />
             <ChartLegend content={<ChartLegendContent payload={[]} />} />
-            {uniqueProducts.map((product) => (
+            {uniqueGroups.map((group) => (
               <Bar
-                key={product}
-                dataKey={product}
+                key={group}
+                dataKey={group}
                 stackId={data?.meta.groupBy ? "stacked" : undefined}
-                fill={`var(--color-${product})`}
+                fill={`var(--color-${group})`}
                 radius={data?.meta.groupBy ? [0, 0, 0, 0] : [4, 4, 0, 0]}
               />
             ))}
