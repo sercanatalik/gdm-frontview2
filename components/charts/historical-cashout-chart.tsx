@@ -287,11 +287,11 @@ export function HistoricalCashoutChart({
 
   // Toolbar component
   const ChartToolbar = () => (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0">
       <Dialog open={showSettings} onOpenChange={setShowSettings}>
         <DialogTrigger asChild>
-          <Button variant="ghost" size="sm">
-            <Settings className="size-4" />
+          <Button variant="ghost" size="sm" className="px-1">
+            <Settings className="size-3" />
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[425px]">
@@ -332,11 +332,11 @@ export function HistoricalCashoutChart({
           </div>
         </DialogContent>
       </Dialog>
-      <Button variant="ghost" size="sm" onClick={handleDownload} disabled={!data?.data}>
-        <Download className="size-4" />
+      <Button variant="ghost" size="sm" className="px-1" onClick={handleDownload} disabled={!data?.data}>
+        <Download className="size-3" />
       </Button>
-      <Button variant="ghost" size="sm" onClick={() => setIsFullscreen(true)}>
-        <Maximize2 className="size-4" />
+      <Button variant="ghost" size="sm" className="px-1" onClick={() => setIsFullscreen(true)}>
+        <Maximize2 className="size-3" />
       </Button>
     </div>
   )
@@ -352,10 +352,10 @@ export function HistoricalCashoutChart({
         </div>
       )}
       <Card className={isFullscreen ? "flex-1 border-0 shadow-none" : className}>
-        <div className="px-6 pt-4 pb-2">
+        <div className="px-4 pt-2 pb-1">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="size-5" />
+            <CardTitle className="flex items-center gap-1">
+              <BarChart3 className="size-4" />
               Historical Cashout by VC Product
             </CardTitle>
             <ChartToolbar />
