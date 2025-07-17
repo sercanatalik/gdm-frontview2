@@ -60,20 +60,16 @@ const generateChartConfig = (data: any[], isStacked: boolean = false): ChartConf
     )
   )].filter(Boolean)
   
-  // Generate monochrome colors for stacked bars (from primary to lighter)
+  // Generate monochrome colors for stacked bars (from black to lighter)
   const generateMonochromeColors = (count: number): string[] => {
     const colors: string[] = []
-    const baseHue = 220 // Blue base color
-    const baseSaturation = 70
-    const baseLightness = 45
     
     for (let i = 0; i < count; i++) {
-      // Create a gradient from dark to light
-      const lightnessStep = Math.min(40 / Math.max(count - 1, 1), 25) // Ensure good contrast
-      const lightness = baseLightness + (i * lightnessStep)
-      const saturation = Math.max(baseSaturation - (i * 5), 30) // Maintain some saturation
+      // Create a gradient from black to lighter grays
+      const lightness = 10 + (i * (75 / Math.max(count - 1, 1))) // Start from black (10%) to light gray (85%)
+      const saturation = 0 // Pure grayscale (no color)
       
-      colors.push(`hsl(${baseHue}, ${saturation}%, ${Math.min(lightness, 80)}%)`)
+      colors.push(`hsl(0, ${saturation}%, ${Math.min(lightness, 85)}%)`)
     }
     return colors
   }
