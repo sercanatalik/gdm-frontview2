@@ -46,7 +46,7 @@ export const riskFilterConfig = {
     "Portfolio": "portfolio",
     "CCY": "ccy",
     "Counterparty": "counterparty",
-    "As Of Date": "asOfDate",
+    // "As Of Date": "asOfDate",
     "VC Product": "vcProduct",
   },
 
@@ -105,11 +105,7 @@ export const riskFilterConfig = {
       type: "text",
       field: "counterparty",
     },
-    "As Of Date": {
-      operators: [FilterOperators.IS, FilterOperators.BEFORE, FilterOperators.AFTER],
-      type: "date",
-      field: "asOfDate",
-    },
+
     "VC Product": {
       operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
       type: "select",
