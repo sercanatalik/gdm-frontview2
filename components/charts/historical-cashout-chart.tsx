@@ -60,16 +60,25 @@ const generateChartConfig = (data: any[], isStacked: boolean = false): ChartConf
     )
   )].filter(Boolean)
   
-  // Generate monochrome colors for stacked bars (from black to lighter)
+  // Generate monochrome colors for stacked bars using predefined color palette
   const generateMonochromeColors = (count: number): string[] => {
-    const colors: string[] = []
+    const predefinedColors = [
+      '#101720', // darkest midnight blue
+      '#2c333e',
+      '#4a535e', 
+      '#5a636e',
+      '#6b747f',
+      '#7c8591',
+      '#8e97a3',
+      '#a0a9b6',
+      '#b2bcc8'  // lightest
+    ]
     
+    const colors: string[] = []
     for (let i = 0; i < count; i++) {
-      // Create a gradient from black to lighter grays
-      const lightness = 10 + (i * (75 / Math.max(count - 1, 1))) // Start from black (10%) to light gray (85%)
-      const saturation = 0 // Pure grayscale (no color)
-      
-      colors.push(`hsl(0, ${saturation}%, ${Math.min(lightness, 85)}%)`)
+      // Use predefined colors, cycling through from darkest to lightest
+      const colorIndex = Math.floor(i * (predefinedColors.length - 1) / Math.max(count - 1, 1))
+      colors.push(predefinedColors[colorIndex])
     }
     return colors
   }
@@ -80,8 +89,14 @@ const generateChartConfig = (data: any[], isStacked: boolean = false): ChartConf
     ? generateMonochromeColors(uniqueGroups.length)
     : multiColors
   
+  // Create a mapping of original to sanitized group names
+  const groupMapping: Record<string, string> = {}
+  
   uniqueGroups.forEach((group, index) => {
-    config[group] = {
+    // Sanitize group name for CSS variable (replace spaces, special chars with underscores)
+    const sanitizedKey = String(group).replace(/[^a-zA-Z0-9]/g, '_')
+    groupMapping[sanitizedKey] = group
+    config[sanitizedKey] = {
       label: group,
       color: colors[index % colors.length],
     }
@@ -124,7 +139,9 @@ const processChartData = (data: any[]) => {
       groupedData[dateStr] = {}
     }
     
-    groupedData[dateStr][groupValue] = (groupedData[dateStr][groupValue] || 0) + value
+    // Sanitize group name for consistent processing
+    const sanitizedGroupValue = String(groupValue).replace(/[^a-zA-Z0-9]/g, '_')
+    groupedData[dateStr][sanitizedGroupValue] = (groupedData[dateStr][sanitizedGroupValue] || 0) + value
   })
   
   // Convert to array format for recharts
@@ -258,12 +275,12 @@ export function HistoricalCashoutChart({
   const chartData = processChartData(data.data)
   const isStacked = Boolean(data.meta.groupBy)
   const chartConfig = generateChartConfig(chartData, isStacked)
-  const uniqueGroups = Object.keys(chartConfig)
+  const sanitizedGroups = Object.keys(chartConfig)
   
   // Debug logging
   console.log('Chart Debug:', {
     isStacked,
-    uniqueGroups,
+    sanitizedGroups,
     chartConfig,
     groupByField: data.meta.groupBy
   })
@@ -411,12 +428,12 @@ export function HistoricalCashoutChart({
               }}
             />
             <ChartLegend content={<ChartLegendContent payload={[]} />} />
-            {uniqueGroups.map((group) => (
+            {sanitizedGroups.map((sanitizedGroup) => (
               <Bar
-                key={group}
-                dataKey={group}
+                key={sanitizedGroup}
+                dataKey={sanitizedGroup}
                 stackId={data?.meta.groupBy ? "stacked" : undefined}
-                fill={`var(--color-${group})`}
+                fill={`var(--color-${sanitizedGroup})`}
                 radius={data?.meta.groupBy ? [0, 0, 0, 0] : [4, 4, 0, 0]}
               />
             ))}
