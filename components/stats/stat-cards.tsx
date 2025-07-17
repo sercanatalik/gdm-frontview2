@@ -9,6 +9,7 @@ import { TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, BarChart3, Dolla
 interface StatCardsProps {
   measures: StatMeasure[]
   relativeDt: string
+  asOfDate?: string | null
   className?: string
   filters?: any[]
 }
@@ -105,8 +106,8 @@ function StatCard({ measure, data, isLoading, error, relativeDt }: {
   )
 }
 
-export function StatCards({ measures, relativeDt, className, filters }: StatCardsProps) {
-  const { data, isLoading, error } = useStatsData(measures, relativeDt, filters)
+export function StatCards({ measures, relativeDt, asOfDate, className, filters }: StatCardsProps) {
+  const { data, isLoading, error } = useStatsData(measures, relativeDt, asOfDate, filters)
 
   return (
     <div className={cn("grid gap-4 md:grid-cols-2 lg:grid-cols-6", className)}>

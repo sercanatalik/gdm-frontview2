@@ -30,10 +30,11 @@ export interface StatData {
 export const useStatsData = (
   measures: StatMeasure[],
   relativeDt: string,
+  asOfDate?: string | null,
   filters: any[] = []
 ) => {
   return useQuery({
-    queryKey: ['stats', measures.map(m => m.key), relativeDt, filters],
+    queryKey: ['stats', measures.map(m => m.key), relativeDt, asOfDate, filters],
     queryFn: async () => {
       const response = await fetch('api/stats', {
         method: 'POST',
@@ -41,6 +42,7 @@ export const useStatsData = (
         body: JSON.stringify({
           measures,
           relativeDt,
+          asOfDate,
           filters
         }),
       })

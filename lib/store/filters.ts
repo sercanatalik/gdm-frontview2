@@ -11,11 +11,13 @@ export interface Filter {
 export interface FiltersState {
   filters: Filter[]
   activeTable: string
+  asOfDate: string | null
 }
 
 export const filtersStore = new Store<FiltersState>({
   filters: [],
   activeTable: '',
+  asOfDate: null,
 })
 
 // Actions
@@ -63,6 +65,13 @@ export const filtersActions = {
       activeTable: tableName,
     }))
   },
+
+  setAsOfDate: (asOfDate: string | null) => {
+    filtersStore.setState((state) => ({
+      ...state,
+      asOfDate,
+    }))
+  },
 }
 
 // Selectors
@@ -71,4 +80,5 @@ export const filtersSelectors = {
   getActiveFilters: () => filtersStore.state.filters.filter(f => f.value?.length > 0),
   getFiltersByType: (type: string) => filtersStore.state.filters.filter(f => f.type === type),
   getActiveTable: () => filtersStore.state.activeTable,
+  getAsOfDate: () => filtersStore.state.asOfDate,
 }

@@ -21,8 +21,8 @@ interface FilterCondition {
 const formatDate = (date: Date): string => date.toISOString().split('T')[0]
 
 // Helper function to parse relative date
-const parseRelativeDate = (relativeDate: string): string => {
-  const now = new Date()
+const parseRelativeDate = (relativeDate: string, baseDate?: string): string => {
+  const now = baseDate ? new Date(baseDate) : new Date()
   
   switch (relativeDate) {
     case 'latest':
@@ -167,7 +167,7 @@ function buildQuery(measures: StatMeasure[], asOfDate: string, tableName: string
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { measures, relativeDt, filters } = body
+    const { measures, relativeDt, asOfDate, filters } = body
 
     if (!measures || !Array.isArray(measures) || measures.length === 0) {
       return NextResponse.json(
@@ -202,15 +202,17 @@ export async function POST(request: NextRequest) {
     }> = {}
     
     // Convert relative dates to actual dates
-    const requestedDate = parseRelativeDate(relativeDt)
-    const latestDate = parseRelativeDate('latest')
+    // Use provided asOfDate or fallback to latest
+    const latestDate = asOfDate || parseRelativeDate('latest')
+    // Calculate the requested date relative to the asOfDate if provided
+    const requestedDate = parseRelativeDate(relativeDt, asOfDate)
     
     // Process each table separately
     for (const [tableName, tableMeasures] of Object.entries(measuresByTable)) {
       // Find the closest available dates for this table
       const actualRequestedDate = await findClosestDate(requestedDate, tableName)
       const actualLatestDate = await findClosestDate(latestDate, tableName)
-      
+      // console.log(`Processing table: ${tableName}, Requested Date: ${actualRequestedDate}, Latest Date: ${actualLatestDate}`)
       // Build queries for both dates with filters
       const requestedQuery = buildQuery(tableMeasures, actualRequestedDate, tableName, filters)
       const latestQuery = buildQuery(tableMeasures, actualLatestDate, tableName, filters)
@@ -218,7 +220,7 @@ export async function POST(request: NextRequest) {
       const filterHash = Buffer.from(JSON.stringify(filters || [])).toString('base64')
       const measureHash = Buffer.from(JSON.stringify(tableMeasures.map(m => m.key))).toString('base64')
       const cacheKeyRequested = `stats:${tableName}:${relativeDt}:${measureHash}:${filterHash}`
-      const cacheKeyLatest = `stats:${tableName}:latest:${measureHash}:${filterHash}`
+      const cacheKeyLatest = `stats:${tableName}:${asOfDate || 'latest'}:${measureHash}:${filterHash}`
      
       // Execute both queries in parallel
       const [requestedData, latestData] = await Promise.all([
