@@ -41,10 +41,15 @@ export default function FinancingPage() {
           filters={filters}
         />
         
-        {/* Historical Cashout Chart */}
-        <HistoricalCashoutChart 
-          className="w-full"
-        />
+        {/* Historical Cashout Chart - 5 columns of 8 on the left */}
+        <div className="grid grid-cols-8 gap-6">
+          <div className="col-span-5">
+            <HistoricalCashoutChart />
+          </div>
+          <div className="col-span-3">
+            {/* Right side content can go here */}
+          </div>
+        </div>
         
         {/* Debug: Show active filters and asOfDate */}
         {(filters.length > 0 || asOfDate) && (

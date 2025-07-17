@@ -7,14 +7,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { 
   ChartContainer, 
   ChartTooltip, 
-  ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
   type ChartConfig 
 } from "@/components/ui/chart"
 import { useHistoricalData } from "@/lib/query/historical"
 import { filtersStore } from "@/lib/store/filters"
-import { Loader2, AlertCircle, BarChart3 } from "lucide-react"
+import { riskFilterConfig } from "@/components/filters/risk-filter.config"
+import { Button } from "@/components/ui/button"
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Loader2, AlertCircle, BarChart3, Maximize2, X, Settings, Download } from "lucide-react"
 
 interface HistoricalCashoutChartProps {
   className?: string
@@ -102,10 +117,54 @@ export function HistoricalCashoutChart({
   const filters = useStore(filtersStore, (state) => state.filters)
   const asOfDate = useStore(filtersStore, (state) => state.asOfDate)
   
+  // Chart configuration state
+  const [fieldName, setFieldName] = React.useState("cashOut")
+  const [groupBy, setGroupBy] = React.useState("vcProduct")
+  const [isFullscreen, setIsFullscreen] = React.useState(false)
+  const [showSettings, setShowSettings] = React.useState(false)
+  
+  // Field options for the chart
+  const fieldOptions = [
+    { value: "cashOut", label: "Cash Out" },
+    { value: "notional", label: "Notional Amount" },
+  ]
+  
+  // GroupBy options from filter config
+  const groupByOptions = [
+    { value: "none", label: "None" },
+    ...Object.entries(riskFilterConfig.filterTypes).map(([key, value]) => ({
+      value: value,
+      label: key
+    }))
+  ]
+  
+  // Download function
+  const handleDownload = () => {
+    if (!data?.data) return
+    
+    const csvData = data.data.map(row => ({
+      asOfDate: row.asOfDate,
+      ...row
+    }))
+    
+    const csvContent = [
+      Object.keys(csvData[0]).join(','),
+      ...csvData.map(row => Object.values(row).join(','))
+    ].join('\n')
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `historical-${fieldName}-data.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+  
   const { data, isLoading, error } = useHistoricalData({
     table: "risk_f_mv",
-    fieldName: "cashOut",
-    groupBy: "vcProduct",
+    fieldName,
+    groupBy: groupBy === "none" ? undefined : groupBy,
     asOfDate,
     filters
   })
@@ -172,31 +231,87 @@ export function HistoricalCashoutChart({
   const chartConfig = generateChartConfig(data.data, isStacked)
   const uniqueProducts = Object.keys(chartConfig)
 
-  return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BarChart3 className="size-5" />
-          Historical Cashout {data?.meta.groupBy ? `by ${data.meta.groupBy}` : ''}
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          {data?.meta.groupBy && (
-            <span className="ml-2 text-xs bg-orange-100 text-blue-800 px-2 py-1 rounded">
-              Stacked by {data.meta.groupBy}
-            </span>
-          )}
-        </p>
-      </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="h-[400px]">
-          <BarChart
-            data={chartData}
-            margin={{
-              left: 12,
-              right: 12,
-              top: 12,
-              bottom: 12,
-            }}
+  // Toolbar component
+  const ChartToolbar = () => (
+    <div className="flex items-center gap-1">
+      <Dialog open={showSettings} onOpenChange={setShowSettings}>
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="sm">
+            <Settings className="size-4" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Chart Settings</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Field Name</label>
+              <Select value={fieldName} onValueChange={setFieldName}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {fieldOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Group By</label>
+              <Select value={groupBy} onValueChange={setGroupBy}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {groupByOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Button variant="ghost" size="sm" onClick={handleDownload} disabled={!data?.data}>
+        <Download className="size-4" />
+      </Button>
+      <Button variant="ghost" size="sm" onClick={() => setIsFullscreen(true)}>
+        <Maximize2 className="size-4" />
+      </Button>
+    </div>
+  )
+
+  const chartContent = (
+    <div className={isFullscreen ? "fixed inset-0 bg-background z-50 flex flex-col" : ""}>
+      {isFullscreen && (
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-semibold">Historical {fieldOptions.find(f => f.value === fieldName)?.label}</h2>
+          <Button variant="ghost" size="sm" onClick={() => setIsFullscreen(false)}>
+            <X className="size-4" />
+          </Button>
+        </div>
+      )}
+      <Card className={isFullscreen ? "flex-1 border-0 shadow-none" : className}>
+        <div className="px-6 pt-4 pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="size-5" />
+              Historical Cashout by VC Product
+            </CardTitle>
+            <ChartToolbar />
+          </div>
+        </div>
+        <CardContent className={isFullscreen ? "pt-4 pb-8" : "pt-4"}>
+          <ChartContainer config={chartConfig} className={isFullscreen ? "h-[calc(100vh-250px)]" : "h-[500px]"}>
+            <BarChart
+              data={chartData}
+         
           >
             <CartesianGrid vertical={false} />
             <XAxis
@@ -272,5 +387,8 @@ export function HistoricalCashoutChart({
         </ChartContainer>
       </CardContent>
     </Card>
+  </div>
   )
+
+  return chartContent
 }
