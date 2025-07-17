@@ -5,6 +5,7 @@ import { RiskFilter } from "@/components/filters/risk-filter"
 import { riskFilterConfig } from "@/components/filters/risk-filter.config"
 import { AsOfDateSelect } from "@/components/filters/as-of-date-select"
 import { StatCards, defaultStatConfigs } from "@/components/stats/stat-cards"
+import { HistoricalCashoutChart } from "@/components/charts/historical-cashout-chart"
 import { useStore } from "@tanstack/react-store"
 import { filtersStore } from "@/lib/store/filters"
 
@@ -40,7 +41,10 @@ export default function FinancingPage() {
           filters={filters}
         />
         
-   
+        {/* Historical Cashout Chart */}
+        <HistoricalCashoutChart 
+          className="w-full"
+        />
         
         {/* Debug: Show active filters and asOfDate */}
         {(filters.length > 0 || asOfDate) && (
