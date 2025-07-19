@@ -277,13 +277,13 @@ export function HistoricalCashoutChart({
   const chartConfig = generateChartConfig(chartData, isStacked)
   const sanitizedGroups = Object.keys(chartConfig)
   
-  // Debug logging
-  console.log('Chart Debug:', {
-    isStacked,
-    sanitizedGroups,
-    chartConfig,
-    groupByField: data.meta.groupBy
-  })
+  // // Debug logging
+  // console.log('Chart Debug:', {
+  //   isStacked,
+  //   sanitizedGroups,
+  //   chartConfig,
+  //   groupByField: data.meta.groupBy
+  // })
 
   // Toolbar component
   const ChartToolbar = () => (
@@ -362,7 +362,7 @@ export function HistoricalCashoutChart({
           </div>
         </div>
         <CardContent className={isFullscreen ? "pt-4 pb-8 px-0" : "pt-4 px-0"}>
-          <ChartContainer config={chartConfig} className={isFullscreen ? "h-[calc(100vh-250px)]" : "h-[500px]"}>
+          <ChartContainer config={chartConfig} className={isFullscreen ? "h-[calc(100vh-250px)]" : "h-auto min-h-[400px] aspect-[2/1]"}>
             <BarChart
               data={chartData}
               margin={{ top: 20, right: 20, left: 20, bottom: 5 }}
