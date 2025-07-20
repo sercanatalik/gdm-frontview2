@@ -15,6 +15,7 @@ import {
   type ChartConfig 
 } from "@/components/ui/chart"
 import { useHistoricalData } from "@/lib/query/historical"
+import { useFutureData } from "@/lib/query/future"
 import { filtersStore } from "@/lib/store/filters"
 import { riskFilterConfig } from "@/components/filters/risk-filter.config"
 import { Button } from "@/components/ui/button"
@@ -176,8 +177,12 @@ export function HistoricalCashoutChart({
   const [activeTab, setActiveTab] = React.useState("historical")
   
   // PNG export functionality using html2canvas-pro
-  const chartRef = React.useRef<HTMLDivElement>(null)
+  const historicalChartRef = React.useRef<HTMLDivElement>(null)
+  const futureChartRef = React.useRef<HTMLDivElement>(null)
   const [exportLoading, setExportLoading] = React.useState(false)
+  
+  // Get current chart ref based on active tab
+  const chartRef = activeTab === "historical" ? historicalChartRef : futureChartRef
   
   // Field options for the chart
   const fieldOptions = [
@@ -211,7 +216,7 @@ export function HistoricalCashoutChart({
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `historical-${fieldName}-data.csv`
+    a.download = `${activeTab}-${fieldName}-data.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -233,7 +238,7 @@ export function HistoricalCashoutChart({
       
       canvas.toBlob((blob) => {
         if (blob) {
-          FileSaver.saveAs(blob, `historical-${fieldName}-chart.png`)
+          FileSaver.saveAs(blob, `${activeTab}-${fieldName}-chart.png`)
         }
         setExportLoading(false)
       }, 'image/png')
@@ -243,15 +248,28 @@ export function HistoricalCashoutChart({
       alert('Unable to save chart as image. Please try again.')
       setExportLoading(false)
     }
-  }, [fieldName])
+  }, [fieldName, activeTab])
   
-  const { data, isLoading, error } = useHistoricalData({
+  const { data: historicalData, isLoading: historicalLoading, error: historicalError } = useHistoricalData({
     table: "risk_f_mv",
     fieldName,
     groupBy: groupBy === "none" ? undefined : groupBy,
     asOfDate,
     filters
   })
+
+  const { data: futureData, isLoading: futureLoading, error: futureError } = useFutureData({
+    table: "risk_f_mv",
+    fieldName,
+    groupBy: groupBy === "none" ? undefined : groupBy,
+    asOfDate,
+    filters
+  })
+
+  // Use appropriate data based on active tab
+  const data = activeTab === "historical" ? historicalData : futureData
+  const isLoading = activeTab === "historical" ? historicalLoading : futureLoading
+  const error = activeTab === "historical" ? historicalError : futureError
 
   if (isLoading) {
     return (
@@ -400,7 +418,7 @@ export function HistoricalCashoutChart({
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsContent value="historical" className="m-0">
             <CardContent className={isFullscreen ? "pt-4 pb-8 px-0" : "pt-4 px-0"}>
-          <ChartContainer ref={chartRef} config={chartConfig} className={isFullscreen ? "h-[calc(100vh-250px)]" : "h-auto min-h-[400px] aspect-[2/1]"}>
+          <ChartContainer ref={historicalChartRef} config={chartConfig} className={isFullscreen ? "h-[calc(100vh-250px)]" : "h-auto min-h-[400px] aspect-[2/1]"}>
             <BarChart
               data={chartData}
               margin={{ top: 20, right: 20, left: 20, bottom: 5 }}
@@ -482,9 +500,83 @@ export function HistoricalCashoutChart({
           
           <TabsContent value="future" className="m-0">
             <CardContent className={isFullscreen ? "pt-4 pb-8 px-0" : "pt-4 px-0"}>
-              <div className="flex items-center justify-center h-[400px] text-muted-foreground">
-                <span>Future analytics coming soon...</span>
-              </div>
+              <ChartContainer ref={futureChartRef} config={chartConfig} className={isFullscreen ? "h-[calc(100vh-250px)]" : "h-auto min-h-[400px] aspect-[2/1]"}>
+                <BarChart
+                  data={chartData}
+                  margin={{ top: 20, right: 20, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    minTickGap={32}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tickFormatter={formatCurrency}
+                  />
+                  <ChartTooltip
+                    cursor={false}
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload || payload.length === 0) {
+                        return null
+                      }
+
+                      const fullDate = payload[0]?.payload?.fullDate
+                      const dateLabel = fullDate 
+                        ? new Date(fullDate).toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })
+                        : label
+
+                      return (
+                        <div className="bg-background border border-border/50 rounded-lg p-3 shadow-xl">
+                          <p className="font-medium mb-2">{dateLabel}</p>
+                          <div className="space-y-1">
+                            <table className="w-full">
+                              <tbody>
+                                {payload.map((item, index) => (
+                                  <tr key={index} className="text-sm">
+                                    <td className="pr-2">
+                                      <div 
+                                        className="w-3 h-3 rounded-sm"
+                                        style={{ backgroundColor: item.color }}
+                                      />
+                                    </td>
+                                    <td className="pr-4 text-muted-foreground">
+                                      {item.name}
+                                    </td>
+                                    <td className="text-right font-mono font-medium">
+                                      {formatCurrency(item.value as number)}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )
+                    }}
+                  />
+                  <ChartLegend content={<ChartLegendContent payload={[]} />} />
+                  {sanitizedGroups.map((sanitizedGroup) => (
+                    <Bar
+                      key={sanitizedGroup}
+                      dataKey={sanitizedGroup}
+                      stackId={data?.meta.groupBy ? "stacked" : undefined}
+                      fill={`var(--color-${sanitizedGroup})`}
+                      radius={data?.meta.groupBy ? [0, 0, 0, 0] : [4, 4, 0, 0]}
+                    />
+                  ))}
+                </BarChart>
+              </ChartContainer>
             </CardContent>
           </TabsContent>
         </Tabs>
