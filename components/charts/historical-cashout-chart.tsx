@@ -29,7 +29,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Loader2, AlertCircle, BarChart3, Maximize2, X, Settings, Download } from "lucide-react"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Loader2, AlertCircle, BarChart3, Maximize2, X, Settings, Download, Image } from "lucide-react"
 
 interface HistoricalCashoutChartProps {
   className?: string
@@ -169,6 +170,7 @@ export function HistoricalCashoutChart({
   const [groupBy, setGroupBy] = React.useState("vcProduct")
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   const [showSettings, setShowSettings] = React.useState(false)
+  const [activeTab, setActiveTab] = React.useState("historical")
   
   // Field options for the chart
   const fieldOptions = [
@@ -218,12 +220,7 @@ export function HistoricalCashoutChart({
   if (isLoading) {
     return (
       <Card className={className}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="size-5" />
-            Historical Cashout by VC Product
-          </CardTitle>
-        </CardHeader>
+      
         <CardContent>
           <div className="flex justify-center items-center h-[400px]">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -237,10 +234,7 @@ export function HistoricalCashoutChart({
     return (
       <Card className={className}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="size-5" />
-            Historical Cashout by VC Product
-          </CardTitle>
+        
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-[400px] text-muted-foreground">
@@ -257,12 +251,7 @@ export function HistoricalCashoutChart({
   if (!data?.data || data.data.length === 0) {
     return (
       <Card className={className}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="size-5" />
-            Historical Cashout by VC Product
-          </CardTitle>
-        </CardHeader>
+       
         <CardContent>
           <div className="flex items-center justify-center h-[400px] text-muted-foreground">
             <span>No data available for the selected period</span>
@@ -352,16 +341,24 @@ export function HistoricalCashoutChart({
         </div>
       )}
       <Card className={isFullscreen ? "flex-1 border-0 shadow-none" : className}>
-        <div className="px-4 pt-2 pb-1">
+        <div className="px-5 pt-0 pb-0">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-1">
-              <BarChart3 className="size-4" />
-              Historical Cashout by VC Product
-            </CardTitle>
+            <div className="flex items-center gap-2">
+              <BarChart3 className="size-5" />
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid w-fit grid-cols-2">
+                  <TabsTrigger value="historical">Historical {fieldOptions.find(f => f.value === fieldName)?.label}</TabsTrigger>
+                  <TabsTrigger value="future">Future {fieldOptions.find(f => f.value === fieldName)?.label}</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
             <ChartToolbar />
           </div>
         </div>
-        <CardContent className={isFullscreen ? "pt-4 pb-8 px-0" : "pt-4 px-0"}>
+        
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsContent value="historical" className="m-0">
+            <CardContent className={isFullscreen ? "pt-4 pb-8 px-0" : "pt-4 px-0"}>
           <ChartContainer config={chartConfig} className={isFullscreen ? "h-[calc(100vh-250px)]" : "h-auto min-h-[400px] aspect-[2/1]"}>
             <BarChart
               data={chartData}
@@ -438,10 +435,20 @@ export function HistoricalCashoutChart({
               />
             ))}
           </BarChart>
-        </ChartContainer>
-      </CardContent>
-    </Card>
-  </div>
+            </ChartContainer>
+            </CardContent>
+          </TabsContent>
+          
+          <TabsContent value="future" className="m-0">
+            <CardContent className={isFullscreen ? "pt-4 pb-8 px-0" : "pt-4 px-0"}>
+              <div className="flex items-center justify-center h-[400px] text-muted-foreground">
+                <span>Future analytics coming soon...</span>
+              </div>
+            </CardContent>
+          </TabsContent>
+        </Tabs>
+      </Card>
+    </div>
   )
 
   return chartContent
