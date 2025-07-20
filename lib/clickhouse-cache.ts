@@ -56,7 +56,7 @@ export class ClickHouseCacheService {
     try {
       if (this.redis.status === 'ready') {
         await this.redis.setex(actualCacheKey, cacheTTL, JSON.stringify(data))
-        console.log(`Cache WRITE for key: ${actualCacheKey}, TTL: ${cacheTTL}s`)
+        // console.log(`Cache WRITE for key: ${actualCacheKey}, TTL: ${cacheTTL}s`)
       } else {
         console.warn(`Cannot write to cache. Redis status: ${this.redis.status}`)
       }

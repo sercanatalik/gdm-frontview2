@@ -108,12 +108,12 @@ const generateChartConfig = (data: any[], isStacked: boolean = false): ChartConf
   })
   
   // Debug logging for color generation
-  console.log('Color Debug:', {
-    uniqueGroups,
-    isStacked,
-    colorsGenerated: colors,
-    finalConfig: config
-  })
+  // console.log('Color Debug:', {
+  //   uniqueGroups,
+  //   isStacked,
+  //   colorsGenerated: colors,
+  //   finalConfig: config
+  // })
   
   return config
 }
