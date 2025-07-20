@@ -125,7 +125,7 @@ const formatCurrency = (value: number): string => {
 }
 
 // Process data for the chart
-const processChartData = (data: any[]) => {
+const processChartData = (data: any[], dataType: 'historical' | 'future' = 'historical') => {
   // Group by date and sum by groupBy field
   const groupedData: Record<string, Record<string, number>> = {}
   
@@ -135,10 +135,12 @@ const processChartData = (data: any[]) => {
     
     // Find the groupBy field value (could be desk, vcProduct, etc.)
     const groupByField = Object.keys(item).find(key => 
-      key !== 'asOfDate' && key !== 'value'
+      key !== 'asOfDate' && key !== 'value' && key !== 'monthly_value'
     )
     const groupValue = groupByField ? (item[groupByField] || 'Unknown') : 'Total'
-    const value = item.value || 0
+    
+    // Use monthly_value for future data, value for historical data
+    const value = dataType === 'future' ? (item.monthly_value || 0) : (item.value || 0)
     
     if (!groupedData[dateStr]) {
       groupedData[dateStr] = {}
@@ -154,7 +156,8 @@ const processChartData = (data: any[]) => {
     .map(([date, groups]) => ({
       date: new Date(date).toLocaleDateString('en-US', { 
         month: 'short', 
-        day: 'numeric' 
+        // day: 'numeric', 
+        year: 'numeric'
       }),
       fullDate: date,
       ...groups
@@ -315,7 +318,7 @@ export function HistoricalCashoutChart({
     )
   }
 
-  const chartData = processChartData(data.data)
+  const chartData = processChartData(data.data, activeTab)
   const isStacked = Boolean(data.meta.groupBy)
   const chartConfig = generateChartConfig(chartData, isStacked)
   const sanitizedGroups = Object.keys(chartConfig)
