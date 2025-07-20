@@ -6,6 +6,7 @@ import { riskFilterConfig } from "@/components/filters/risk-filter.config"
 import { AsOfDateSelect } from "@/components/filters/as-of-date-select"
 import { StatCards, defaultStatConfigs } from "@/components/stats/stat-cards"
 import { HistoricalCashoutChart } from "@/components/charts/historical-cashout-chart"
+import { RecentTradesCard } from "@/components/recent-trades-card"
 import { useStore } from "@tanstack/react-store"
 import { filtersStore } from "@/lib/store/filters"
 
@@ -47,7 +48,7 @@ export default function FinancingPage() {
             <HistoricalCashoutChart />
           </div>
           <div className="col-span-3">
-            {/* Right side content can go here */}
+            <RecentTradesCard filters={filters} />
           </div>
         </div>
         
