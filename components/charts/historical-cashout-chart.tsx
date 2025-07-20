@@ -1,9 +1,12 @@
 "use client"
 
 import * as React from "react"
+import { useCallback } from "react"
 import { useStore } from "@tanstack/react-store"
 import { Bar, BarChart, XAxis, YAxis, CartesianGrid } from "recharts"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import html2canvas from 'html2canvas-pro'
+import * as FileSaver from "file-saver"
 import { 
   ChartContainer, 
   ChartTooltip, 
@@ -172,6 +175,10 @@ export function HistoricalCashoutChart({
   const [showSettings, setShowSettings] = React.useState(false)
   const [activeTab, setActiveTab] = React.useState("historical")
   
+  // PNG export functionality using html2canvas-pro
+  const chartRef = React.useRef<HTMLDivElement>(null)
+  const [exportLoading, setExportLoading] = React.useState(false)
+  
   // Field options for the chart
   const fieldOptions = [
     { value: "cashOut", label: "Cash Out" },
@@ -187,7 +194,7 @@ export function HistoricalCashoutChart({
     }))
   ]
   
-  // Download function
+  // Download CSV function
   const handleDownload = () => {
     if (!data?.data) return
     
@@ -208,6 +215,35 @@ export function HistoricalCashoutChart({
     a.click()
     URL.revokeObjectURL(url)
   }
+  
+  // Save as PNG function using html2canvas-pro
+  const handleSaveAsPng = useCallback(async () => {
+    if (!chartRef.current) return
+    
+    setExportLoading(true)
+    
+    try {
+      const canvas = await html2canvas(chartRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2, // High quality
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+      })
+      
+      canvas.toBlob((blob) => {
+        if (blob) {
+          FileSaver.saveAs(blob, `historical-${fieldName}-chart.png`)
+        }
+        setExportLoading(false)
+      }, 'image/png')
+      
+    } catch (error) {
+      console.error('Error saving chart as PNG:', error)
+      alert('Unable to save chart as image. Please try again.')
+      setExportLoading(false)
+    }
+  }, [fieldName])
   
   const { data, isLoading, error } = useHistoricalData({
     table: "risk_f_mv",
@@ -324,9 +360,14 @@ export function HistoricalCashoutChart({
       <Button variant="ghost" size="sm" className="px-1" onClick={handleDownload} disabled={!data?.data}>
         <Download className="size-3" />
       </Button>
-      <Button variant="ghost" size="sm" className="px-1" onClick={() => setIsFullscreen(true)}>
-        <Maximize2 className="size-3" />
+      <Button variant="ghost" size="sm" className="px-1" onClick={handleSaveAsPng} disabled={!data?.data || exportLoading}>
+        <Image className="size-3" />
       </Button>
+      {!isFullscreen && (
+        <Button variant="ghost" size="sm" className="px-1" onClick={() => setIsFullscreen(true)}>
+          <Maximize2 className="size-3" />
+        </Button>
+      )}
     </div>
   )
 
@@ -359,7 +400,7 @@ export function HistoricalCashoutChart({
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsContent value="historical" className="m-0">
             <CardContent className={isFullscreen ? "pt-4 pb-8 px-0" : "pt-4 px-0"}>
-          <ChartContainer config={chartConfig} className={isFullscreen ? "h-[calc(100vh-250px)]" : "h-auto min-h-[400px] aspect-[2/1]"}>
+          <ChartContainer ref={chartRef} config={chartConfig} className={isFullscreen ? "h-[calc(100vh-250px)]" : "h-auto min-h-[400px] aspect-[2/1]"}>
             <BarChart
               data={chartData}
               margin={{ top: 20, right: 20, left: 20, bottom: 5 }}
