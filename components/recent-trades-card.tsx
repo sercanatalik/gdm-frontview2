@@ -1,11 +1,13 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useRef, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { Loader2, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react"
+import { Loader2, AlertCircle, ChevronLeft, ChevronRight, Download, Image } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRecentTrades, type Trade } from "@/lib/query/recent-trades"
+import html2canvas from 'html2canvas-pro'
+import * as FileSaver from "file-saver"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface RecentTradesCardProps {
@@ -18,6 +20,7 @@ const ITEMS_PER_PAGE = 10
 export function RecentTradesCard({ filters = [], className }: RecentTradesCardProps) {
   const [currentPage, setCurrentPage] = useState(0)
   const { data: trades = [], isLoading, error } = useRecentTrades(filters, 50)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   const totalPages = Math.ceil(trades.length / ITEMS_PER_PAGE)
   const startIndex = currentPage * ITEMS_PER_PAGE
@@ -67,6 +70,59 @@ export function RecentTradesCard({ filters = [], className }: RecentTradesCardPr
     setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))
   }
 
+  const handleExportPNG = useCallback(async () => {
+    if (!cardRef.current) return
+
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: false
+      })
+      
+      canvas.toBlob((blob) => {
+        if (blob) {
+          FileSaver.saveAs(blob, `recent-trades-${new Date().toISOString().split('T')[0]}.png`)
+        }
+      })
+    } catch (error) {
+      console.error('Failed to export PNG:', error)
+    }
+  }, [])
+
+  const handleDownloadData = useCallback(() => {
+    if (!trades || trades.length === 0) return
+
+    // Create CSV content
+    const headers = ['ID', 'Counterparty', 'Instrument', 'Trade Date', 'Maturity Date', 'Notional', 'Cash Out', 'Desk']
+    const csvData = trades.map(trade => [
+      trade.id,
+      trade.counterparty,
+      trade.instrument,
+      trade.tradeDate,
+      trade.maturityDt,
+      trade.notional,
+      trade.cashOut,
+      trade.desk
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => row.map(field => 
+        // Escape commas and quotes in CSV
+        typeof field === 'string' && (field.includes(',') || field.includes('"')) 
+          ? `"${field.replace(/"/g, '""')}"` 
+          : field
+      ).join(','))
+    ].join('\n')
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    FileSaver.saveAs(blob, `recent-trades-data-${new Date().toISOString().split('T')[0]}.csv`)
+  }, [trades])
+
   if (isLoading) {
     return (
       <Card className={cn("min-h-[100px]", className)}>
@@ -82,7 +138,7 @@ export function RecentTradesCard({ filters = [], className }: RecentTradesCardPr
 
   if (error) {
     return (
-      <Card className={cn("min-h-[400px]", className)}>
+      <Card className={cn("min-h-[300px]", className)}>
         <CardHeader>
           <CardTitle>Recent Trades</CardTitle>
         </CardHeader>
@@ -97,12 +153,34 @@ export function RecentTradesCard({ filters = [], className }: RecentTradesCardPr
   }
 
   return (
-    <Card className={cn("min-h-[400px]", className)}>
-      <CardHeader>
-        <CardTitle>Recent Trades</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          This month's activity: {stats.tradeCount} trades across {stats.counterparties} counterparties, {stats.instruments} instruments, and {stats.currencies} currencies
-        </p>
+    <Card ref={cardRef} className={cn("min-h-[400px]", className)}>
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+        <div className="space-y-1">
+          <CardTitle>Recent Trades</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            This month's activity: {stats.tradeCount} trades across {stats.counterparties} counterparties, {stats.instruments} instruments, and {stats.currencies} currencies
+          </p>
+        </div>
+        <div className="flex items-center gap-0">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="px-1" 
+            onClick={handleDownloadData} 
+            disabled={!trades || trades.length === 0}
+          >
+            <Download className="size-3" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="px-1" 
+            onClick={handleExportPNG} 
+            disabled={!trades || trades.length === 0}
+          >
+            <Image className="size-3" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         <ScrollArea className="h-150">

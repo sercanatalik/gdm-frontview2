@@ -421,7 +421,7 @@ export function HistoricalCashoutChart({
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsContent value="historical" className="m-0">
             <CardContent className={isFullscreen ? "pt-4 pb-8 px-0" : "pt-4 px-0"}>
-          <ChartContainer ref={historicalChartRef} config={chartConfig} className={isFullscreen ? "h-[calc(100vh-250px)]" : "h-auto min-h-[400px] aspect-[2/1]"}>
+          <ChartContainer ref={historicalChartRef} config={chartConfig} className={isFullscreen ? "h-[calc(100vh-250px)]" : "h-[400px] w-full"}>
             <BarChart
               data={chartData}
               margin={{ top: 20, right: 20, left: 20, bottom: 5 }}
@@ -503,7 +503,7 @@ export function HistoricalCashoutChart({
           
           <TabsContent value="future" className="m-0">
             <CardContent className={isFullscreen ? "pt-4 pb-8 px-0" : "pt-4 px-0"}>
-              <ChartContainer ref={futureChartRef} config={chartConfig} className={isFullscreen ? "h-[calc(100vh-250px)]" : "h-auto min-h-[400px] aspect-[2/1]"}>
+              <ChartContainer ref={futureChartRef} config={chartConfig} className={isFullscreen ? "h-[calc(100vh-250px)]" : "h-[400px] w-full"}>
                 <BarChart
                   data={chartData}
                   margin={{ top: 20, right: 20, left: 20, bottom: 5 }}
