@@ -14,7 +14,7 @@ export const NavigationCard = ({ href, title }: NavigationCardProps) => {
     <Link href={href} className="block aspect-square">
       <Card
         className={cn(
-          "dark flex h-full w-full flex-col items-center justify-center gap-0 rounded-lg border-white p-6 text-center shadow-lg transition-shadow duration-300 hover:shadow-xl"
+          "dark flex h-full w-full flex-col items-center justify-center gap-0 rounded-lg border-white p-3 text-center shadow-lg transition-shadow duration-300 hover:shadow-xl"
         )}
       >
         <CardTitle className="text-xl font-semibold">{title}</CardTitle>

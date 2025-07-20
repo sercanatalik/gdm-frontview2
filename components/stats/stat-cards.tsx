@@ -110,7 +110,7 @@ export function StatCards({ measures, relativeDt, asOfDate, className, filters }
   const { data, isLoading, error } = useStatsData(measures, relativeDt, asOfDate, filters)
 
   return (
-    <div className={cn("grid gap-4 md:grid-cols-2 lg:grid-cols-6", className)}>
+    <div className={cn("grid gap-2 md:grid-cols-2 lg:grid-cols-6", className)}>
       {measures.map((measure) => (
         <StatCard
           key={measure.key}
