@@ -138,7 +138,7 @@ export function RecentTradesCard({ filters = [], className }: RecentTradesCardPr
 
   if (error) {
     return (
-      <Card className={cn("min-h-[300px]", className)}>
+      <Card className={cn("min-h-[350px]", className)}>
         <CardHeader>
           <CardTitle>Recent Trades</CardTitle>
         </CardHeader>
@@ -153,9 +153,9 @@ export function RecentTradesCard({ filters = [], className }: RecentTradesCardPr
   }
 
   return (
-    <Card ref={cardRef} className={cn("min-h-[400px]", className)}>
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-        <div className="space-y-1">
+    <Card ref={cardRef} className={cn("min-h-[200px]", className)}>
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-0">
+        <div className="space-y-[4px]">
           <CardTitle>Recent Trades</CardTitle>
           <p className="text-sm text-muted-foreground">
             This month's activity: {stats.tradeCount} trades across {stats.counterparties} counterparties, {stats.instruments} instruments, and {stats.currencies} currencies
@@ -182,16 +182,16 @@ export function RecentTradesCard({ filters = [], className }: RecentTradesCardPr
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <ScrollArea className="h-150">
+      <CardContent className="space-y-0 pb-0">
+        <ScrollArea >
         {currentTrades.length === 0 ? (
-          <div className="text-sm text-muted-foreground text-center py-8">
+          <div className="text-sm text-muted-foreground text-center ">
             No trades available
           </div>
         ) : (
           <>
             {currentTrades.map((trade) => (
-              <div key={trade.id} className="flex items-center justify-between py-2">
+              <div key={trade.id} className="flex items-center justify-between py-2 px-3 border-b last:border-0 hover:bg-muted transition-colors">
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
                     {getInitials(trade.counterparty)}
@@ -212,7 +212,7 @@ export function RecentTradesCard({ filters = [], className }: RecentTradesCardPr
             ))}
             
             {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center justify-between pt-0">
                 <Button
                   variant="ghost"
                   size="sm"

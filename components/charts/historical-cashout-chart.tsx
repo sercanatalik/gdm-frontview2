@@ -318,7 +318,7 @@ export function HistoricalCashoutChart({
     )
   }
 
-  const chartData = processChartData(data.data, activeTab)
+  const chartData = processChartData(data.data, activeTab as 'historical' | 'future')
   const isStacked = Boolean(data.meta.groupBy)
   const chartConfig = generateChartConfig(chartData, isStacked)
   const sanitizedGroups = Object.keys(chartConfig)

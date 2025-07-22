@@ -44,8 +44,16 @@ export default function FinancingPage() {
         
         {/* Historical Cashout Chart - 5 columns of 8 on the left */}
         <div className="grid grid-cols-8 gap-6">
-          <div className="col-span-5">
-            <HistoricalCashoutChart />
+          <div className="col-span-5 space-y-6">
+           
+            <StatCards 
+              measures={defaultStatConfigs}
+              relativeDt="-6m"
+              asOfDate={asOfDate}
+              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
+              filters={filters}
+            />
+             <HistoricalCashoutChart />
           </div>
           <div className="col-span-3">
             <RecentTradesCard filters={filters} />
