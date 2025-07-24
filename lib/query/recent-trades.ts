@@ -14,10 +14,11 @@ export interface Trade {
 // React Query hook for fetching recent trades data
 export const useRecentTrades = (
   filters: any[] = [],
-  limit: number = 50
+  limit: number = 50,
+  asOfDate?: string
 ) => {
   return useQuery({
-    queryKey: ['recent-trades', filters, limit],
+    queryKey: ['recent-trades', filters, limit, asOfDate],
     queryFn: async (): Promise<Trade[]> => {
       const response = await fetch('/gdm-frontview/api/data', {
         method: 'POST',
@@ -27,7 +28,8 @@ export const useRecentTrades = (
         body: JSON.stringify({
           table: 'risk_f_mv',
           limit,
-          filters
+          filters,
+          asOfDate
         }),
       })
 

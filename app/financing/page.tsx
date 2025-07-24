@@ -56,7 +56,7 @@ export default function FinancingPage() {
              <HistoricalCashoutChart />
           </div>
           <div className="col-span-3">
-            <RecentTradesCard filters={filters} />
+            <RecentTradesCard filters={filters} asOfDate={asOfDate || undefined} />
           </div>
         </div>
         

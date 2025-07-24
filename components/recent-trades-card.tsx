@@ -13,13 +13,14 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 interface RecentTradesCardProps {
   filters?: any[]
   className?: string
+  asOfDate?: string
 }
 
 const ITEMS_PER_PAGE = 10
 
-export function RecentTradesCard({ filters = [], className }: RecentTradesCardProps) {
+export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTradesCardProps) {
   const [currentPage, setCurrentPage] = useState(0)
-  const { data: trades = [], isLoading, error } = useRecentTrades(filters, 50)
+  const { data: trades = [], isLoading, error } = useRecentTrades(filters, 50, asOfDate)
   const cardRef = useRef<HTMLDivElement>(null)
 
   const totalPages = Math.ceil(trades.length / ITEMS_PER_PAGE)

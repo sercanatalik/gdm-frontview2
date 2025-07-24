@@ -52,9 +52,11 @@ function buildFilterConditions(filters: FilterCondition[]): string {
 function buildRecentTradesQuery(
   tableName: string,
   limit: number = 50,
-  filters: FilterCondition[] = []
+  filters: FilterCondition[] = [],
+  asOfDate?: string
 ): string {
   const filterConditions = buildFilterConditions(filters)
+  const asOfDateCondition = asOfDate ? ` AND asOfDate = '${asOfDate}'` : ''
   
   return `
     SELECT
@@ -67,7 +69,7 @@ function buildRecentTradesQuery(
       maturityDt,
       desk
     FROM ${tableName}
-    WHERE 1=1${filterConditions}
+    WHERE 1=1${filterConditions}${asOfDateCondition}
     ORDER BY tradeDate DESC, id DESC
     LIMIT ${limit}
   `
@@ -79,7 +81,8 @@ export async function POST(request: NextRequest) {
     const { 
       table = 'risk_f_mv',
       limit = 50,
-      filters = []
+      filters = [],
+      asOfDate
     } = body
     
     // Validate inputs
@@ -100,13 +103,14 @@ export async function POST(request: NextRequest) {
     const cacheService = getClickHouseCacheService(60) // 1 minute cache for recent data
     
     // Build and execute query
-    const query = buildRecentTradesQuery(table, limit, filters)
+    const query = buildRecentTradesQuery(table, limit, filters, asOfDate)
     
     console.log(`Recent trades query for ${table}: ${query}`)
     
     // Generate cache key
     const filterHash = Buffer.from(JSON.stringify(filters || [])).toString('base64')
-    const cacheKey = `recent-trades:${table}:${limit}:${filterHash}`
+    const asOfDateHash = asOfDate ? Buffer.from(asOfDate).toString('base64') : 'none'
+    const cacheKey = `recent-trades:${table}:${limit}:${filterHash}:${asOfDateHash}`
     
     const result = await cacheService.query<{
       id: string
