@@ -4,7 +4,7 @@ import React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useStatsData, type StatMeasure, type StatConfig, formatters } from "@/lib/query/stats"
 import { cn } from "@/lib/utils"
-import { TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, BarChart3, DollarSign, Users, Activity } from "lucide-react"
+import { Loader2, AlertCircle, BarChart3, DollarSign, Users, Activity } from "lucide-react"
 
 interface StatCardsProps {
   measures: StatMeasure[]
@@ -21,22 +21,6 @@ interface StatData {
   changePercent: number
 }
 
-function getTrendDisplay(data: StatData) {
-  if (data.change === 0) {
-    return {
-      icon: <Minus className="size-4 text-muted-foreground" />,
-      color: "text-muted-foreground"
-    }
-  }
-  
-  const isPositive = data.change > 0
-  return {
-    icon: isPositive 
-      ? <TrendingUp className="size-4 text-green-500" />
-      : <TrendingDown className="size-4 text-red-500" />,
-    color: isPositive ? "text-green-500" : "text-red-500"
-  }
-}
 
 function StatCard({ measure, data, isLoading, error, relativeDt }: {
   measure: StatMeasure
@@ -90,7 +74,7 @@ function StatCard({ measure, data, isLoading, error, relativeDt }: {
           </div>
         ) : data ? (
           <>
-            <div className="text-lg sm:text-xl lg:text-2xl font-bold leading-tight break-all">
+            <div className="text-xl sm:text-xl lg:text-xl xl:text-xl font-bold leading-tight break-all">
               {formatNumber(data.current)}
             </div>
             <p className="text-[9px] sm:text-[10px] text-muted-foreground leading-tight">

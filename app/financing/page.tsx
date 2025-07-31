@@ -1,3 +1,4 @@
+
 "use client"
 
 import { RiskFilter } from "@/components/filters/risk-filter"
@@ -37,7 +38,7 @@ export default function FinancingPage() {
           measures={defaultStatConfigs}
           relativeDt="-6m"
           asOfDate={asOfDate}
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4"
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
           filters={filters}
         />
         
@@ -49,13 +50,13 @@ export default function FinancingPage() {
               measures={defaultStatConfigs}
               relativeDt="-6m"
               asOfDate={asOfDate}
-              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4"
+              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
               filters={filters}
             />
              <HistoricalCashoutChart />
           </div>
           <div className="col-span-3">
-            <RecentTradesCard filters={filters} asOfDate={asOfDate || undefined} />
+            <RecentTradesCard filters={filters} asOfDate={asOfDate ?? undefined} />
           </div>
         </div>
         
