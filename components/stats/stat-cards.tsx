@@ -74,32 +74,32 @@ function StatCard({ measure, data, isLoading, error, relativeDt }: {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
-        <CardTitle className="text-sm font-medium">{measure.label}</CardTitle>
-        {measure.icon || <BarChart3 className="size-4 text-muted-foreground" />}
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 px-3 pt-3">
+        <CardTitle className="text-xs sm:text-sm font-medium leading-tight truncate pr-1">{measure.label}</CardTitle>
+        {measure.icon || <BarChart3 className="size-3 sm:size-4 text-muted-foreground flex-shrink-0" />}
       </CardHeader>
-      <CardContent className="pt-0 space-y-0">
+      <CardContent className="pt-0 space-y-0 px-3 pb-3">
         {isLoading ? (
-          <div className="flex justify-center items-center h-10">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="flex justify-center items-center h-8 sm:h-10">
+            <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-primary" />
           </div>
         ) : error ? (
-          <div className="flex items-center space-x-2">
-            <AlertCircle className="size-4 text-destructive" />
-            <span className="text-sm text-destructive">Error loading data</span>
+          <div className="flex items-center space-x-1 sm:space-x-2">
+            <AlertCircle className="size-3 sm:size-4 text-destructive flex-shrink-0" />
+            <span className="text-xs sm:text-sm text-destructive">Error loading data</span>
           </div>
         ) : data ? (
           <>
-            <div className="text-2xl font-bold">
+            <div className="text-lg sm:text-xl lg:text-2xl font-bold leading-tight break-all">
               {formatNumber(data.current)}
             </div>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-[9px] sm:text-[10px] text-muted-foreground leading-tight">
               {data.change >= 0 ? "+ " : "- "}
               {formatNumber(Math.abs(data.change))} since {getDaysText(relativeDt)} days ago
             </p>
           </>
         ) : (
-          <div className="text-sm text-muted-foreground">No data available</div>
+          <div className="text-xs sm:text-sm text-muted-foreground">No data available</div>
         )}
       </CardContent>
     </Card>
@@ -110,7 +110,7 @@ export function StatCards({ measures, relativeDt, asOfDate, className, filters }
   const { data, isLoading, error } = useStatsData(measures, relativeDt, asOfDate, filters)
 
   return (
-    <div className={cn("grid gap-2 md:grid-cols-2 lg:grid-cols-6", className)}>
+    <div className={cn("grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6", className)}>
       {measures.map((measure) => (
         <StatCard
           key={measure.key}

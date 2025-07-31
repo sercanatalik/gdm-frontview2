@@ -163,7 +163,6 @@ const processChartData = (data: any[], dataType: 'historical' | 'future' = 'hist
       ...groups
     }))
     .sort((a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime())
-    .slice(-30) // Show last 30 data points
 }
 
 export function HistoricalCashoutChart({ 

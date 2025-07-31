@@ -46,7 +46,7 @@ export const riskFilterConfig = {
     "Portfolio": "portfolio",
     "CCY": "ccy",
     "Counterparty": "counterparty",
-    // "As Of Date": "asOfDate",
+    // "As Of Date": "asOfDt",
     "VC Product": "vcProduct",
   },
 

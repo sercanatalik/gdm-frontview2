@@ -65,12 +65,12 @@ function buildRecentTradesQuery(
       notional,
       cashOut,
       instrument,
-      tradeDate,
+      tradeDt,
       maturityDt,
       desk
     FROM ${tableName}
     WHERE 1=1${filterConditions}${asOfDateCondition}
-    ORDER BY tradeDate DESC, id DESC
+    ORDER BY tradeDt DESC, id DESC
     LIMIT ${limit}
   `
 }

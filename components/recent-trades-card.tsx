@@ -102,7 +102,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
       trade.id,
       trade.counterparty,
       trade.instrument,
-      trade.tradeDate,
+      trade.tradeDt,
       trade.maturityDt,
       trade.notional,
       trade.cashOut,
@@ -200,7 +200,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                   <div>
                     <div className="font-medium text-sm">{trade.counterparty}</div>
                     <div className="text-xs text-muted-foreground">
-                      {trade.instrument} • {formatDate(trade.tradeDate)}
+                      {trade.instrument} • {formatDate(trade.tradeDt)}
                     </div>
                   </div>
                 </div>

@@ -6,7 +6,7 @@ export interface Trade {
   notional: number
   cashOut: number
   instrument: string
-  tradeDate: string
+  tradeDt: string
   maturityDt: string
   desk: string
 }
