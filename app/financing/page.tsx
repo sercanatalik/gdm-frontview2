@@ -5,10 +5,12 @@ import { RiskFilter } from "@/components/filters/risk-filter"
 import { riskFilterConfig } from "@/components/filters/risk-filter.config"
 import { AsOfDateSelect } from "@/components/filters/as-of-date-select"
 import { StatCards, defaultStatConfigs } from "@/components/stats/stat-cards"
+import { GroupedStatCard } from "@/components/stats/grouped-stat-card"
 import { HistoricalCashoutChart } from "@/components/charts/historical-cashout-chart"
 import { RecentTradesCard } from "@/components/recent-trades-card"
 import { useStore } from "@tanstack/react-store"
 import { filtersStore } from "@/lib/store/filters"
+import { formatters } from "@/lib/query/stats"
 
 export default function FinancingPage() {
   const filters = useStore(filtersStore, (state) => state.filters)
@@ -41,7 +43,9 @@ export default function FinancingPage() {
           className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
           filters={filters}
         />
-        
+
+        {/* Grouped Stats Cards */}
+       
         {/* Historical Cashout Chart - 5 columns of 8 on the left */}
         <div className="grid grid-cols-8 gap-6">
           <div className="col-span-5 space-y-6">
@@ -79,6 +83,28 @@ export default function FinancingPage() {
             </div>
           </div>
         )}
+
+        {/* Grouped Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 my-6">
+          <GroupedStatCard
+            measure={{
+              key: 'cashOut',
+              label: 'By Desk',
+              field: 'cashOut',
+              tableName: 'risk_f_mv',
+              aggregation: 'sum',
+              formatter: formatters.currency,
+              result1: { field: 'counterparty', aggregation: 'countDistinct' },
+              result2: { field: 'underlyingAmount', aggregation: 'sum' }
+            }}
+            groupBy="desk"
+            relativeDt="-1d"
+            asOfDate={asOfDate}
+            filters={filters}
+          />
+          
+         
+        </div>
       </div>
     </div>
   )

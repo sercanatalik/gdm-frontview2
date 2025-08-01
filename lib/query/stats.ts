@@ -25,6 +25,47 @@ export interface StatData {
   }
 }
 
+export interface GroupedStatMeasure {
+  key: string
+  label: string
+  field: string
+  tableName: string
+  aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min'
+  formatter?: (value: number) => string
+  icon?: React.ReactNode
+  asOfDateField?: string
+  result1?: {
+    field: string
+    aggregation: 'count' | 'countDistinct' | 'sum' | 'avg' | 'max' | 'min'
+  }
+  result2?: {
+    field: string
+    aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min'
+  }
+  result3?: {
+    field: string
+    aggregation: 'sum' | 'count' | 'countDistinct' | 'avg' | 'max' | 'min'
+  }
+  orderBy?: string
+  orderDirection?: 'ASC' | 'DESC'
+  additionalSelectFields?: Array<{
+    field: string
+    aggregation?: 'sum' | 'count' | 'countDistinct' | 'avg' | 'max' | 'min'
+    alias: string
+  }>
+}
+
+export interface GroupedStatData {
+  groupValue: string
+  current: number
+  previous: number
+  change: number
+  changePercent: number
+  counterpartyCount: number
+  notionalAmount: number
+  percentage: number
+}
+
 
 // React Query hook for fetching stats data
 export const useStatsData = (
@@ -56,6 +97,41 @@ export const useStatsData = (
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     enabled: Boolean(measures.length > 0 && relativeDt),
+  })
+}
+
+// React Query hook for fetching grouped stats data
+export const useGroupedStatsData = (
+  measure: GroupedStatMeasure,
+  groupBy: string,
+  relativeDt: string,
+  asOfDate?: string | null,
+  filters: any[] = []
+) => {
+  return useQuery({
+    queryKey: ['grouped-stats', measure.key, groupBy, relativeDt, asOfDate, filters],
+    queryFn: async (): Promise<GroupedStatData[]> => {
+      const response = await fetch('api/grouped-stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          measure,
+          groupBy,
+          relativeDt,
+          asOfDate,
+          filters
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch grouped stats data')
+      }
+
+      return response.json()
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    enabled: Boolean(measure && groupBy && relativeDt),
   })
 }
 
