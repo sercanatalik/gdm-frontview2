@@ -74,7 +74,7 @@ function StatCard({ measure, data, isLoading, error, relativeDt }: {
           </div>
         ) : data ? (
           <>
-            <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold leading-tight break-all">
+            <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-xl font-bold leading-tight break-all">
               {formatNumber(data.current)}
             </div>
             <p className="text-[9px] sm:text-[10px] text-muted-foreground leading-tight">
