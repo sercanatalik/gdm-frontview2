@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useGroupedStatsData, type GroupedStatMeasure, formatters } from "@/lib/query/stats"
 import { cn } from "@/lib/utils"
@@ -41,83 +41,47 @@ const CHART_COLORS = [
 function GroupedStatCard({ measure, groupBy, relativeDt, asOfDate, className, filters }: GroupedStatCardProps) {
   const { data, isLoading, error } = useGroupedStatsData(measure, groupBy, relativeDt, asOfDate, filters)
 
-  // Format numbers with proper truncation for display
-  const formatNumber = (value: number) => {
-    const roundedValue = Math.round(value * 100) / 100
+  // Unified number formatting function
+  const formatValue = (value: number, type: 'currency' | 'count' | 'percentage' = 'count') => {
+    const absValue = Math.abs(value)
+    const sign = value < 0 ? '-' : ''
     
-    if (measure.formatter === formatters.currency) {
-      if (Math.abs(roundedValue) >= 1000000) {
-        const millions = roundedValue / 1000000
-        return `$${millions.toFixed(1)}M`
-      } else if (Math.abs(roundedValue) >= 1000) {
-        const thousands = roundedValue / 1000
-        return `$${thousands.toFixed(1)}K`
-      } else {
-        return `$${roundedValue.toFixed(0)}`
-      }
-    }
+    if (type === 'percentage') return `(${value.toFixed(1)}%)`
     
-    // For non-currency numbers (like counterparty counts)
-    if (Math.abs(roundedValue) >= 1000000) {
-      const millions = roundedValue / 1000000
-      return `${millions.toFixed(1)}M`
-    } else if (Math.abs(roundedValue) >= 1000) {
-      const thousands = roundedValue / 1000
-      return `${thousands.toFixed(1)}K`
-    }
+    const format = (num: number, suffix: string) => 
+      type === 'currency' ? `${sign}$${num.toFixed(1)}${suffix}` : `${sign}${num.toFixed(1)}${suffix}`
     
-    return Math.round(roundedValue).toString()
+    if (absValue >= 1000000) return format(absValue / 1000000, 'M')
+    if (absValue >= 1000) return format(absValue / 1000, 'K')
+    
+    return type === 'currency' ? `${sign}$${Math.round(absValue)}` : Math.round(value).toString()
   }
 
-  // Format counterparty count specifically
-  const formatCounterpartyCount = (value: number) => {
-    if (Math.abs(value) >= 1000) {
-      const thousands = value / 1000
-      return `${thousands.toFixed(1)}K`
-    }
-    return Math.round(value).toString()
-  }
-
-  const formatPercentage = (value: number) => {
-    return `(${value.toFixed(1)}%)`
-  }
-
-  // Chart data - show first 5 categories, aggregate rest as "Others"
-  const chartData = (() => {
-    if (!data || data.length === 0) return []
+  // Generate chart data with top 4 + Others aggregation
+  const chartData = useMemo(() => {
+    if (!data?.length) return []
     
-    if (data.length <= 5) {
-      // Show all items if 5 or fewer
-      return data.map((item, index) => ({
-        name: item.groupValue,
-        value: Math.abs(item.current), // Use absolute value for chart display
-        color: item.groupValue === 'Others' ? '#9ca3af' : CHART_COLORS[index % CHART_COLORS.length]
-      }))
-    } else {
-      // Show first 4 items + aggregate others as 5th item
-      const topItems = data.slice(0, 4)
-      const otherItems = data.slice(4)
-      
-      const othersValue = otherItems.reduce((sum, item) => sum + item.current, 0)
-      
-      const chartItems = topItems.map((item, index) => ({
-        name: item.groupValue,
-        value: Math.abs(item.current), // Use absolute value for chart display
-        color: CHART_COLORS[index % CHART_COLORS.length]
-      }))
-      
-      // Only add Others if there are items to aggregate
-      if (otherItems.length > 0) {
-        chartItems.push({
-          name: 'Others',
-          value: Math.abs(othersValue), // Use absolute value for chart display
-          color: '#9ca3af'
-        })
-      }
-      
-      return chartItems
+    const createChartItem = (item: GroupedStatData, index: number) => ({
+      name: item.groupValue,
+      value: Math.abs(item.current),
+      color: item.groupValue === 'Others' ? '#9ca3af' : CHART_COLORS[index % CHART_COLORS.length]
+    })
+    
+    if (data.length <= 5) return data.map(createChartItem)
+    
+    const [topItems, otherItems] = [data.slice(0, 4), data.slice(4)]
+    const chartItems = topItems.map(createChartItem)
+    
+    if (otherItems.length > 0) {
+      chartItems.push({
+        name: 'Others',
+        value: Math.abs(otherItems.reduce((sum, item) => sum + item.current, 0)),
+        color: '#9ca3af'
+      })
     }
-  })()
+    
+    return chartItems
+  }, [data])
 
   return (
     <Card className={cn("", className)}>
@@ -160,27 +124,13 @@ function GroupedStatCard({ measure, groupBy, relativeDt, asOfDate, className, fi
               
               {/* Chart Labels */}
               {chartData.map((item, index) => {
-                // Calculate percentage for chart data
-                const totalChartValue = chartData.reduce((sum, chartItem) => sum + chartItem.value, 0)
-                const chartPercentage = totalChartValue > 0 ? (item.value / totalChartValue) * 100 : 0
-                
-                // Special positioning for "Others" label
+                const totalValue = chartData.reduce((sum, chartItem) => sum + chartItem.value, 0)
+                const percentage = totalValue > 0 ? (item.value / totalValue) * 100 : 0
                 const isOthers = item.name === 'Others'
-                let labelStyle = {}
                 
-                if (isOthers) {
-                  // Position "Others" at bottom right
-                  labelStyle = {
-                    bottom: '5%',
-                    right: '2%',
-                  }
-                } else {
-                  // Regular positioning for other items
-                  labelStyle = {
-                    top: `${15 + (index * 16)}%`,
-                    left: index % 2 === 0 ? '2%' : '65%',
-                  }
-                }
+                const labelStyle = isOthers 
+                  ? { bottom: '5%', right: '2%' }
+                  : { top: `${15 + (index * 16)}%`, left: index % 2 === 0 ? '2%' : '65%' }
                 
                 return (
                   <div
@@ -190,7 +140,7 @@ function GroupedStatCard({ measure, groupBy, relativeDt, asOfDate, className, fi
                     }`}
                     style={labelStyle}
                   >
-                    {item.name}: ({chartPercentage.toFixed(1)}%)
+                    {item.name}: {formatValue(percentage, 'percentage')}
                   </div>
                 )
               })}
@@ -201,6 +151,8 @@ function GroupedStatCard({ measure, groupBy, relativeDt, asOfDate, className, fi
               <div className="space-y-1.5 pr-1">
                 {data.map((item, index) => {
                   const isOthers = item.groupValue === 'Others'
+                  const currencyType = measure.formatter === formatters.currency ? 'currency' : 'count'
+                  
                   return (
                     <div 
                       key={item.groupValue} 
@@ -224,7 +176,7 @@ function GroupedStatCard({ measure, groupBy, relativeDt, asOfDate, className, fi
                             {item.groupValue}
                           </div>
                           <div className="text-[10px] text-muted-foreground">
-                            {formatCounterpartyCount(item.counterpartyCount)} counterparty
+                            {formatValue(item.counterpartyCount, 'count')} counterparty
                           </div>
                         </div>
                       </div>
@@ -232,10 +184,10 @@ function GroupedStatCard({ measure, groupBy, relativeDt, asOfDate, className, fi
                         <div className={`font-medium text-xs ${
                           isOthers ? 'text-muted-foreground' : ''
                         }`}>
-                          {formatNumber(item.current)} {formatPercentage(item.percentage)}
+                          {formatValue(item.current, currencyType)} {formatValue(item.percentage, 'percentage')}
                         </div>
                         <div className="text-[10px] text-muted-foreground">
-                          {formatNumber(item.notionalAmount)} notional
+                          {formatValue(item.notionalAmount, currencyType)} notional
                         </div>
                       </div>
                     </div>
