@@ -22,6 +22,7 @@ interface GroupedStatMeasure {
   }
   orderBy?: string
   orderDirection?: 'ASC' | 'DESC'
+  limit?: number
   additionalSelectFields?: Array<{
     field: string
     aggregation?: 'sum' | 'count' | 'countDistinct' | 'avg' | 'max' | 'min'
@@ -182,6 +183,7 @@ function buildGroupedQuery(measure: GroupedStatMeasure, groupBy: string, asOfDat
   const asOfDateField = measure.asOfDateField || 'asOfDate'
   const orderBy = measure.orderBy || 'current'
   const orderDirection = measure.orderDirection || 'DESC'
+  const limit = measure.limit || 50
   
   // Build result1 (defaults to counterparty count)
   let result1Query = ''
@@ -231,6 +233,9 @@ function buildGroupedQuery(measure: GroupedStatMeasure, groupBy: string, asOfDat
   
   const additionalSelectsClause = additionalSelects ? `, ${additionalSelects}` : ''
   
+  // For Others aggregation, we need to fetch more data than the limit
+  const queryLimit = (limit <= 12) ? 100 : limit
+  
   return `
     SELECT 
       ${groupBy} as groupValue,
@@ -241,6 +246,7 @@ function buildGroupedQuery(measure: GroupedStatMeasure, groupBy: string, asOfDat
     WHERE ${asOfDateField} = '${asOfDate}'${filterConditions}
     GROUP BY ${groupBy}
     ORDER BY ${orderBy} ${orderDirection}
+    LIMIT ${queryLimit}
   `
 }
 
@@ -298,26 +304,83 @@ export async function POST(request: NextRequest) {
     // Calculate total for percentage calculation
     const totalCurrent = latestData.reduce((sum, item) => sum + item.current, 0)
     
-    // Merge and calculate changes
-    const result: GroupedStatData[] = latestData.map(latestItem => {
-      const requestedItem = requestedData.find(r => r.groupValue === latestItem.groupValue)
-      const previous = requestedItem?.current || 0
-      const current = latestItem.current
-      const change = current - previous
-      const changePercent = previous !== 0 ? (change / previous) * 100 : 0
-      const percentage = totalCurrent > 0 ? (current / totalCurrent) * 100 : 0
+    // Process results with "Others" aggregation
+    const limit = measure.limit || 50
+    let processedData: GroupedStatData[]
+    
+    if (latestData.length > 11 && limit <= 12) {
+      // Take top 11 items
+      const topItems = latestData.slice(0, 11)
+      const otherItems = latestData.slice(11)
       
-      return {
-        groupValue: latestItem.groupValue,
-        current,
-        previous,
-        change,
-        changePercent,
-        counterpartyCount: latestItem.result1,
-        notionalAmount: latestItem.result2,
-        percentage
+      // Aggregate "Others"
+      const othersData = {
+        groupValue: 'Others',
+        current: otherItems.reduce((sum, item) => sum + item.current, 0),
+        result1: otherItems.reduce((sum, item) => sum + item.result1, 0),
+        result2: otherItems.reduce((sum, item) => sum + item.result2, 0),
+        result3: otherItems.reduce((sum, item) => sum + (item.result3 || 0), 0)
       }
-    })
+      
+      // Find corresponding "Others" data in requested results
+      const otherRequestedItems = requestedData.filter(r => 
+        !topItems.some(t => t.groupValue === r.groupValue)
+      )
+      const othersPrevious = otherRequestedItems.reduce((sum, item) => sum + item.current, 0)
+      
+      // Process top items + others
+      const allItems = [...topItems, othersData]
+      processedData = allItems.map(latestItem => {
+        let requestedItem
+        let previous = 0
+        
+        if (latestItem.groupValue === 'Others') {
+          previous = othersPrevious
+        } else {
+          requestedItem = requestedData.find(r => r.groupValue === latestItem.groupValue)
+          previous = requestedItem?.current || 0
+        }
+        
+        const current = latestItem.current
+        const change = current - previous
+        const changePercent = previous !== 0 ? (change / previous) * 100 : 0
+        const percentage = totalCurrent > 0 ? (current / totalCurrent) * 100 : 0
+        
+        return {
+          groupValue: latestItem.groupValue,
+          current,
+          previous,
+          change,
+          changePercent,
+          counterpartyCount: latestItem.result1,
+          notionalAmount: latestItem.result2,
+          percentage
+        }
+      })
+    } else {
+      // No aggregation needed, process normally
+      processedData = latestData.map(latestItem => {
+        const requestedItem = requestedData.find(r => r.groupValue === latestItem.groupValue)
+        const previous = requestedItem?.current || 0
+        const current = latestItem.current
+        const change = current - previous
+        const changePercent = previous !== 0 ? (change / previous) * 100 : 0
+        const percentage = totalCurrent > 0 ? (current / totalCurrent) * 100 : 0
+        
+        return {
+          groupValue: latestItem.groupValue,
+          current,
+          previous,
+          change,
+          changePercent,
+          counterpartyCount: latestItem.result1,
+          notionalAmount: latestItem.result2,
+          percentage
+        }
+      })
+    }
+    
+    const result = processedData
     
     return NextResponse.json(result)
     

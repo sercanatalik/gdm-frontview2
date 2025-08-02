@@ -48,6 +48,7 @@ export interface GroupedStatMeasure {
   }
   orderBy?: string
   orderDirection?: 'ASC' | 'DESC'
+  limit?: number
   additionalSelectFields?: Array<{
     field: string
     aggregation?: 'sum' | 'count' | 'countDistinct' | 'avg' | 'max' | 'min'
