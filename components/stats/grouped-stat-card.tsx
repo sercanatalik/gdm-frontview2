@@ -114,6 +114,14 @@ function GroupedStatCard({ measure, groupBy, relativeDt, asOfDate, className, fi
                     dataKey="value"
                     stroke="#ffffff"
                     strokeWidth={2}
+                    label={({ name, value }) => {
+                      if (!value) return ''
+                      const totalValue = chartData.reduce((sum, item) => sum + item.value, 0)
+                      const percentage = totalValue > 0 ? (value / totalValue) * 100 : 0
+                      return `${name}: ${formatValue(percentage, 'percentage')}`
+                    }}
+                    labelLine={false}
+                    style={{ fontSize: '10px', fontWeight: '500' }}
                   >
                     {chartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -121,29 +129,6 @@ function GroupedStatCard({ measure, groupBy, relativeDt, asOfDate, className, fi
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
-              
-              {/* Chart Labels */}
-              {chartData.map((item, index) => {
-                const totalValue = chartData.reduce((sum, chartItem) => sum + chartItem.value, 0)
-                const percentage = totalValue > 0 ? (item.value / totalValue) * 100 : 0
-                const isOthers = item.name === 'Others'
-                
-                const labelStyle = isOthers 
-                  ? { bottom: '5%', right: '2%' }
-                  : { top: `${15 + (index * 16)}%`, left: index % 2 === 0 ? '2%' : '65%' }
-                
-                return (
-                  <div
-                    key={item.name}
-                    className={`absolute text-[10px] font-medium bg-background/80 px-1.5 py-0.5 rounded shadow-sm ${
-                      isOthers ? 'text-muted-foreground italic' : 'text-foreground'
-                    }`}
-                    style={labelStyle}
-                  >
-                    {item.name}: {formatValue(percentage, 'percentage')}
-                  </div>
-                )
-              })}
             </div>
 
             {/* Data List */}
