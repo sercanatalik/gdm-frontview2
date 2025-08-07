@@ -64,25 +64,7 @@ export default function FinancingPage() {
           </div>
         </div>
         
-        {/* Debug: Show active filters and asOfDate */}
-        {(filters.length > 0 || asOfDate) && (
-          <div className="mt-4 p-4 bg-gray-100 rounded">
-            <h3 className="font-semibold mb-2">Active State:</h3>
-            <div className="text-sm space-y-2">
-              {asOfDate && (
-                <div>
-                  <strong>As Of Date:</strong> {asOfDate}
-                </div>
-              )}
-              {filters.length > 0 && (
-                <div>
-                  <strong>Filters:</strong>
-                  <pre className="mt-1">{JSON.stringify(filters, null, 2)}</pre>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+       
 
         {/* Grouped Stats Cards - Row 1 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 my-3">
