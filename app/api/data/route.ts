@@ -40,6 +40,14 @@ function buildFilterConditions(filters: FilterCondition[]): string {
         return value.map(v => `${fieldName} LIKE '%${v}%'`).join(' OR ')
       case 'do not include':
         return value.map(v => `${fieldName} NOT LIKE '%${v}%'`).join(' AND ')
+      case '>=':
+        return `${fieldName} >= '${value[0]}'`
+      case '<=':
+        return `${fieldName} <= '${value[0]}'`
+      case '>':
+        return `${fieldName} > '${value[0]}'`
+      case '<':
+        return `${fieldName} < '${value[0]}'`
       default:
         return `${fieldName} = '${value[0]}'`
     }

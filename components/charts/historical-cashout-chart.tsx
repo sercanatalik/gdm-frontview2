@@ -34,7 +34,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Loader2, AlertCircle, BarChart3, Maximize2, X, Settings, Download, Image } from "lucide-react"
+import { Loader2, AlertCircle, BarChart3, Expand, X, Settings, Download, Image } from "lucide-react"
 
 interface HistoricalCashoutChartProps {
   className?: string
@@ -385,7 +385,7 @@ export function HistoricalCashoutChart({
       </Button>
       {!isFullscreen && (
         <Button variant="ghost" size="sm" className="px-1" onClick={() => setIsFullscreen(true)}>
-          <Maximize2 className="size-3" />
+          <Expand className="size-3" />
         </Button>
       )}
     </div>

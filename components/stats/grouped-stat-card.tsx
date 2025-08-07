@@ -218,16 +218,13 @@ function GroupedStatCard({ measure, groupBy, relativeDt, asOfDate, className, fi
     
     <DialogContent className="max-w-[98vw] w-[98vw] h-[90vh] max-h-[90vh] overflow-y-auto sm:max-w-[60vw]">
       <DialogHeader>
-        <div className="flex items-center justify-between">
-          <DialogTitle>By {groupBy} - Expanded View</DialogTitle>
-          <button
-            onClick={downloadAsPNG}
-            className="flex items-center space-x-2 px-3 py-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors"
-          >
-            <Download className="h-3 w-3" />
-            <span>Download PNG</span>
-          </button>
-        </div>
+        <DialogTitle>By {groupBy} - Expanded View</DialogTitle>
+        <button
+          onClick={downloadAsPNG}
+          className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-10 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+        >
+          <Download />
+        </button>
       </DialogHeader>
       
       <div ref={modalContentRef}>
