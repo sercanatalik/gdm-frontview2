@@ -1,6 +1,7 @@
 import {
   Calendar,
   CreditCard,
+  DollarSign,
   Globe,
   Home,
   Inbox,
@@ -21,6 +22,14 @@ export const teams = [
     icon: CreditCard,
     route: "/credit",
   },
+   {
+    name: "AI SDK Client",
+    plan: "AI SDK Clientt",
+    icon: DollarSign,
+    route: "/ai",
+  },
+
+
 ];
 
 export const creditItems = [
