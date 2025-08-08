@@ -8,7 +8,7 @@ import { StatCards, defaultStatConfigs } from "@/components/stats/stat-cards"
 import { GroupedStatCard } from "@/components/stats/grouped-stat-card"
 import { HistoricalCashoutChart } from "@/components/charts/historical-cashout-chart"
 import { RecentTradesCard } from "@/components/recent-trades-card"
-import { PerformanceTableCard } from "@/components/performance-table-card"
+import PerformanceCard from "@/components/performance-card"
 import { useStore } from "@tanstack/react-store"
 import { filtersStore } from "@/lib/store/filters"
 import { formatters } from "@/lib/query/stats"
@@ -67,7 +67,7 @@ export default function FinancingPage() {
         
         {/* Performance Table */}
         <div className="grid grid-cols-1 gap-6">
-          <PerformanceTableCard
+          <PerformanceCard
             asOfDate={asOfDate ?? undefined}
             filters={filters}
           />

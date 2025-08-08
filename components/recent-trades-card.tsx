@@ -18,7 +18,7 @@ interface RecentTradesCardProps {
   asOfDate?: string
 }
 
-const ITEMS_PER_PAGE = 10
+const ITEMS_PER_PAGE = 8
 
 export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTradesCardProps) {
   const [currentPage, setCurrentPage] = useState(0)
@@ -271,7 +271,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
             ))}
             
             {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-0">
+              <div className="flex items-center justify-between pt-8">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -335,7 +335,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
             ))}
             
             {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-0">
+              <div className="flex items-center justify-between pt-8">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -548,7 +548,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-between items-center mt-8 pt-6 border-t">
+            <div className="flex justify-between items-center mt-10 pt-6 border-t">
               <div className="flex space-x-2">
                 <Button variant="outline" size="sm" disabled>
                   View in Trading System
