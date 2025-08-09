@@ -62,7 +62,13 @@ export default function AIPage() {
       const client = await experimental_createMCPClient({
         transport: {
           type: 'sse',
-          url: 'http://127.0.0.1:9000/sse/',
+          url: 'http://127.0.0.1:9001/sse/',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Cors': 'no-cors',
+          },
         },
       });
       clientRef.current = client;
