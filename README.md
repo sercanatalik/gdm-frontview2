@@ -40,4 +40,43 @@ REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=your_redis_password
 REDIS_DB=0
+
+# AI Chat Configuration
+# Get your API key from: https://console.anthropic.com/
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# MCP Server Configuration
+NEXT_PUBLIC_MCP_SERVER_URL=http://127.0.0.1:9001/sse/
+
+# AI Model Configuration
+NEXT_PUBLIC_ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
 ```
+
+## AI Chat Feature
+
+The application includes an AI Chat feature powered by:
+- **Anthropic Claude models** for intelligent responses
+- **Model Context Protocol (MCP)** for tool integration
+- **Dynamic tool execution** for data analysis
+
+### Setup Instructions
+
+1. **Get Anthropic API Key**: Visit [Anthropic Console](https://console.anthropic.com/) to get your API key
+2. **Copy environment file**: `cp .env.example .env.local`
+3. **Configure API key**: Add your Anthropic API key to `.env.local`
+4. **Start MCP server**: Ensure your MCP server is running on the configured URL
+5. **Access AI Chat**: Navigate to `/ai` in your application
+
+### Available Claude Models
+
+- **claude-3-5-sonnet-20241022** (default) - Most capable for complex reasoning
+- **claude-3-5-haiku-20241022** - Fast and efficient for simpler tasks
+- **claude-3-opus-20240229** - Highest performance for demanding tasks
+
+### Features
+
+- 🤖 **AI-powered responses** using Anthropic Claude models
+- 🔧 **Dynamic tool integration** via MCP protocol
+- 📊 **Real-time debugging** with server logs
+- ⚙️ **Selectable tools** for custom workflows
+- 🔄 **Streaming responses** for better UX

@@ -1,8 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
-import { experimental_createMCPClient, streamText } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { useState } from 'react';
 import {
   Conversation,
   ConversationContent,
@@ -20,34 +18,36 @@ import {
   PromptInputSubmit,
 } from '@/components/ai-elements/prompt-input';
 
-interface ToolInvocation {
+interface ToolCall {
   toolName: string;
-  state: 'result' | 'call' | 'partial-call';
-  result?: unknown;
+  result: any;
 }
 
-interface Message {
+interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  toolInvocations?: ToolInvocation[];
+  toolCalls?: ToolCall[];
+}
+
+interface APIResponse {
+  text: string;
+  toolCalls?: ToolCall[];
+  availableTools?: string[];
 }
 
 export default function AIPage() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const clientRef = useRef<ReturnType<typeof experimental_createMCPClient> | null>(null);
+  const [availableTools, setAvailableTools] = useState<string[]>([]);
+  const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set());
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
-  };
-
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    const userMessage: Message = {
+    const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
       content: input.trim(),
@@ -58,156 +58,57 @@ export default function AIPage() {
     setIsLoading(true);
 
     try {
-      // Create MCP client
-      const client = await experimental_createMCPClient({
-        transport: {
-          type: 'sse',
-          url: 'http://127.0.0.1:9001/sse/',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            'Cors': 'no-cors',
-          },
+      const response = await fetch('/gdm-frontview/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          prompt: input.trim(),
+          selectedTools: Array.from(selectedTools),
+        }),
       });
-      clientRef.current = client;
 
-      // Get available tools
-      const tools = await client.tools();
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
 
-      // Create assistant message placeholder
-      const assistantMessage: Message = {
+      const result: APIResponse = await response.json();
+
+      // Update available tools and select all by default if this is the first time
+      if (result.availableTools && result.availableTools.length > 0) {
+        setAvailableTools(result.availableTools);
+        if (selectedTools.size === 0) {
+          setSelectedTools(new Set(result.availableTools));
+        }
+      }
+
+      const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: '',
-        toolInvocations: [],
+        content: result.text || 'No response received.',
+        toolCalls: result.toolCalls || [],
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-
-      // Stream response
-      const response = streamText({
-        model: openai('gpt-4o-mini'),
-        tools,
-        prompt: input.trim(),
-        system: 'You are a helpful assistant that can answer questions and help with tasks. Use the available tools when appropriate.',
-      });
-
-      let fullContent = '';
-      
-      // Handle streaming text content
-      for await (const chunk of response.textStream) {
-        fullContent += chunk;
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === assistantMessage.id 
-              ? { ...msg, content: fullContent }
-              : msg
-          )
-        );
-      }
-
-      // Get the final result to access tool calls
-      const result = await response;
-      
-      // Handle tool invocations if present
-      const toolCalls = await result.toolCalls;
-      if (toolCalls && toolCalls.length > 0) {
-        const toolInvocations = toolCalls.map((toolCall: {
-          toolName: string;
-          result: unknown;
-        }) => ({
-          toolName: toolCall.toolName,
-          state: 'result' as const,
-          result: toolCall.result,
-        }));
-
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === assistantMessage.id 
-              ? { ...msg, toolInvocations }
-              : msg
-          )
-        );
-      }
-
-      // Clean up
-      await client.close();
     } catch (error) {
-      console.error('Chat error:', error);
-      setMessages(prev => {
-        const lastMessage = prev[prev.length - 1];
-        if (lastMessage && lastMessage.role === 'assistant') {
-          return prev.map(msg => 
-            msg.id === lastMessage.id 
-              ? { ...msg, content: 'Sorry, there was an error processing your request.' }
-              : msg
-          );
-        }
-        return prev;
-      });
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `Error: ${error instanceof Error ? error.message : 'Something went wrong'}`,
+      };
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
-      if (clientRef.current) {
-        await clientRef.current.close();
-        clientRef.current = null;
-      }
     }
-  }, [input, isLoading]);
-
-  const renderMessage = (message: Message) => {
-    // Handle tool invocations if present
-    if (message.toolInvocations && message.toolInvocations.length > 0) {
-      return (
-        <div className="space-y-2">
-          {message.content && <Response>{message.content}</Response>}
-          {message.toolInvocations.map((tool, index) => (
-            <div key={index} className="border rounded-lg p-3 bg-muted/30">
-              <div className="text-sm font-medium text-muted-foreground mb-2">
-                🔧 Tool: {tool.toolName}
-              </div>
-              <div className="text-sm">
-                {tool.state === 'result' && (
-                  <div className="bg-green-50 dark:bg-green-900/20 p-2 rounded">
-                    <div className="font-medium text-green-800 dark:text-green-200 mb-1">Result:</div>
-                    <pre className="whitespace-pre-wrap text-green-700 dark:text-green-300">
-                      {typeof tool.result === 'string' 
-                        ? tool.result 
-                        : JSON.stringify(tool.result, null, 2)}
-                    </pre>
-                  </div>
-                )}
-                {tool.state === 'partial-call' && (
-                  <div className="text-blue-600 dark:text-blue-400">
-                    Preparing tool call...
-                  </div>
-                )}
-                {tool.state === 'call' && (
-                  <div className="text-yellow-600 dark:text-yellow-400">
-                    Executing tool...
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    // Regular text message
-    return <Response>{message.content || ''}</Response>;
   };
 
   return (
     <div className="h-[calc(100vh-120px)] flex flex-col">
-      <div className="mb-6">
+      <div className="p-6 pb-4">
         <h2 className="text-3xl font-bold tracking-tight">AI Chat</h2>
         <p className="text-muted-foreground">
-          Chat with AI assistant powered by MCP
-        </p>
-        <p className="text-xs text-muted-foreground">
-          Connected to MCP server at http://127.0.0.1:9000/sse/
+          Chat with AI assistant powered by Anthropic Claude
         </p>
       </div>
       
@@ -223,16 +124,34 @@ export default function AIPage() {
                   <p className="text-muted-foreground">
                     Ask questions about your data, get insights, or request analytics
                   </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    MCP tools will be available automatically when needed
-                  </p>
                 </div>
               </div>
             ) : (
               messages.map((message) => (
                 <Message key={message.id} from={message.role}>
                   <MessageContent>
-                    {renderMessage(message)}
+                    <Response>{message.content}</Response>
+                    {message.toolCalls && message.toolCalls.length > 0 && (
+                      <div className="mt-4 space-y-2">
+                        {message.toolCalls.map((toolCall, index) => (
+                          <div key={index} className="border rounded-lg p-3 bg-muted/30">
+                            <div className="text-sm font-medium text-muted-foreground mb-2">
+                              🔧 Tool: {toolCall.toolName}
+                            </div>
+                            <div className="bg-green-50 dark:bg-green-900/20 p-2 rounded">
+                              <div className="font-medium text-green-800 dark:text-green-200 mb-1">
+                                Result:
+                              </div>
+                              <pre className="whitespace-pre-wrap text-green-700 dark:text-green-300 text-sm">
+                                {typeof toolCall.result === 'string' 
+                                  ? toolCall.result 
+                                  : JSON.stringify(toolCall.result, null, 2)}
+                              </pre>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </MessageContent>
                 </Message>
               ))
@@ -242,15 +161,82 @@ export default function AIPage() {
         </Conversation>
         
         <div className="border-t p-4">
+          {/* Tool Selection */}
+          {availableTools.length > 0 && (
+            <div className="mb-4 p-3 bg-muted/20 rounded-lg">
+              <div className="flex justify-between items-center mb-3">
+                <div className="text-sm font-medium">
+                  🔧 Available Tools ({availableTools.length})
+                  {selectedTools.size > 0 && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      ({selectedTools.size} selected)
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSelectedTools(new Set(availableTools))}
+                    className="text-xs px-2 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded border border-primary/20 transition-colors"
+                  >
+                    Select All
+                  </button>
+                  <button
+                    onClick={() => setSelectedTools(new Set())}
+                    className="text-xs px-2 py-1 bg-muted hover:bg-muted/80 text-muted-foreground rounded border transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {availableTools.map((toolName) => {
+                  const isSelected = selectedTools.has(toolName);
+                  return (
+                    <button
+                      key={toolName}
+                      onClick={() => {
+                        const newSet = new Set(selectedTools);
+                        if (isSelected) {
+                          newSet.delete(toolName);
+                        } else {
+                          newSet.add(toolName);
+                        }
+                        setSelectedTools(newSet);
+                      }}
+                      className={`inline-flex items-center px-3 py-2 rounded-lg text-xs border transition-all hover:scale-105 ${
+                        isSelected
+                          ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                          : 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
+                      }`}
+                    >
+                      <span className="font-mono font-medium">{toolName}</span>
+                      {isSelected && (
+                        <span className="ml-1">✓</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="text-xs text-muted-foreground mt-2">
+                💡 Selected tools will be available to the AI assistant
+              </div>
+            </div>
+          )}
+          
           <PromptInput onSubmit={handleSubmit}>
             <PromptInputTextarea
               value={input}
-              onChange={handleInputChange}
+              onChange={(e) => setInput(e.target.value)}
               placeholder="Ask me anything about your data..."
               disabled={isLoading}
             />
             <PromptInputToolbar>
-              <div></div>
+              <div className="flex items-center text-xs text-muted-foreground">
+                {isLoading ? 'Processing...' : 
+                  selectedTools.size > 0 ? 
+                    `${selectedTools.size} tools selected` : 
+                    'Ready to chat'}
+              </div>
               <PromptInputSubmit 
                 disabled={!input?.trim() || isLoading}
               />
