@@ -4,7 +4,7 @@ import { anthropic } from '@ai-sdk/anthropic';
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt } = await request.json();
+    const { prompt, selectedTools } = await request.json();
 
     if (!prompt || typeof prompt !== 'string') {
       return NextResponse.json(
@@ -51,8 +51,17 @@ export async function POST(request: NextRequest) {
     // Convert MCP tools to dynamic tools with proper schema validation
     const dynamicTools: Record<string, any> = {};
     
-    if (Object.keys(tools).length > 0) {
-      for (const [toolName, toolConfig] of Object.entries(tools)) {
+    // Filter tools based on selectedTools array
+    const toolsToUse = selectedTools && Array.isArray(selectedTools) && selectedTools.length > 0
+      ? Object.fromEntries(Object.entries(tools).filter(([toolName]) => selectedTools.includes(toolName)))
+      : tools;
+    
+    console.log('Selected tools from request:', selectedTools);
+    console.log('Available tools:', Object.keys(tools));
+    console.log('Tools to use:', Object.keys(toolsToUse));
+    
+    if (Object.keys(toolsToUse).length > 0) {
+      for (const [toolName, toolConfig] of Object.entries(toolsToUse)) {
         try {
           // Ensure proper schema structure
           const schema = (toolConfig as any)?.inputSchema || {
@@ -114,8 +123,44 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Build parts array following the useChat structure
+    const parts: any[] = [];
+    
+    // Add text part if there's text content
+    if (result.text) {
+      parts.push({
+        type: 'text',
+        text: result.text
+      });
+    }
+    
+    // Add tool call parts
+    if (result.toolCalls && result.toolCalls.length > 0) {
+      result.toolCalls.forEach((toolCall: any) => {
+        parts.push({
+          type: 'tool-call',
+          toolName: toolCall.toolName,
+          args: toolCall.args || {}
+        });
+      });
+    }
+    
+    // Add tool result parts  
+    if (result.toolResults && result.toolResults.length > 0) {
+      result.toolResults.forEach((toolResult: any) => {
+        parts.push({
+          type: 'tool-result',
+          toolName: toolResult.toolName,
+          result: toolResult.result || toolResult,
+          isError: false
+        });
+      });
+    }
+
+
     return NextResponse.json({
       text: result.text,
+      parts: parts,
       toolCalls: result.toolCalls?.map((toolCall: any) => ({
         toolName: toolCall.toolName,
         result: toolCall.result || JSON.stringify(toolCall.args || {}, null, 2),
