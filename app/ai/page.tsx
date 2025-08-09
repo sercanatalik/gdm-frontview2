@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { MicIcon, GlobeIcon } from 'lucide-react';
 import {
   Conversation,
   ConversationContent,
@@ -16,7 +17,21 @@ import {
   PromptInputTextarea,
   PromptInputToolbar,
   PromptInputSubmit,
+  PromptInputTools,
+  PromptInputButton,
+  PromptInputModelSelect,
+  PromptInputModelSelectTrigger,
+  PromptInputModelSelectValue,
+  PromptInputModelSelectContent,
+  PromptInputModelSelectItem,
 } from '@/components/ai-elements/prompt-input';
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolOutput,
+  ToolInput,
+} from '@/components/ai-elements/tool';
 
 interface ToolCall {
   toolName: string;
@@ -36,12 +51,34 @@ interface APIResponse {
   availableTools?: string[];
 }
 
+
 export default function AIPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [availableTools, setAvailableTools] = useState<string[]>([]);
   const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set());
+
+  // Fetch available tools on page load
+  useEffect(() => {
+    const fetchTools = async () => {
+      try {
+        const response = await fetch('/gdm-frontview/api/ai/tools');
+        if (response.ok) {
+          const tools = await response.json();
+          if (tools.availableTools && tools.availableTools.length > 0) {
+            setAvailableTools(tools.availableTools);
+            // Select all tools by default
+            setSelectedTools(new Set(tools.availableTools));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch available tools:', error);
+      }
+    };
+
+    fetchTools();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,21 +171,18 @@ export default function AIPage() {
                     {message.toolCalls && message.toolCalls.length > 0 && (
                       <div className="mt-4 space-y-2">
                         {message.toolCalls.map((toolCall, index) => (
-                          <div key={index} className="border rounded-lg p-3 bg-muted/30">
-                            <div className="text-sm font-medium text-muted-foreground mb-2">
-                              🔧 Tool: {toolCall.toolName}
-                            </div>
-                            <div className="bg-green-50 dark:bg-green-900/20 p-2 rounded">
-                              <div className="font-medium text-green-800 dark:text-green-200 mb-1">
-                                Result:
-                              </div>
-                              <pre className="whitespace-pre-wrap text-green-700 dark:text-green-300 text-sm">
-                                {typeof toolCall.result === 'string' 
+                          <Tool key={index}>
+                            <ToolHeader type="tool-call" state={'output-available' as const} />
+                            <ToolContent>
+                              <ToolInput input={`Tool: ${toolCall.toolName}`} />
+                              <ToolOutput 
+                                output={typeof toolCall.result === 'string' 
                                   ? toolCall.result 
                                   : JSON.stringify(toolCall.result, null, 2)}
-                              </pre>
-                            </div>
-                          </div>
+                                errorText={undefined}
+                              />
+                            </ToolContent>
+                          </Tool>
                         ))}
                       </div>
                     )}
@@ -161,85 +195,49 @@ export default function AIPage() {
         </Conversation>
         
         <div className="border-t p-4">
-          {/* Tool Selection */}
-          {availableTools.length > 0 && (
-            <div className="mb-4 p-3 bg-muted/20 rounded-lg">
-              <div className="flex justify-between items-center mb-3">
-                <div className="text-sm font-medium">
-                  🔧 Available Tools ({availableTools.length})
-                  {selectedTools.size > 0 && (
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      ({selectedTools.size} selected)
-                    </span>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setSelectedTools(new Set(availableTools))}
-                    className="text-xs px-2 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded border border-primary/20 transition-colors"
-                  >
-                    Select All
-                  </button>
-                  <button
-                    onClick={() => setSelectedTools(new Set())}
-                    className="text-xs px-2 py-1 bg-muted hover:bg-muted/80 text-muted-foreground rounded border transition-colors"
-                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {availableTools.map((toolName) => {
-                  const isSelected = selectedTools.has(toolName);
-                  return (
-                    <button
-                      key={toolName}
-                      onClick={() => {
-                        const newSet = new Set(selectedTools);
-                        if (isSelected) {
-                          newSet.delete(toolName);
-                        } else {
-                          newSet.add(toolName);
-                        }
-                        setSelectedTools(newSet);
-                      }}
-                      className={`inline-flex items-center px-3 py-2 rounded-lg text-xs border transition-all hover:scale-105 ${
-                        isSelected
-                          ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                          : 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
-                      }`}
-                    >
-                      <span className="font-mono font-medium">{toolName}</span>
-                      {isSelected && (
-                        <span className="ml-1">✓</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="text-xs text-muted-foreground mt-2">
-                💡 Selected tools will be available to the AI assistant
-              </div>
-            </div>
-          )}
-          
-          <PromptInput onSubmit={handleSubmit}>
+          <PromptInput onSubmit={handleSubmit} className="mt-4">
             <PromptInputTextarea
-              value={input}
               onChange={(e) => setInput(e.target.value)}
+              value={input}
               placeholder="Ask me anything about your data..."
               disabled={isLoading}
             />
             <PromptInputToolbar>
-              <div className="flex items-center text-xs text-muted-foreground">
-                {isLoading ? 'Processing...' : 
-                  selectedTools.size > 0 ? 
-                    `${selectedTools.size} tools selected` : 
-                    'Ready to chat'}
-              </div>
-              <PromptInputSubmit 
-                disabled={!input?.trim() || isLoading}
-              />
+              <PromptInputTools>
+                <PromptInputButton>
+                  <MicIcon size={16} />
+                </PromptInputButton>
+                <PromptInputButton>
+                  <GlobeIcon size={16} />
+                  <span>Search</span>
+                </PromptInputButton>
+                <PromptInputModelSelect
+                  onValueChange={(value) => {
+                    setSelectedTools(prev => {
+                      const newSet = new Set(prev);
+                      if (newSet.has(value)) {
+                        newSet.delete(value);
+                      } else {
+                        newSet.add(value);
+                      }
+                      return newSet;
+                    });
+                  }}
+                  value={Array.from(selectedTools)[0] || ''}
+                >
+                  <PromptInputModelSelectTrigger>
+                    <PromptInputModelSelectValue placeholder="Select Tools" />
+                  </PromptInputModelSelectTrigger>
+                  <PromptInputModelSelectContent>
+                    {availableTools.map((tool) => (
+                      <PromptInputModelSelectItem key={tool} value={tool}>
+                        {tool} {selectedTools.has(tool) ? '✓' : ''}
+                      </PromptInputModelSelectItem>
+                    ))}
+                  </PromptInputModelSelectContent>
+                </PromptInputModelSelect>
+              </PromptInputTools>
+              <PromptInputSubmit disabled={!input} status={isLoading ? 'submitted' : undefined} />
             </PromptInputToolbar>
           </PromptInput>
         </div>

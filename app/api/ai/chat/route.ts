@@ -116,9 +116,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       text: result.text,
-      toolCalls: result.toolCalls?.map(toolCall => ({
+      toolCalls: result.toolCalls?.map((toolCall: any) => ({
         toolName: toolCall.toolName,
-        result: (toolCall as any).result || 'Tool executed',
+        result: toolCall.result || JSON.stringify(toolCall.args || {}, null, 2),
       })) || [],
       availableTools: Object.keys(tools),
     });
