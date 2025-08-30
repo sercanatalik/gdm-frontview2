@@ -6,7 +6,7 @@ import { riskFilterConfig } from "@/components/filters/risk-filter.config"
 import { AsOfDateSelect } from "@/components/filters/as-of-date-select"
 import { StatCards, defaultStatConfigs } from "@/components/stats/stat-cards"
 import { GroupedStatCard } from "@/components/stats/grouped-stat-card"
-import { HistoricalCashoutChart } from "@/components/charts/historical-cashout-chart"
+import { CashoutChart } from "@/components/charts/cashout-chart"
 import { RecentTradesCard } from "@/components/recent-trades-card"
 import PerformanceCard from "@/components/performance-card"
 import { useStore } from "@tanstack/react-store"
@@ -58,7 +58,7 @@ export default function FinancingPage() {
               className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
               filters={filters}
             />
-             <HistoricalCashoutChart />
+             <CashoutChart />
           </div>
           <div className="col-span-3">
             <RecentTradesCard filters={filters} asOfDate={asOfDate ?? undefined} />
