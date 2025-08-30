@@ -45,7 +45,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             enableSystem
     
           >
-            <SidebarProvider>
+            <SidebarProvider defaultOpen={false}>
               <AppSidebar />
               <SidebarInset>
                 <main>
