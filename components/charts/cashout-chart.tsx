@@ -43,21 +43,18 @@ interface CashoutChartProps {
 // Color palettes
 const MULTI_COLORS = [
   "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
   "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
   "hsl(var(--chart-6))",
-  "hsl(var(--chart-7))",
   "hsl(var(--chart-8))",
-  "hsl(var(--chart-9))",
   "hsl(var(--chart-10))",
-  "hsl(var(--chart-11))",
 ]
 
 const MONOCHROME_COLORS = [
-  '#101720', '#2c333e', '#4a535e', '#5a636e', '#6b747f',
-  '#7c8591', '#8e97a3', '#a0a9b6', '#b2bcc8'
+  '#0a0e15',  // Very dark (almost black)
+  '#2a3441',  // Dark gray-blue
+  '#525c6a',  // Medium gray
+  '#7f8b9b',  // Light gray-blue
+  '#b8c1ce',  // Very light gray
 ]
 
 // Field and GroupBy options
@@ -83,25 +80,57 @@ const generateChartConfig = (data: Record<string, unknown>[], isStacked: boolean
     )
   )].filter(Boolean)
   
-  const colors = isStacked 
-    ? MONOCHROME_COLORS.slice(0, uniqueGroups.length)
-    : MULTI_COLORS
+  // Sort groups to ensure "Others" is always last
+  uniqueGroups.sort((a, b) => {
+    if (a === 'Others') return 1
+    if (b === 'Others') return -1
+    return 0
+  })
   
   const config: ChartConfig = {}
-  uniqueGroups.forEach((group, index) => {
-    const sanitizedKey = sanitizeKey(group)
-    config[sanitizedKey] = {
-      label: group,
-      color: colors[index % colors.length],
-    }
-  })
+  
+  if (isStacked) {
+    // For stacked charts, use monochrome colors with high contrast
+    uniqueGroups.forEach((group, index) => {
+      const sanitizedKey = sanitizeKey(group)
+      let color: string
+      
+      if (sanitizedKey === 'Others') {
+        // Use the lightest color for "Others"
+        color = MONOCHROME_COLORS[MONOCHROME_COLORS.length - 1]
+      } else {
+        // Distribute other colors evenly across the darker spectrum
+        color = MONOCHROME_COLORS[Math.min(index, MONOCHROME_COLORS.length - 2)]
+      }
+      
+      config[sanitizedKey] = {
+        label: group === 'Others' ? 'Others' : group,
+        color,
+      }
+    })
+  } else {
+    // For non-stacked charts, use multi-colors
+    uniqueGroups.forEach((group, index) => {
+      const sanitizedKey = sanitizeKey(group)
+      const color = sanitizedKey === 'Others' 
+        ? 'hsl(var(--muted-foreground))' 
+        : MULTI_COLORS[index % MULTI_COLORS.length]
+      
+      config[sanitizedKey] = {
+        label: group === 'Others' ? 'Others' : group,
+        color,
+      }
+    })
+  }
   
   return config
 }
 
 const processChartData = (data: Record<string, unknown>[], dataType: 'historical' | 'future' = 'historical') => {
   const groupedData: Record<string, Record<string, number>> = {}
+  const globalGroupTotals: Record<string, number> = {}
   
+  // First pass: collect all data and calculate global totals
   data.forEach(item => {
     const asOfDate = item.asOfDate as string
     const dateStr = asOfDate.split(' ')[0]
@@ -119,18 +148,46 @@ const processChartData = (data: Record<string, unknown>[], dataType: 'historical
     
     const sanitizedGroupValue = sanitizeKey(groupValue)
     groupedData[dateStr][sanitizedGroupValue] = (groupedData[dateStr][sanitizedGroupValue] || 0) + value
+    
+    // Track global totals for determining top 4
+    globalGroupTotals[sanitizedGroupValue] = (globalGroupTotals[sanitizedGroupValue] || 0) + value
   })
   
-  return Object.entries(groupedData)
-    .map(([date, groups]) => ({
+  // Determine the top 4 groups globally
+  const globalTop4 = Object.entries(globalGroupTotals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([key]) => key)
+  
+  // Second pass: process each date keeping only the global top 4 and aggregate others
+  const processedData = Object.entries(groupedData).map(([date, groups]) => {
+    const result: Record<string, number> = {}
+    let othersTotal = 0
+    
+    Object.entries(groups).forEach(([key, value]) => {
+      if (globalTop4.includes(key)) {
+        result[key] = value
+      } else {
+        othersTotal += value
+      }
+    })
+    
+    // Add "Others" if there are any
+    if (othersTotal > 0) {
+      result[sanitizeKey('Others')] = othersTotal
+    }
+    
+    return {
       date: new Date(date).toLocaleDateString('en-US', { 
         month: 'short', 
         year: 'numeric'
       }),
       fullDate: date,
-      ...groups
-    }))
-    .sort((a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime())
+      ...result
+    }
+  })
+  
+  return processedData.sort((a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime())
 }
 
 // Custom Tooltip Component
