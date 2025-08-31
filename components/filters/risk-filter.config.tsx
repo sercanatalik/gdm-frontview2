@@ -35,21 +35,22 @@ export const FilterOperators = {
   EXCLUDE_IF_ANY_OF: "exclude if any of",
   BEFORE: "before",
   AFTER: "after",
+  BEFORE_AND_EQUAL: "before & equal",
+  AFTER_AND_EQUAL: "after & equal"
 }
 
 // Risk filter configuration
 export const riskFilterConfig = {
   // Filter types mapping to database columns
   filterTypes: {
-    "Desk": "hmsDesk",
-    "SL1": "hmsSL1",
-    "Portfolio": "hmsPortfolio",
-    "CCY": "collatCurrency",
-    "Counterparty": "counterParty",
-    // "As Of Date": "asOfDt",
-    "VC Product": "productType",
-    "tradeDt": "tradeDt",
-    "maturityDt": "maturityDt",
+    "hmsDesk": "hmsDesk",
+    "hmsSL1": "hmsSL1", 
+    "hmsPortfolio": "hmsPortfolio",
+    "collatCurrency": "collatCurrency",
+    "counterParty": "counterParty",
+
+    "tradeDate": "tradeDt",
+   
   },
 
   // Filter operators for different field types
@@ -65,8 +66,8 @@ export const riskFilterConfig = {
     "exclude if any of": "NOT ILIKE",
     "before": "<",
     "after": ">",
-    "before and equal": "<=",
-    "after and equal": ">=",
+    "before & equal": "<=",
+    "after & equal": ">=",
   },
 
   // Icon mapping for filter types and values
@@ -77,10 +78,8 @@ export const riskFilterConfig = {
     "hmsPortfolio": <PieChart className="size-4 text-green-500" />,
     "collatCurrency": <DollarSign className="size-4 text-yellow-500" />,
     "counterParty": <User className="size-4 text-orange-500" />,
-    "As Of Date": <Calendar className="size-4 text-gray-500" />,
-    "VC Product": <Target className="size-4 text-red-500" />,
-    "tradeDt": <Clock className="size-4 text-indigo-500" />,
-    "maturityDt": <Clock className="size-4 text-indigo-500" />,
+    "tradeDate": <Clock className="size-4 text-indigo-500" />,
+    "t.maturityDate": <Clock className="size-4 text-indigo-500" />,
 
   },
 
@@ -112,22 +111,17 @@ export const riskFilterConfig = {
       field: "counterParty",
     },
 
-    "productType": {
-      operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
-      type: "select",
-      field: "productType",
+
+    "tradeDate": {
+      operators: [FilterOperators.AFTER, FilterOperators.BEFORE,FilterOperators.BEFORE_AND_EQUAL,FilterOperators.AFTER_AND_EQUAL],
+      type: "date",
+      field: "tradeDate",
     },
 
-    "tradeDt": {
+    "t.maturityDate": {
       operators: [FilterOperators.BEFORE, FilterOperators.AFTER],
       type: "date",
-      field: "tradeDt",
-    },
-
-    "maturityDt": {
-      operators: [FilterOperators.BEFORE, FilterOperators.AFTER],
-      type: "date",
-      field: "t.maturityDt",
+      field: "t.maturityDate",
     },
   },
 
