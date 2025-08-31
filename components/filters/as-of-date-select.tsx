@@ -69,7 +69,8 @@ export function AsOfDateSelect({
   }
 
   return (
-    <div className={cn("group", className)}>
+    <div className={cn("group flex items-center gap-2", className)}>
+    
       <Select 
         value={asOfDate || ""} 
         onValueChange={handleDateChange}
@@ -83,16 +84,16 @@ export function AsOfDateSelect({
           )}
         >
           <Calendar className="size-4 shrink-0 text-muted-foreground group-hover:text-primary transition-all" />
-          <SelectValue placeholder={isLoading ? "Loading..." : "As of Date"} />
+          <SelectValue placeholder={isLoading ? "Loading..." : "Select Date"} />
         </SelectTrigger>
         <SelectContent>
-           <ScrollArea className="h-[400px]">
-             {dates.map((date) => (
-               <SelectItem key={date} value={date}>
-                 {date}
-               </SelectItem>
-             ))}
-           </ScrollArea>
+          <ScrollArea className="h-[400px]">
+            {dates.map((date) => (
+              <SelectItem key={date} value={date}>
+                {date}
+              </SelectItem>
+            ))}
+          </ScrollArea>
         </SelectContent>
       </Select>
     </div>
