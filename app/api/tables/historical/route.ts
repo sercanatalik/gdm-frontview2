@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { 
-      table = 'risk_f_mv',
+      table = 'trade_book_instrument_mv',
       fieldName = 'cashOut',
       groupBy,
       asOfDate,

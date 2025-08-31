@@ -20,7 +20,7 @@ interface AsOfDateSelectProps {
 }
 
 export function AsOfDateSelect({ 
-  tableName = "risk_f_mv", 
+  tableName = "trade_book_instrument_mv", 
   className = "" 
 }: AsOfDateSelectProps) {
   const [dates, setDates] = React.useState<string[]>([])

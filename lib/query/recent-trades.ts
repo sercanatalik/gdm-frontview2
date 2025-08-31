@@ -1,13 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 
 export interface Trade {
-  id: string
-  counterparty: string
+  counterParty: string
   notional: number
   cashOut: number
   instrument: string
-  tradeDt: string
-  maturityDt: string
+  tradeDate: string
+  maturityDate: string
   desk: string
 }
 
@@ -26,7 +25,7 @@ export const useRecentTrades = (
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          table: 'risk_f_mv',
+          table: 'trade_book_instrument_mv',
           limit,
           filters,
           asOfDate
@@ -59,10 +58,10 @@ export const useTradesMaturingSoon = (
       const today = new Date()
       
       const maturityFilter = {
-        field: 'maturityDt',
+        field: 'maturityDate',
         operator: '>=',
         value: [today.toISOString().split('T')[0]],
-        type: 'maturityDt'
+        type: 'maturityDate'
       }
       
       const combinedFilters = [...filters, maturityFilter]
@@ -73,11 +72,11 @@ export const useTradesMaturingSoon = (
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          table: 'risk_f_mv',
+          table: 'trade_book_instrument_mv',
           limit,
           filters: combinedFilters,
           asOfDate,
-          orderBy: [{ column: 'maturityDt', direction: 'ASC' }]
+          orderBy: [{ column: 'maturityDate', direction: 'ASC' }]
         }),
       })
 

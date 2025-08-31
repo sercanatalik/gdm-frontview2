@@ -55,8 +55,8 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
     }
   }
 
-  const getInitials = (counterparty: string) => {
-    return counterparty
+  const getInitials = (counterParty: string) => {
+    return counterParty
       .split(' ')
       .map(word => word.charAt(0))
       .join('')
@@ -66,7 +66,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
 
   const getTotalStats = () => {
     const tradeCount = trades.length
-    const counterparties = new Set(trades.map(t => t.counterparty)).size
+    const counterparties = new Set(trades.map(t => t.counterParty)).size
     const instruments = new Set(trades.map(t => t.instrument)).size
     const currencies = new Set(trades.map(t => t.instrument.split('_')[0])).size
 
@@ -93,10 +93,10 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
     setIsModalOpen(true)
   }
 
-  const getDaysToMaturity = (maturityDt: string) => {
+  const getDaysToMaturity = (maturityDate: string) => {
     const today = new Date()
-    const maturityDate = new Date(maturityDt)
-    const timeDiff = maturityDate.getTime() - today.getTime()
+    const maturity = new Date(maturityDate)
+    const timeDiff = maturity.getTime() - today.getTime()
     const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24))
     return daysDiff
   }
@@ -137,13 +137,12 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
     if (!trades || trades.length === 0) return
 
     // Create CSV content
-    const headers = ['ID', 'Counterparty', 'Instrument', 'Trade Date', 'Maturity Date', 'Notional', 'Cash Out', 'Desk']
+    const headers = ['Counterparty', 'Instrument', 'Trade Date', 'Maturity Date', 'Notional', 'Cash Out', 'Desk']
     const csvData = trades.map(trade => [
-      trade.id,
-      trade.counterparty,
+      trade.counterParty,
       trade.instrument,
-      trade.tradeDt,
-      trade.maturityDt,
+      trade.tradeDate,
+      trade.maturityDate,
       trade.notional,
       trade.cashOut,
       trade.desk
@@ -245,20 +244,20 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
           </div>
         ) : (
           <>
-            {currentTrades.map((trade) => (
+            {currentTrades.map((trade, index) => (
               <div 
-                key={trade.id} 
+                key={`recent-${index}`} 
                 className="flex items-center justify-between py-2 px-3 border-b last:border-0 hover:bg-muted transition-colors cursor-pointer"
                 onClick={() => handleTradeClick(trade)}
               >
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                    {getInitials(trade.counterparty)}
+                    {getInitials(trade.counterParty)}
                   </div>
                   <div>
-                    <div className="font-medium text-sm">{trade.counterparty}</div>
+                    <div className="font-medium text-sm">{trade.counterParty}</div>
                     <div className="text-xs text-muted-foreground">
-                      {trade.instrument} • {formatDate(trade.tradeDt)}
+                      {trade.instrument} • {formatDate(trade.tradeDate)}
                     </div>
                   </div>
                 </div>
@@ -309,20 +308,20 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
           </div>
         ) : (
           <>
-            {currentTrades.map((trade) => (
+            {currentTrades.map((trade, index) => (
               <div 
-                key={trade.id} 
+                key={`maturing-${index}`} 
                 className="flex items-center justify-between py-2 px-3 border-b last:border-0 hover:bg-muted transition-colors cursor-pointer"
                 onClick={() => handleTradeClick(trade)}
               >
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                    {getInitials(trade.counterparty)}
+                    {getInitials(trade.counterParty)}
                   </div>
                   <div>
-                    <div className="font-medium text-sm">{trade.counterparty}</div>
+                    <div className="font-medium text-sm">{trade.counterParty}</div>
                     <div className="text-xs text-muted-foreground">
-                      {trade.instrument} • Matures {formatDate(trade.maturityDt)}
+                      {trade.instrument} • Matures {formatDate(trade.maturityDate)}
                     </div>
                   </div>
                 </div>
@@ -374,11 +373,11 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
             <DialogHeader className="pb-4">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
-                  {getInitials(selectedTrade.counterparty)}
+                  {getInitials(selectedTrade.counterParty)}
                 </div>
                 <div>
                   <DialogTitle className="text-xl">{selectedTrade.instrument}</DialogTitle>
-                  <p className="text-sm text-muted-foreground">Trade ID: {selectedTrade.id}</p>
+                  <p className="text-sm text-muted-foreground">Trade Details</p>
                 </div>
               </div>
               
@@ -387,7 +386,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                   ACTIVE
                 </div>
                 {(() => {
-                  const daysToMaturity = getDaysToMaturity(selectedTrade.maturityDt)
+                  const daysToMaturity = getDaysToMaturity(selectedTrade.maturityDate)
                   if (daysToMaturity <= 7) {
                     return (
                       <div className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
@@ -400,7 +399,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                 <div className="ml-auto text-right">
                   <p className="text-sm text-muted-foreground">Maturity Date</p>
                   <p className="text-lg font-semibold text-red-600">
-                    {formatDate(selectedTrade.maturityDt)}
+                    {formatDate(selectedTrade.maturityDate)}
                   </p>
                 </div>
               </div>
@@ -482,9 +481,9 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                     <span className="text-muted-foreground">Counterparty</span>
                     <div className="flex items-center space-x-2">
                       <div className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">
-                        {getInitials(selectedTrade.counterparty)}
+                        {getInitials(selectedTrade.counterParty)}
                       </div>
-                      <span className="font-medium">{selectedTrade.counterparty}</span>
+                      <span className="font-medium">{selectedTrade.counterParty}</span>
                     </div>
                   </div>
                   <div className="flex justify-between">
@@ -524,7 +523,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                   <div>
                     <p className="text-sm text-muted-foreground">Days to Maturity</p>
                     <p className="text-lg font-semibold text-red-600">
-                      {getDaysToMaturity(selectedTrade.maturityDt)} days
+                      {getDaysToMaturity(selectedTrade.maturityDate)} days
                     </p>
                   </div>
                 </div>
@@ -533,7 +532,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                   <div>
                     <p className="text-sm text-muted-foreground">Maturity Date</p>
                     <p className="text-lg font-semibold">
-                      {formatDate(selectedTrade.maturityDt)}
+                      {formatDate(selectedTrade.maturityDate)}
                     </p>
                   </div>
                 </div>

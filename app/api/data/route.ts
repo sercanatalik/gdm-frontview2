@@ -68,17 +68,16 @@ function buildRecentTradesQuery(
   
   return `
     SELECT
-      id,
-      counterparty,
+      counterParty,
       notional,
       cashOut,
       instrument,
-      tradeDt,
-      maturityDt,
+      tradeDate,
+      maturityDate,
       desk
     FROM ${tableName}
     WHERE 1=1${filterConditions}${asOfDateCondition}
-    ORDER BY tradeDt DESC, id DESC
+    ORDER BY tradeDate DESC, counterParty DESC
     LIMIT ${limit}
   `
 }
@@ -87,7 +86,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { 
-      table = 'risk_f_mv',
+      table = 'trade_book_instrument_mv',
       limit = 50,
       filters = [],
       asOfDate
@@ -121,13 +120,12 @@ export async function POST(request: NextRequest) {
     const cacheKey = `recent-trades:${table}:${limit}:${filterHash}:${asOfDateHash}`
     
     const result = await cacheService.query<{
-      id: string
-      counterparty: string
+      counterParty: string
       notional: number
       cashOut: number
       instrument: string
       tradeDate: string
-      maturityDt: string
+      maturityDate: string
       desk: string
     }>(query, undefined, cacheKey, 60)
     

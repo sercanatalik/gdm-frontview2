@@ -41,13 +41,15 @@ export const FilterOperators = {
 export const riskFilterConfig = {
   // Filter types mapping to database columns
   filterTypes: {
-    "Desk": "desk",
-    "SL1": "SL1",
-    "Portfolio": "portfolio",
-    "CCY": "ccy",
-    "Counterparty": "counterparty",
+    "Desk": "hmsDesk",
+    "SL1": "hmsSL1",
+    "Portfolio": "hmsPortfolio",
+    "CCY": "collatCurrency",
+    "Counterparty": "counterParty",
     // "As Of Date": "asOfDt",
-    "VC Product": "vcProduct",
+    "VC Product": "productType",
+    "tradeDt": "tradeDt",
+    "maturityDt": "maturityDt",
   },
 
   // Filter operators for different field types
@@ -63,53 +65,69 @@ export const riskFilterConfig = {
     "exclude if any of": "NOT ILIKE",
     "before": "<",
     "after": ">",
+    "before and equal": "<=",
+    "after and equal": ">=",
   },
 
   // Icon mapping for filter types and values
   iconMapping: {
     // Filter type icons
-    "Desk": <Building className="size-4 text-blue-500" />,
-    "SL1": <BarChart3 className="size-4 text-purple-500" />,
-    "Portfolio": <PieChart className="size-4 text-green-500" />,
-    "CCY": <DollarSign className="size-4 text-yellow-500" />,
-    "Counterparty": <User className="size-4 text-orange-500" />,
+    "hmsDesk": <Building className="size-4 text-blue-500" />,
+    "hmsSL1": <BarChart3 className="size-4 text-purple-500" />,
+    "hmsPortfolio": <PieChart className="size-4 text-green-500" />,
+    "collatCurrency": <DollarSign className="size-4 text-yellow-500" />,
+    "counterParty": <User className="size-4 text-orange-500" />,
     "As Of Date": <Calendar className="size-4 text-gray-500" />,
     "VC Product": <Target className="size-4 text-red-500" />,
+    "tradeDt": <Clock className="size-4 text-indigo-500" />,
+    "maturityDt": <Clock className="size-4 text-indigo-500" />,
 
   },
 
   // Operator configuration for different field types
   operatorConfig: {
-    "Desk": {
+    "hmsDesk": {
       operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
       type: "select",
-      field: "desk",
+      field: "hmsDesk",
     },
-    "SL1": {
+    "hmsSL1": {
       operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
       type: "select",
-      field: "SL1",
+      field: "hmsSL1",
     },
-    "Portfolio": {
+    "hmsPortfolio": {
       operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
       type: "select",
-      field: "portfolio",
+      field: "hmsPortfolio",
     },
-    "CCY": {
+    "collatCurrency": {
       operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
       type: "select",
-      field: "ccy",
+      field: "collatCurrency",
     },
-    "Counterparty": {
+    "counterParty": {
       operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.INCLUDE, FilterOperators.DO_NOT_INCLUDE],
       type: "text",
-      field: "counterparty",
+      field: "counterParty",
     },
 
-    "VC Product": {
+    "productType": {
       operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
       type: "select",
-      field: "vcProduct",
+      field: "productType",
+    },
+
+    "tradeDt": {
+      operators: [FilterOperators.BEFORE, FilterOperators.AFTER],
+      type: "date",
+      field: "tradeDt",
+    },
+
+    "maturityDt": {
+      operators: [FilterOperators.BEFORE, FilterOperators.AFTER],
+      type: "date",
+      field: "t.maturityDt",
     },
   },
 
@@ -128,7 +146,7 @@ export const riskFilterConfig = {
   ],
 
   // Default table name
-  tableName: "risk_f_mv",
+  tableName: "trade_book_instrument_mv",
 }
 
 // Export individual parts for flexibility

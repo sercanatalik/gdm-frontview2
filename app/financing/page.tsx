@@ -37,13 +37,13 @@ export default function FinancingPage() {
       
       <div className="space-y-6">
         {/* Stat Cards */}
-        <StatCards 
+        {/* <StatCards 
           measures={defaultStatConfigs}
           relativeDt="-6m"
           asOfDate={asOfDate}
           className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
           filters={filters}
-        />
+        /> */}
 
         {/* Grouped Stats Cards */}
        
@@ -51,39 +51,39 @@ export default function FinancingPage() {
         <div className="grid grid-cols-8 gap-6">
           <div className="col-span-5 space-y-6">
            
-            <StatCards 
+            {/* <StatCards 
               measures={defaultStatConfigs}
               relativeDt="-6m"
               asOfDate={asOfDate}
               className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
               filters={filters}
             />
-             <CashoutChart />
+             <CashoutChart /> */}
           </div>
           <div className="col-span-3">
-            <RecentTradesCard filters={filters} asOfDate={asOfDate ?? undefined} />
+            {/* <RecentTradesCard filters={filters} asOfDate={asOfDate ?? undefined} /> */}
           </div>
         </div>
         
         {/* Performance Table */}
         <div className="grid grid-cols-1 gap-6">
-          <PerformanceCard
+          {/* <PerformanceCard
             asOfDate={asOfDate ?? undefined}
             filters={filters}
-          />
+          /> */}
         </div>
 
         {/* Grouped Stats Cards - Row 1 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 my-3">
-          <GroupedStatCard
+          {/* <GroupedStatCard
             measure={{
               key: 'desk_analysis',
               label: 'By Desk',
               field: 'cashOut',
-              tableName: 'risk_f_mv',
+              tableName: 'trade_book_instrument_mv',
               aggregation: 'sum',
               formatter: formatters.currency,
-              result1: { field: 'counterparty', aggregation: 'countDistinct' },
+              result1: { field: 'counterParty', aggregation: 'countDistinct' },
               result2: { field: 'underlyingAmount', aggregation: 'sum' },
               limit: 12
             }}
@@ -98,10 +98,10 @@ export default function FinancingPage() {
               key: 'sl1_analysis',
               label: 'By SL1',
               field: 'cashOut',
-              tableName: 'risk_f_mv',
+              tableName: 'trade_book_instrument_mv',
               aggregation: 'sum',
               formatter: formatters.currency,
-              result1: { field: 'counterparty', aggregation: 'countDistinct' },
+              result1: { field: 'counterParty', aggregation: 'countDistinct' },
               result2: { field: 'underlyingAmount', aggregation: 'sum' },
               limit: 12
             }}
@@ -116,10 +116,10 @@ export default function FinancingPage() {
               key: 'ccy_analysis',
               label: 'By Currency',
               field: 'cashOut',
-              tableName: 'risk_f_mv',
+              tableName: 'trade_book_instrument_mv',
               aggregation: 'sum',
               formatter: formatters.currency,
-              result1: { field: 'counterparty', aggregation: 'countDistinct' },
+              result1: { field: 'counterParty', aggregation: 'countDistinct' },
               result2: { field: 'underlyingAmount', aggregation: 'sum' },
               limit: 12
             }}
@@ -134,32 +134,32 @@ export default function FinancingPage() {
               key: 'counterparty_analysis',
               label: 'By Counterparty',
               field: 'cashOut',
-              tableName: 'risk_f_mv',
+              tableName: 'trade_book_instrument_mv',
               aggregation: 'sum',
               formatter: formatters.currency,
               result1: { field: 'book', aggregation: 'countDistinct' },
               result2: { field: 'underlyingAmount', aggregation: 'sum' },
               limit: 12
             }}
-            groupBy="counterparty"
+            groupBy="counterParty"
             relativeDt="-1d"
             asOfDate={asOfDate}
             filters={filters}
-          />
+          /> */}
 
         </div>
 
         {/* Grouped Stats Cards - Row 2 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 my-3">
-          <GroupedStatCard
+          {/* <GroupedStatCard
             measure={{
               key: 'obligor_analysis',
               label: 'By Obligor',
               field: 'cashOut',
-              tableName: 'risk_f_mv',
+              tableName: 'trade_book_instrument_mv',
               aggregation: 'sum',
               formatter: formatters.currency,
-              result1: { field: 'counterparty', aggregation: 'countDistinct' },
+              result1: { field: 'counterParty', aggregation: 'countDistinct' },
               result2: { field: 'underlyingAmount', aggregation: 'sum' },
               limit: 12
             }}
@@ -174,10 +174,10 @@ export default function FinancingPage() {
               key: 'collat_rating_analysis',
               label: 'By Collat Rating',
               field: 'cashOut',
-              tableName: 'risk_f_mv',
+              tableName: 'trade_book_instrument_mv',
               aggregation: 'sum',
               formatter: formatters.currency,
-              result1: { field: 'counterparty', aggregation: 'countDistinct' },
+              result1: { field: 'counterParty', aggregation: 'countDistinct' },
               result2: { field: 'underlyingAmount', aggregation: 'sum' },
               limit: 12
             }}
@@ -192,10 +192,10 @@ export default function FinancingPage() {
               key: 'collat_sector_analysis',
               label: 'By Collat Sector',
               field: 'cashOut',
-              tableName: 'risk_f_mv',
+              tableName: 'trade_book_instrument_mv',
               aggregation: 'sum',
               formatter: formatters.currency,
-              result1: { field: 'counterparty', aggregation: 'countDistinct' },
+              result1: { field: 'counterParty', aggregation: 'countDistinct' },
               result2: { field: 'underlyingAmount', aggregation: 'sum' },
               limit: 12
             }}
@@ -210,10 +210,10 @@ export default function FinancingPage() {
               key: 'collat_industry_analysis',
               label: 'By Collat Industry',
               field: 'cashOut',
-              tableName: 'risk_f_mv',
+              tableName: 'trade_book_instrument_mv',
               aggregation: 'sum',
               formatter: formatters.currency,
-              result1: { field: 'counterparty', aggregation: 'countDistinct' },
+              result1: { field: 'counterParty', aggregation: 'countDistinct' },
               result2: { field: 'underlyingAmount', aggregation: 'sum' },
               limit: 12
             }}
@@ -221,7 +221,7 @@ export default function FinancingPage() {
             relativeDt="-1d"
             asOfDate={asOfDate}
             filters={filters}
-          />
+          /> */}
         </div>
       </div>
     </div>

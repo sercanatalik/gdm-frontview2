@@ -185,7 +185,7 @@ function buildGroupedQuery(measure: GroupedStatMeasure, groupBy: string, asOfDat
   const orderDirection = measure.orderDirection || 'DESC'
   const limit = measure.limit || 50
   
-  // Build result1 (defaults to counterparty count)
+  // Build result1 (defaults to counterParty count)
   let result1Query = ''
   if (measure.result1) {
     let result1Field = measure.result1.field
@@ -194,7 +194,7 @@ function buildGroupedQuery(measure: GroupedStatMeasure, groupBy: string, asOfDat
     }
     result1Query = `${measure.result1.aggregation}(${result1Field}) as result1`
   } else {
-    result1Query = `countDistinct(counterparty) as result1`
+    result1Query = `countDistinct(counterParty) as result1`
   }
   
   // Build result2 (defaults to notional sum)

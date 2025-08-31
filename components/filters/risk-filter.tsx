@@ -39,7 +39,7 @@ interface RiskFilterProps {
 
 // Main component
 export function RiskFilter({ 
-  tableName = "risk_f_mv",
+  tableName = "trade_book_instrument_mv",
   filterTypes = {},
   filterOperators = {},
   iconMapping = {},
