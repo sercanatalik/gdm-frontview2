@@ -114,7 +114,7 @@ export const defaultStatConfigs = [
   {
     key: 'transactions',
     label: 'Transactions',
-    field: 'id',
+    field: 'tradeId',
     tableName: 'f_exposure',
     aggregation: 'count' as const,
     formatter: formatters.number,
@@ -130,9 +130,9 @@ export const defaultStatConfigs = [
     icon: <BarChart3 className="size-4 text-purple-500" />,
   },
   {
-    key: 'cashOut',
-    label: 'Total cashOut&L',
-    field: 'cashOut',
+    key: 'fundingAmount',
+    label: 'Total fundingAmount&L',
+    field: 'fundingAmount',
     tableName: 'f_exposure',
     aggregation: 'sum' as const,
     formatter: formatters.currency,
@@ -141,7 +141,7 @@ export const defaultStatConfigs = [
   {
     key: 'tradeCount',
     label: 'Trade Count',
-    field: 'id',
+    field: 'tradeId',
     tableName: 'f_exposure',
     aggregation: 'count' as const,
     formatter: formatters.number,
@@ -150,7 +150,7 @@ export const defaultStatConfigs = [
   {
     key: 'underlyingAmount',
     label: 'Avg Position',
-    field: 'underlyingAmount',
+    field: 'i_outstandingAmt',
     tableName: 'f_exposure',
     aggregation: 'avg' as const,
     formatter: formatters.currency,
@@ -159,7 +159,7 @@ export const defaultStatConfigs = [
   {
     key: 'active_desks',
     label: 'Active Desks',
-    field: 'desk',
+    field: 'hmsDesk',
     tableName: 'f_exposure',
     aggregation: 'count' as const,
     formatter: formatters.number,
