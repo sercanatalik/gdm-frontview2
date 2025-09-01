@@ -140,7 +140,7 @@ export const riskFilterConfig = {
   ],
 
   // Default table name
-  tableName: "trade_book_instrument_mv",
+  tableName: "f_exposure",
 }
 
 // Export individual parts for flexibility

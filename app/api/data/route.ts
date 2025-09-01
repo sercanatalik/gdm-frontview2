@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { 
-      table = 'trade_book_instrument_mv',
+      table = 'f_exposure',
       limit = 50,
       filters = [],
       asOfDate

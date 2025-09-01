@@ -25,7 +25,7 @@ export const useRecentTrades = (
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          table: 'trade_book_instrument_mv',
+          table: 'f_exposure',
           limit,
           filters,
           asOfDate
@@ -72,7 +72,7 @@ export const useTradesMaturingSoon = (
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          table: 'trade_book_instrument_mv',
+          table: 'f_exposure',
           limit,
           filters: combinedFilters,
           asOfDate,

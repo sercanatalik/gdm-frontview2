@@ -316,7 +316,7 @@ export function CashoutChart({ className }: CashoutChartProps) {
   
   // Data fetching
   const { data: historicalData, isLoading: historicalLoading, error: historicalError } = useHistoricalData({
-    table: "trade_book_instrument_mv",
+    table: "f_exposure",
     fieldName,
     groupBy: groupBy === "none" ? undefined : groupBy,
     asOfDate,
@@ -324,7 +324,7 @@ export function CashoutChart({ className }: CashoutChartProps) {
   })
 
   const { data: futureData, isLoading: futureLoading, error: futureError } = useFutureData({
-    table: "trade_book_instrument_mv",
+    table: "f_exposure",
     fieldName,
     groupBy: groupBy === "none" ? undefined : groupBy,
     asOfDate,
