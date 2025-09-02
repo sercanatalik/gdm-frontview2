@@ -6,7 +6,8 @@ interface StatMeasure {
   label: string
   field: string
   tableName: string
-  aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min' | 'countDistinct'
+  aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min' | 'countDistinct' | 'avgBy'
+  weightField?: string // Required when aggregation is 'avgBy'
 }
 
 interface FilterCondition {
@@ -157,6 +158,17 @@ function buildQuery(measures: StatMeasure[], asOfDate: string, tableName: string
       aggregationFunction = 'countDistinct'
     }
     
+    // Handle weighted average (avgBy)
+    if (m.aggregation === 'avgBy') {
+      if (!m.weightField) {
+        throw new Error(`weightField is required for avgBy aggregation on measure ${m.key}`)
+      }
+      // Calculate weighted average: sum(value * weight) / sum(weight)
+      const valueField = `toFloat64OrZero(toString(${m.field}))`
+      const weightField = `toFloat64OrZero(toString(${m.weightField}))`
+      return `sum(${valueField} * ${weightField}) / sum(${weightField}) as ${m.key}`
+    }
+    
     return `${aggregationFunction}(${field}) as ${m.key}`
   }).join(', ')
   
@@ -222,7 +234,7 @@ export async function POST(request: NextRequest) {
       // Build queries for both dates with filters
       const requestedQuery = buildQuery(tableMeasures, actualRequestedDate, tableName, filters)
       const latestQuery = buildQuery(tableMeasures, actualLatestDate, tableName, filters)
-      // console.log(`Executing queries for ${tableName} Latest: ${latestQuery}`)
+      console.log(`Executing queries for ${tableName} Latest: ${latestQuery}`)
       const filterHash = Buffer.from(JSON.stringify(filters || [])).toString('base64')
       const measureHash = Buffer.from(JSON.stringify(tableMeasures.map(m => m.key))).toString('base64')
       const cacheKeyRequested = `stats:${tableName}:${relativeDt}:${measureHash}:${filterHash}`

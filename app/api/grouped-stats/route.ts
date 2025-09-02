@@ -6,26 +6,31 @@ interface GroupedStatMeasure {
   label: string
   field: string
   tableName: string
-  aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min' | 'countDistinct'
+  aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min' | 'countDistinct' | 'avgBy'
+  weightField?: string // Required when aggregation is 'avgBy'
   asOfDateField?: string
   result1?: {
     field: string
-    aggregation: 'count' | 'countDistinct' | 'sum' | 'avg' | 'max' | 'min'
+    aggregation: 'count' | 'countDistinct' | 'sum' | 'avg' | 'max' | 'min' | 'avgBy'
+    weightField?: string // Required when aggregation is 'avgBy'
   }
   result2?: {
     field: string
-    aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min' | 'countDistinct'
+    aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min' | 'countDistinct' | 'avgBy'
+    weightField?: string // Required when aggregation is 'avgBy'
   }
   result3?: {
     field: string
-    aggregation: 'sum' | 'count' | 'countDistinct' | 'avg' | 'max' | 'min'
+    aggregation: 'sum' | 'count' | 'countDistinct' | 'avg' | 'max' | 'min' | 'avgBy'
+    weightField?: string // Required when aggregation is 'avgBy'
   }
   orderBy?: string
   orderDirection?: 'ASC' | 'DESC'
   limit?: number
   additionalSelectFields?: Array<{
     field: string
-    aggregation?: 'sum' | 'count' | 'countDistinct' | 'avg' | 'max' | 'min'
+    aggregation?: 'sum' | 'count' | 'countDistinct' | 'avg' | 'max' | 'min' | 'avgBy'
+    weightField?: string // Required when aggregation is 'avgBy'
     alias: string
   }>
 }
@@ -174,6 +179,7 @@ function buildFilterConditions(filters: FilterCondition[]): string {
 function buildGroupedQuery(measure: GroupedStatMeasure, groupBy: string, asOfDate: string, filters: FilterCondition[] = []) {
   let field = measure.field
   let aggregationFunction = measure.aggregation
+  let mainAggregation: string
   
   // For numeric aggregations, ensure the field is treated as numeric
   if (['sum', 'avg', 'max', 'min'].includes(measure.aggregation)) {
@@ -185,6 +191,19 @@ function buildGroupedQuery(measure: GroupedStatMeasure, groupBy: string, asOfDat
     aggregationFunction = 'countDistinct'
   }
   
+  // Handle weighted average (avgBy)
+  if (measure.aggregation === 'avgBy') {
+    if (!measure.weightField) {
+      throw new Error(`weightField is required for avgBy aggregation on measure ${measure.key}`)
+    }
+    // Calculate weighted average: sum(value * weight) / sum(weight)
+    const valueField = `toFloat64OrZero(toString(${measure.field}))`
+    const weightField = `toFloat64OrZero(toString(${measure.weightField}))`
+    mainAggregation = `sum(${valueField} * ${weightField}) / sum(${weightField})`
+  } else {
+    mainAggregation = `${aggregationFunction}(${field})`
+  }
+  
   const filterConditions = buildFilterConditions(filters)
   const asOfDateField = measure.asOfDateField || 'asOfDate'
   const orderBy = measure.orderBy || 'current'
@@ -194,11 +213,21 @@ function buildGroupedQuery(measure: GroupedStatMeasure, groupBy: string, asOfDat
   // Build result1 (defaults to counterParty count)
   let result1Query = ''
   if (measure.result1) {
-    let result1Field = measure.result1.field
-    if (['sum', 'avg', 'max', 'min'].includes(measure.result1.aggregation)) {
-      result1Field = `toFloat64OrZero(toString(${measure.result1.field}))`
+    if (measure.result1.aggregation === 'avgBy') {
+      if (!measure.result1.weightField) {
+        throw new Error(`weightField is required for avgBy aggregation on result1`)
+      }
+      const valueField = `toFloat64OrZero(toString(${measure.result1.field}))`
+      const weightField = `toFloat64OrZero(toString(${measure.result1.weightField}))`
+      result1Query = `sum(${valueField} * ${weightField}) / sum(${weightField}) as result1`
+    } else {
+      let result1Field = measure.result1.field
+      if (['sum', 'avg', 'max', 'min'].includes(measure.result1.aggregation)) {
+        result1Field = `toFloat64OrZero(toString(${measure.result1.field}))`
+      }
+      let aggregation = measure.result1.aggregation === 'countDistinct' ? 'countDistinct' : measure.result1.aggregation
+      result1Query = `${aggregation}(${result1Field}) as result1`
     }
-    result1Query = `${measure.result1.aggregation}(${result1Field}) as result1`
   } else {
     result1Query = `countDistinct(counterParty) as result1`
   }
@@ -206,11 +235,21 @@ function buildGroupedQuery(measure: GroupedStatMeasure, groupBy: string, asOfDat
   // Build result2 (defaults to notional sum)
   let result2Query = ''
   if (measure.result2) {
-    let result2Field = measure.result2.field
-    if (['sum', 'avg', 'max', 'min'].includes(measure.result2.aggregation)) {
-      result2Field = `toFloat64OrZero(toString(${measure.result2.field}))`
+    if (measure.result2.aggregation === 'avgBy') {
+      if (!measure.result2.weightField) {
+        throw new Error(`weightField is required for avgBy aggregation on result2`)
+      }
+      const valueField = `toFloat64OrZero(toString(${measure.result2.field}))`
+      const weightField = `toFloat64OrZero(toString(${measure.result2.weightField}))`
+      result2Query = `sum(${valueField} * ${weightField}) / sum(${weightField}) as result2`
+    } else {
+      let result2Field = measure.result2.field
+      if (['sum', 'avg', 'max', 'min'].includes(measure.result2.aggregation)) {
+        result2Field = `toFloat64OrZero(toString(${measure.result2.field}))`
+      }
+      let aggregation = measure.result2.aggregation === 'countDistinct' ? 'countDistinct' : measure.result2.aggregation
+      result2Query = `${aggregation}(${result2Field}) as result2`
     }
-    result2Query = `${measure.result2.aggregation}(${result2Field}) as result2`
   } else {
     result2Query = `sum(toFloat64OrZero(toString(underlyingAmount))) as result2`
   }
@@ -218,23 +257,41 @@ function buildGroupedQuery(measure: GroupedStatMeasure, groupBy: string, asOfDat
   // Build result3 (optional)
   let result3Query = ''
   if (measure.result3) {
-    let result3Field = measure.result3.field
-    if (['sum', 'avg', 'max', 'min'].includes(measure.result3.aggregation)) {
-      result3Field = `toFloat64OrZero(toString(${measure.result3.field}))`
+    if (measure.result3.aggregation === 'avgBy') {
+      if (!measure.result3.weightField) {
+        throw new Error(`weightField is required for avgBy aggregation on result3`)
+      }
+      const valueField = `toFloat64OrZero(toString(${measure.result3.field}))`
+      const weightField = `toFloat64OrZero(toString(${measure.result3.weightField}))`
+      result3Query = `, sum(${valueField} * ${weightField}) / sum(${weightField}) as result3`
+    } else {
+      let result3Field = measure.result3.field
+      if (['sum', 'avg', 'max', 'min'].includes(measure.result3.aggregation)) {
+        result3Field = `toFloat64OrZero(toString(${measure.result3.field}))`
+      }
+      let aggregation = measure.result3.aggregation === 'countDistinct' ? 'countDistinct' : measure.result3.aggregation
+      result3Query = `, ${aggregation}(${result3Field}) as result3`
     }
-    result3Query = `, ${measure.result3.aggregation}(${result3Field}) as result3`
   }
   
   // Build additional select fields
   const additionalSelects = measure.additionalSelectFields?.map(field => {
-    let fieldQuery = field.field
-    if (field.aggregation) {
+    if (field.aggregation === 'avgBy') {
+      if (!field.weightField) {
+        throw new Error(`weightField is required for avgBy aggregation on additional field ${field.alias}`)
+      }
+      const valueField = `toFloat64OrZero(toString(${field.field}))`
+      const weightField = `toFloat64OrZero(toString(${field.weightField}))`
+      return `sum(${valueField} * ${weightField}) / sum(${weightField}) as ${field.alias}`
+    } else if (field.aggregation) {
+      let fieldQuery = field.field
       if (['sum', 'avg', 'max', 'min'].includes(field.aggregation)) {
         fieldQuery = `toFloat64OrZero(toString(${field.field}))`
       }
-      return `${field.aggregation}(${fieldQuery}) as ${field.alias}`
+      let aggregation = field.aggregation === 'countDistinct' ? 'countDistinct' : field.aggregation
+      return `${aggregation}(${fieldQuery}) as ${field.alias}`
     }
-    return `${fieldQuery} as ${field.alias}`
+    return `${field.field} as ${field.alias}`
   }).join(', ') || ''
   
   const additionalSelectsClause = additionalSelects ? `, ${additionalSelects}` : ''
@@ -245,7 +302,7 @@ function buildGroupedQuery(measure: GroupedStatMeasure, groupBy: string, asOfDat
   return `
     SELECT 
       ${groupBy} as groupValue,
-      ${aggregationFunction}(${field}) as current,
+      ${mainAggregation} as current,
       ${result1Query},
       ${result2Query}${result3Query}${additionalSelectsClause}
     FROM ${measure.tableName}

@@ -5,7 +5,8 @@ export interface StatMeasure {
   label: string
   field: string
   tableName: string
-  aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min' | 'countDistinct'
+  aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min' | 'countDistinct' | 'avgBy'
+  weightField?: string // Required when aggregation is 'avgBy'
   formatter?: (value: number) => string
   icon?: React.ReactNode
 }
@@ -30,28 +31,33 @@ export interface GroupedStatMeasure {
   label: string
   field: string
   tableName: string
-  aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min' | 'countDistinct'
+  aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min' | 'countDistinct' | 'avgBy'
+  weightField?: string // Required when aggregation is 'avgBy'
   formatter?: (value: number) => string
   icon?: React.ReactNode
   asOfDateField?: string
   result1?: {
     field: string
-    aggregation: 'count' | 'countDistinct' | 'sum' | 'avg' | 'max' | 'min'
+    aggregation: 'count' | 'countDistinct' | 'sum' | 'avg' | 'max' | 'min' | 'avgBy'
+    weightField?: string // Required when aggregation is 'avgBy'
   }
   result2?: {
     field: string
-    aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min' | 'countDistinct'
+    aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min' | 'countDistinct' | 'avgBy'
+    weightField?: string // Required when aggregation is 'avgBy'
   }
   result3?: {
     field: string
-    aggregation: 'sum' | 'count' | 'countDistinct' | 'avg' | 'max' | 'min'
+    aggregation: 'sum' | 'count' | 'countDistinct' | 'avg' | 'max' | 'min' | 'avgBy'
+    weightField?: string // Required when aggregation is 'avgBy'
   }
   orderBy?: string
   orderDirection?: 'ASC' | 'DESC'
   limit?: number
   additionalSelectFields?: Array<{
     field: string
-    aggregation?: 'sum' | 'count' | 'countDistinct' | 'avg' | 'max' | 'min'
+    aggregation?: 'sum' | 'count' | 'countDistinct' | 'avg' | 'max' | 'min' | 'avgBy'
+    weightField?: string // Required when aggregation is 'avgBy'
     alias: string
   }>
 }
