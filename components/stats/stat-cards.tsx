@@ -125,7 +125,7 @@ export const defaultStatConfigs = [
     label: 'Active Bookings',
     field: 'book',
     tableName: 'f_exposure',
-    aggregation: 'count' as const,
+    aggregation: 'countDistinct' as const,
     formatter: formatters.number,
     icon: <BarChart3 className="size-4 text-purple-500" />,
   },

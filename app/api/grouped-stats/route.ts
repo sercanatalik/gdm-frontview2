@@ -6,7 +6,7 @@ interface GroupedStatMeasure {
   label: string
   field: string
   tableName: string
-  aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min'
+  aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min' | 'countDistinct'
   asOfDateField?: string
   result1?: {
     field: string
@@ -14,7 +14,7 @@ interface GroupedStatMeasure {
   }
   result2?: {
     field: string
-    aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min'
+    aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min' | 'countDistinct'
   }
   result3?: {
     field: string
@@ -173,10 +173,16 @@ function buildFilterConditions(filters: FilterCondition[]): string {
 
 function buildGroupedQuery(measure: GroupedStatMeasure, groupBy: string, asOfDate: string, filters: FilterCondition[] = []) {
   let field = measure.field
+  let aggregationFunction = measure.aggregation
   
   // For numeric aggregations, ensure the field is treated as numeric
   if (['sum', 'avg', 'max', 'min'].includes(measure.aggregation)) {
     field = `toFloat64OrZero(toString(${measure.field}))`
+  }
+  
+  // ClickHouse uses countDistinct (camelCase)
+  if (measure.aggregation === 'countDistinct') {
+    aggregationFunction = 'countDistinct'
   }
   
   const filterConditions = buildFilterConditions(filters)
@@ -239,7 +245,7 @@ function buildGroupedQuery(measure: GroupedStatMeasure, groupBy: string, asOfDat
   return `
     SELECT 
       ${groupBy} as groupValue,
-      ${measure.aggregation}(${field}) as current,
+      ${aggregationFunction}(${field}) as current,
       ${result1Query},
       ${result2Query}${result3Query}${additionalSelectsClause}
     FROM ${measure.tableName}

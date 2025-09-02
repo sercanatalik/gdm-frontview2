@@ -5,7 +5,7 @@ export interface StatMeasure {
   label: string
   field: string
   tableName: string
-  aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min'
+  aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min' | 'countDistinct'
   formatter?: (value: number) => string
   icon?: React.ReactNode
 }
@@ -30,7 +30,7 @@ export interface GroupedStatMeasure {
   label: string
   field: string
   tableName: string
-  aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min'
+  aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min' | 'countDistinct'
   formatter?: (value: number) => string
   icon?: React.ReactNode
   asOfDateField?: string
@@ -40,7 +40,7 @@ export interface GroupedStatMeasure {
   }
   result2?: {
     field: string
-    aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min'
+    aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min' | 'countDistinct'
   }
   result3?: {
     field: string

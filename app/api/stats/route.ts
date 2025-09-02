@@ -6,7 +6,7 @@ interface StatMeasure {
   label: string
   field: string
   tableName: string
-  aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min'
+  aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min' | 'countDistinct'
 }
 
 interface FilterCondition {
@@ -144,6 +144,7 @@ function buildFilterConditions(filters: FilterCondition[]): string {
 function buildQuery(measures: StatMeasure[], asOfDate: string, tableName: string, filters: FilterCondition[] = []) {
   const aggregations = measures.map(m => {
     let field = m.field
+    let aggregationFunction = m.aggregation
     
     // For numeric aggregations, ensure the field is treated as numeric
     // Use toFloat64OrZero for safe conversion that handles both string and numeric types
@@ -151,7 +152,12 @@ function buildQuery(measures: StatMeasure[], asOfDate: string, tableName: string
       field = `toFloat64OrZero(toString(${m.field}))`
     }
     
-    return `${m.aggregation}(${field}) as ${m.key}`
+    // ClickHouse uses countDistinct (camelCase)
+    if (m.aggregation === 'countDistinct') {
+      aggregationFunction = 'countDistinct'
+    }
+    
+    return `${aggregationFunction}(${field}) as ${m.key}`
   }).join(', ')
   
   const filterConditions = buildFilterConditions(filters)
