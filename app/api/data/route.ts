@@ -69,12 +69,12 @@ function buildRecentTradesQuery(
   return `
     SELECT
       counterParty,
-      notional,
-      cashOut,
+      collateralAmount,
+      fundingAmount,
       instrument,
       tradeDate,
-      maturityDate,
-      desk
+      t.maturityDt,
+      hmsDesk
     FROM ${tableName}
     WHERE 1=1${filterConditions}${asOfDateCondition}
     ORDER BY tradeDate DESC, counterParty DESC
@@ -121,11 +121,11 @@ export async function POST(request: NextRequest) {
     
     const result = await cacheService.query<{
       counterParty: string
-      notional: number
-      cashOut: number
+      collateralAmount: number
+      fundingAmount: number
       instrument: string
       tradeDate: string
-      maturityDate: string
+      maturityDt: string
       desk: string
     }>(query, undefined, cacheKey, 60)
     

@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { 
       table = 'f_exposure',
-      fieldName = 'cashOut',
+      fieldName = 'fundingAmount',
       groupBy,
       asOfDate,
       filters = []

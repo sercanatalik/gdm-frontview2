@@ -51,14 +51,8 @@ export default function FinancingPage() {
         <div className="grid grid-cols-8 gap-6">
           <div className="col-span-5 space-y-6">
            
-            {/* <StatCards 
-              measures={defaultStatConfigs}
-              relativeDt="-6m"
-              asOfDate={asOfDate}
-              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
-              filters={filters}
-            />
-             <CashoutChart /> */}
+           
+             <CashoutChart /> 
           </div>
           <div className="col-span-3">
             {/* <RecentTradesCard filters={filters} asOfDate={asOfDate ?? undefined} /> */}
@@ -79,7 +73,7 @@ export default function FinancingPage() {
             measure={{
               key: 'desk_analysis',
               label: 'By Desk',
-              field: 'cashOut',
+              field: 'fundingAmount',
               tableName: 'f_exposure',
               aggregation: 'sum',
               formatter: formatters.currency,
@@ -97,7 +91,7 @@ export default function FinancingPage() {
             measure={{
               key: 'sl1_analysis',
               label: 'By SL1',
-              field: 'cashOut',
+              field: 'fundingAmount',
               tableName: 'f_exposure',
               aggregation: 'sum',
               formatter: formatters.currency,
@@ -115,7 +109,7 @@ export default function FinancingPage() {
             measure={{
               key: 'ccy_analysis',
               label: 'By Currency',
-              field: 'cashOut',
+              field: 'fundingAmount',
               tableName: 'f_exposure',
               aggregation: 'sum',
               formatter: formatters.currency,
@@ -133,7 +127,7 @@ export default function FinancingPage() {
             measure={{
               key: 'counterparty_analysis',
               label: 'By Counterparty',
-              field: 'cashOut',
+              field: 'fundingAmount',
               tableName: 'f_exposure',
               aggregation: 'sum',
               formatter: formatters.currency,
@@ -155,7 +149,7 @@ export default function FinancingPage() {
             measure={{
               key: 'obligor_analysis',
               label: 'By Obligor',
-              field: 'cashOut',
+              field: 'fundingAmount',
               tableName: 'f_exposure',
               aggregation: 'sum',
               formatter: formatters.currency,
@@ -173,7 +167,7 @@ export default function FinancingPage() {
             measure={{
               key: 'collat_rating_analysis',
               label: 'By Collat Rating',
-              field: 'cashOut',
+              field: 'fundingAmount',
               tableName: 'f_exposure',
               aggregation: 'sum',
               formatter: formatters.currency,
@@ -191,7 +185,7 @@ export default function FinancingPage() {
             measure={{
               key: 'collat_sector_analysis',
               label: 'By Collat Sector',
-              field: 'cashOut',
+              field: 'fundingAmount',
               tableName: 'f_exposure',
               aggregation: 'sum',
               formatter: formatters.currency,
@@ -209,7 +203,7 @@ export default function FinancingPage() {
             measure={{
               key: 'collat_industry_analysis',
               label: 'By Collat Industry',
-              field: 'cashOut',
+              field: 'fundingAmount',
               tableName: 'f_exposure',
               aggregation: 'sum',
               formatter: formatters.currency,

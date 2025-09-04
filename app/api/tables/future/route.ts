@@ -63,7 +63,7 @@ function buildFilterConditions(filters: FilterCondition[]): string {
   return conditions.length > 0 ? ` AND (${conditions.join(' AND ')})` : ''
 }
 
-// Helper function to build future data query using maturityDate
+// Helper function to build future data query using maturityDt
 function buildFutureQuery(
   tableName: string,
   fieldName: string,
@@ -80,10 +80,10 @@ function buildFutureQuery(
   return `
     WITH monthly_data AS (
       SELECT
-        toStartOfMonth(maturityDate) as month_start,
+        toStartOfMonth(t.maturityDt) as month_start,
         sum(toFloat64OrZero(toString(${fieldName}))) as monthly_value${breakdownClause}
       FROM ${tableName}
-      WHERE maturityDate > '${fromDate}'${filterConditions}
+      WHERE t.maturityDt > '${fromDate}'${filterConditions}
       GROUP BY month_start${breakdownClause}
       ORDER BY month_start
     )
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { 
       table = 'f_exposure',
-      fieldName = 'cashOut',
+      fieldName = 'fundingAmount',
       groupBy,
       asOfDate,
       filters = []

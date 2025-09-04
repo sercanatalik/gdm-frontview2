@@ -49,7 +49,7 @@ interface GroupedStatData {
   change: number
   changePercent: number
   counterpartyCount: number
-  notionalAmount: number
+  collateralAmount: number
   percentage: number
 }
 
@@ -251,7 +251,7 @@ function buildGroupedQuery(measure: GroupedStatMeasure, groupBy: string, asOfDat
       result2Query = `${aggregation}(${result2Field}) as result2`
     }
   } else {
-    result2Query = `sum(toFloat64OrZero(toString(underlyingAmount))) as result2`
+    result2Query = `sum(toFloat64OrZero(toString(collateralAmount))) as result2`
   }
   
   // Build result3 (optional)
@@ -416,7 +416,7 @@ export async function POST(request: NextRequest) {
           change,
           changePercent,
           counterpartyCount: latestItem.result1,
-          notionalAmount: latestItem.result2,
+          collateralAmount: latestItem.result2,
           percentage
         }
       })
@@ -437,7 +437,7 @@ export async function POST(request: NextRequest) {
           change,
           changePercent,
           counterpartyCount: latestItem.result1,
-          notionalAmount: latestItem.result2,
+          collateralAmount: latestItem.result2,
           percentage
         }
       })

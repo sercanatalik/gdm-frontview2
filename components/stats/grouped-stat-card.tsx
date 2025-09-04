@@ -25,7 +25,7 @@ interface GroupedStatData {
   change: number
   changePercent: number
   counterpartyCount: number
-  notionalAmount: number
+  collateralAmount: number
   percentage: number
 }
 
@@ -201,7 +201,7 @@ function GroupedStatCard({ measure, groupBy, relativeDt, asOfDate, className, fi
                           {formatValue(item.current, currencyType)} {formatValue(item.percentage, 'percentage')}
                         </div>
                         <div className="text-[10px] text-muted-foreground">
-                          {formatValue(item.notionalAmount, currencyType)} notional
+                          {formatValue(item.collateralAmount, currencyType)} collateral
                         </div>
                       </div>
                     </div>
@@ -313,7 +313,7 @@ function GroupedStatCard({ measure, groupBy, relativeDt, asOfDate, className, fi
                         {formatValue(item.current, currencyType)} {formatValue(item.percentage, 'percentage')}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {formatValue(item.notionalAmount, currencyType)} notional
+                        {formatValue(item.collateralAmount, currencyType)} collateral
                       </div>
                     </div>
                   </div>

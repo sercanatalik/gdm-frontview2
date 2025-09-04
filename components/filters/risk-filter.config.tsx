@@ -79,7 +79,7 @@ export const riskFilterConfig = {
     "collatCurrency": <DollarSign className="size-4 text-yellow-500" />,
     "counterParty": <User className="size-4 text-orange-500" />,
     "tradeDate": <Clock className="size-4 text-indigo-500" />,
-    "t.maturityDate": <Clock className="size-4 text-indigo-500" />,
+    "t.maturityDt": <Clock className="size-4 text-indigo-500" />,
 
   },
 
@@ -118,10 +118,10 @@ export const riskFilterConfig = {
       field: "tradeDate",
     },
 
-    "t.maturityDate": {
+    "t.maturityDt": {
       operators: [FilterOperators.BEFORE, FilterOperators.AFTER],
       type: "date",
-      field: "t.maturityDate",
+      field: "t.maturityDt",
     },
   },
 

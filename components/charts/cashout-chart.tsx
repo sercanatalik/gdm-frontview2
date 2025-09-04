@@ -59,8 +59,8 @@ const MONOCHROME_COLORS = [
 
 // Field and GroupBy options
 const FIELD_OPTIONS = [
-  { value: "cashOut", label: "Cash Out" },
-  { value: "notional", label: "Notional Amount" },
+  { value: "fundingAmount", label: "Cash Out" },
+  { value: "collateralAmount", label: "Notional Amount" },
 ]
 
 // Utilities
@@ -292,8 +292,8 @@ export function CashoutChart({ className }: CashoutChartProps) {
   const asOfDate = useStore(filtersStore, (state) => state.asOfDate)
   
   // State
-  const [fieldName, setFieldName] = React.useState("cashOut")
-  const [groupBy, setGroupBy] = React.useState("vcProduct")
+  const [fieldName, setFieldName] = React.useState("fundingAmount")
+  const [groupBy, setGroupBy] = React.useState("null")
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   const [showSettings, setShowSettings] = React.useState(false)
   const [activeTab, setActiveTab] = React.useState("historical")

@@ -69,7 +69,7 @@ export interface GroupedStatData {
   change: number
   changePercent: number
   counterpartyCount: number
-  notionalAmount: number
+  collateralAmount: number
   percentage: number
 }
 

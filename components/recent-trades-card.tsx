@@ -93,9 +93,9 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
     setIsModalOpen(true)
   }
 
-  const getDaysToMaturity = (maturityDate: string) => {
+  const getDaysToMaturity = (maturityDt: string) => {
     const today = new Date()
-    const maturity = new Date(maturityDate)
+    const maturity = new Date(maturityDt)
     const timeDiff = maturity.getTime() - today.getTime()
     const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24))
     return daysDiff
@@ -137,14 +137,14 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
     if (!trades || trades.length === 0) return
 
     // Create CSV content
-    const headers = ['Counterparty', 'Instrument', 'Trade Date', 'Maturity Date', 'Notional', 'Cash Out', 'Desk']
+    const headers = ['Counterparty', 'Instrument', 'Trade Date', 'Maturity Date', 'Collateral Amount', 'Funding Amount', 'Desk']
     const csvData = trades.map(trade => [
       trade.counterParty,
       trade.instrument,
       trade.tradeDate,
-      trade.maturityDate,
-      trade.notional,
-      trade.cashOut,
+      trade.maturityDt,
+      trade.collateralAmount,
+      trade.fundingAmount,
       trade.desk
     ])
 
@@ -263,7 +263,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                 </div>
                 <div className="text-right">
                   <div className="font-medium text-sm">
-                    {formatCurrency(trade.cashOut)}
+                    {formatCurrency(trade.fundingAmount)}
                   </div>
                 </div>
               </div>
@@ -321,13 +321,13 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                   <div>
                     <div className="font-medium text-sm">{trade.counterParty}</div>
                     <div className="text-xs text-muted-foreground">
-                      {trade.instrument} • Matures {formatDate(trade.maturityDate)}
+                      {trade.instrument} • Matures {formatDate(trade.maturityDt)}
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="font-medium text-sm">
-                    {formatCurrency(trade.cashOut)}
+                    {formatCurrency(trade.fundingAmount)}
                   </div>
                 </div>
               </div>
@@ -386,7 +386,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                   ACTIVE
                 </div>
                 {(() => {
-                  const daysToMaturity = getDaysToMaturity(selectedTrade.maturityDate)
+                  const daysToMaturity = getDaysToMaturity(selectedTrade.maturityDt)
                   if (daysToMaturity <= 7) {
                     return (
                       <div className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
@@ -399,7 +399,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                 <div className="ml-auto text-right">
                   <p className="text-sm text-muted-foreground">Maturity Date</p>
                   <p className="text-lg font-semibold text-red-600">
-                    {formatDate(selectedTrade.maturityDate)}
+                    {formatDate(selectedTrade.maturityDt)}
                   </p>
                 </div>
               </div>
@@ -410,17 +410,17 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
               <Card className="p-4">
                 <div className="flex items-center space-x-2 mb-2">
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-muted-foreground">Notional Amount</span>
+                  <span className="text-sm font-medium text-muted-foreground">Collateral Amount</span>
                 </div>
-                <p className="text-2xl font-bold">{formatLargeNumber(selectedTrade.notional)}</p>
+                <p className="text-2xl font-bold">{formatLargeNumber(selectedTrade.collateralAmount)}</p>
               </Card>
               
               <Card className="p-4">
                 <div className="flex items-center space-x-2 mb-2">
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-muted-foreground">Cash Out</span>
+                  <span className="text-sm font-medium text-muted-foreground">Funding Amount</span>
                 </div>
-                <p className="text-2xl font-bold">{formatLargeNumber(selectedTrade.cashOut)}</p>
+                <p className="text-2xl font-bold">{formatLargeNumber(selectedTrade.fundingAmount)}</p>
               </Card>
               
               <Card className="p-4">
@@ -429,10 +429,10 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                   <span className="text-sm font-medium text-muted-foreground">P&L</span>
                 </div>
                 <p className="text-2xl font-bold text-red-600">
-                  {formatLargeNumber(selectedTrade.cashOut - selectedTrade.notional)}
+                  {formatLargeNumber(selectedTrade.fundingAmount - selectedTrade.collateralAmount)}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  ({(((selectedTrade.cashOut - selectedTrade.notional) / selectedTrade.notional) * 100).toFixed(2)}%)
+                  ({(((selectedTrade.fundingAmount - selectedTrade.collateralAmount) / selectedTrade.collateralAmount) * 100).toFixed(2)}%)
                 </p>
               </Card>
             </div>
@@ -523,7 +523,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                   <div>
                     <p className="text-sm text-muted-foreground">Days to Maturity</p>
                     <p className="text-lg font-semibold text-red-600">
-                      {getDaysToMaturity(selectedTrade.maturityDate)} days
+                      {getDaysToMaturity(selectedTrade.maturityDt)} days
                     </p>
                   </div>
                 </div>
@@ -532,7 +532,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                   <div>
                     <p className="text-sm text-muted-foreground">Maturity Date</p>
                     <p className="text-lg font-semibold">
-                      {formatDate(selectedTrade.maturityDate)}
+                      {formatDate(selectedTrade.maturityDt)}
                     </p>
                   </div>
                 </div>
