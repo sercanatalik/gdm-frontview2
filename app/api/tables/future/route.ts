@@ -63,12 +63,33 @@ function buildFilterConditions(filters: FilterCondition[]): string {
   return conditions.length > 0 ? ` AND (${conditions.join(' AND ')})` : ''
 }
 
+// Helper function to find closest future date (greater than or equal to target)
+const findClosestFutureDate = async (targetDate: string, tableName: string): Promise<string> => {
+  const cacheService = getClickHouseCacheService(300)
+  
+  const query = `
+    SELECT DISTINCT asOfDate
+    FROM ${tableName}
+    WHERE asOfDate >= '${targetDate}'
+    ORDER BY asOfDate ASC
+    LIMIT 1
+  `
+  try {
+    const result = await cacheService.query<{ asOfDate: string }>(query, undefined, `closest_future_date:${tableName}:${targetDate}`, 300)
+    return result[0]?.asOfDate || targetDate
+  } catch (error) {
+    console.warn(`Could not find closest future date for ${targetDate} in ${tableName}, using original date`)
+    return targetDate
+  }
+}
+
 // Helper function to build future data query using maturityDt
 function buildFutureQuery(
   tableName: string,
   fieldName: string,
   groupBy: string | undefined,
   fromDate: string,
+  asOfDate: string,
   filters: FilterCondition[] = []
 ): string {
   const filterConditions = buildFilterConditions(filters)
@@ -83,16 +104,25 @@ function buildFutureQuery(
         toStartOfMonth(t.maturityDt) as month_start,
         sum(toFloat64OrZero(toString(${fieldName}))) as monthly_value${breakdownClause}
       FROM ${tableName}
-      WHERE t.maturityDt > '${fromDate}'${filterConditions}
+      WHERE t.maturityDt >= '${fromDate}' 
+        AND asOfDate = '${asOfDate}'${filterConditions}
       GROUP BY month_start${breakdownClause}
       ORDER BY month_start
+    ),
+    cumulative_data AS (
+      SELECT
+        month_start,
+        monthly_value${breakdownClause},
+        sum(monthly_value) OVER (${breakdownPartition} ORDER BY month_start 
+          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as cumulative_value
+      FROM monthly_data
     )
     
     SELECT
       formatDateTime(month_start, '%Y-%m-%d') as asOfDate${breakdownClause},
-      sum(monthly_value) OVER (${breakdownPartition} ORDER BY month_start) as value,
+      cumulative_value as value,
       monthly_value
-    FROM monthly_data
+    FROM cumulative_data
     ORDER BY month_start${breakdownClause}
   `
 }
@@ -132,8 +162,14 @@ export async function POST(request: NextRequest) {
     
     const cacheService = getClickHouseCacheService(300)
     
-    // Use asOfDate as starting point for future projections, or default to today
-    const fromDate = asOfDate || formatDate(new Date())
+    // Use asOfDate or default to today for finding the data snapshot
+    const targetAsOfDate = asOfDate || formatDate(new Date())
+    
+    // Find the closest available asOfDate that is >= targetAsOfDate
+    const actualAsOfDate = await findClosestFutureDate(targetAsOfDate, table)
+    
+    // Use today as the starting point for future projections
+    const fromDate = formatDate(new Date())
     
     // Build and execute query
     const query = buildFutureQuery(
@@ -141,6 +177,7 @@ export async function POST(request: NextRequest) {
       fieldName,
       groupBy || undefined,
       fromDate,
+      actualAsOfDate,
       filters
     )
     
@@ -148,7 +185,7 @@ export async function POST(request: NextRequest) {
     
     // Generate cache key
     const filterHash = Buffer.from(JSON.stringify(filters || [])).toString('base64')
-    const cacheKey = `future:${table}:${fieldName}:${groupBy || 'none'}:${fromDate}:${filterHash}`
+    const cacheKey = `future:${table}:${fieldName}:${groupBy || 'none'}:${actualAsOfDate}:${fromDate}:${filterHash}`
     
     const result = await cacheService.query<{
       asOfDate: string
@@ -163,6 +200,7 @@ export async function POST(request: NextRequest) {
         table,
         fieldName,
         groupBy,
+        asOfDate: actualAsOfDate,
         fromDate: fromDate,
         recordCount: result.length
       }
