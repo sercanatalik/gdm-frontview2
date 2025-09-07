@@ -27,15 +27,15 @@ export function getRedisClient(): RedisClient {
     })
 
     globalRedisClient.on('connect', () => {
-      console.log('Redis connected successfully')
+  //    console.log('Redis connected successfully')
     })
 
     globalRedisClient.on('ready', () => {
-      console.log('Redis ready for commands')
+//      console.log('Redis ready for commands')
     })
 
     globalRedisClient.on('close', () => {
-      console.warn('Redis connection closed')
+//      console.warn('Redis connection closed')
     })
 
     globalRedisClient.on('reconnecting', () => {

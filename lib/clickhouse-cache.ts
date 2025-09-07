@@ -34,7 +34,7 @@ export class ClickHouseCacheService {
           // console.log(`Cache HIT for key: ${actualCacheKey}`)
           return JSON.parse(cached)
         } else {
-          console.log(`Cache MISS for key: ${actualCacheKey}`)
+      //    console.log(`Cache MISS for key: ${actualCacheKey}`)
         }
       } else {
         console.warn(`Redis not ready. Status: ${this.redis.status}`)

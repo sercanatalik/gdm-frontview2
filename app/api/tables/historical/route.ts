@@ -17,7 +17,7 @@ const findClosestDate = async (targetDate: string, tableName: string): Promise<s
   
   const query = `
     SELECT asOfDate
-    FROM ${tableName}
+    FROM ${tableName} FINAL
     WHERE asOfDate <= '${targetDate}'
     ORDER BY asOfDate DESC
     LIMIT 1
@@ -102,7 +102,7 @@ function buildHistoricalQuery(
   
   return `
     SELECT ${groupByClause}asOfDate, ${selectClause}
-    FROM ${tableName}
+    FROM ${tableName} FINAL
     WHERE asOfDate <= '${baseDate}'${filterConditions}
     ${groupBy ? `GROUP BY ${groupBy}, asOfDate` : 'GROUP BY asOfDate'}
     ${orderByClause}

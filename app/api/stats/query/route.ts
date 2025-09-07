@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { query } = body
 
-    console.log('Received stats query:', query)
+    // console.log('Received stats query:', query)
     
     if (!query) {
       return NextResponse.json(

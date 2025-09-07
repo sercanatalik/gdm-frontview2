@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
       filters
     )
     
-    console.log(`Future query for ${table}: ${query}`)
+   //console.log(`Future query for ${table}: ${query}`)
     
     // Generate cache key
     const filterHash = Buffer.from(JSON.stringify(filters || [])).toString('base64')
