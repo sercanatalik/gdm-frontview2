@@ -63,7 +63,7 @@ export const processFutureData = (data: Record<string, unknown>[]) => {
       .map(([key]) => key)
     
     // Second pass: process each date keeping only the global top 4 and aggregate others
-    const result = Object.entries(groupedByDate)
+    const processedData = Object.entries(groupedByDate)
       .map(([date, groups]) => {
         const point: any = {
           date: new Date(date).toLocaleDateString('en-US', { 
@@ -94,8 +94,43 @@ export const processFutureData = (data: Record<string, unknown>[]) => {
         return point
       })
       .sort((a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime())
+    
+    // Calculate cumulative values (decreasing from total)
+    // First, get the initial total for each group
+    const groupInitialTotals: Record<string, number> = {}
+    const allGroups = new Set<string>()
+    
+    processedData.forEach(point => {
+      Object.keys(point).forEach(key => {
+        if (key !== 'date' && key !== 'fullDate') {
+          allGroups.add(key)
+          groupInitialTotals[key] = (groupInitialTotals[key] || 0) + (point[key] || 0)
+        }
+      })
+    })
+    
+    // Now calculate cumulative values (starting from total and decreasing)
+    const cumulativeData = processedData.map((point, index) => {
+      const cumulativePoint: any = {
+        date: point.date,
+        fullDate: point.fullDate
+      }
       
-    return result
+      // For each group, calculate cumulative remaining value
+      allGroups.forEach(group => {
+        // Sum of all previous values for this group (what has already flowed out)
+        let previousSum = 0
+        for (let i = 0; i < index; i++) {
+          previousSum += processedData[i][group] || 0
+        }
+        // Remaining value = total - what has flowed out
+        cumulativePoint[group] = groupInitialTotals[group] - previousSum
+      })
+      
+      return cumulativePoint
+    })
+    
+    return cumulativeData
   }
 
   // Original processing for ungrouped data
@@ -165,8 +200,40 @@ export const processFutureData = (data: Record<string, unknown>[]) => {
       ...result
     }
   })
+  .sort((a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime())
   
-  return processedData.sort((a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime())
+  // Calculate cumulative values for ungrouped data
+  const groupInitialTotals: Record<string, number> = {}
+  const allGroups = new Set<string>()
+  
+  processedData.forEach(point => {
+    Object.keys(point).forEach(key => {
+      if (key !== 'date' && key !== 'fullDate') {
+        allGroups.add(key)
+        groupInitialTotals[key] = (groupInitialTotals[key] || 0) + (point[key] || 0)
+      }
+    })
+  })
+  
+  // Calculate cumulative remaining values
+  const cumulativeData = processedData.map((point, index) => {
+    const cumulativePoint: any = {
+      date: point.date,
+      fullDate: point.fullDate
+    }
+    
+    allGroups.forEach(group => {
+      let previousSum = 0
+      for (let i = 0; i < index; i++) {
+        previousSum += processedData[i][group] || 0
+      }
+      cumulativePoint[group] = groupInitialTotals[group] - previousSum
+    })
+    
+    return cumulativePoint
+  })
+  
+  return cumulativeData
 }
 
 export const FutureChart = React.forwardRef<HTMLDivElement, FutureChartProps>(
@@ -213,6 +280,8 @@ export const FutureChart = React.forwardRef<HTMLDivElement, FutureChartProps>(
       )
     }
     
+    console.log('Processed chart data:', chartData)
+    
     const isStacked = Boolean(data.meta.groupBy)
     const chartConfig = generateChartConfig(chartData, isStacked)
     
@@ -221,8 +290,15 @@ export const FutureChart = React.forwardRef<HTMLDivElement, FutureChartProps>(
       ? Object.keys(chartData[0]).filter(key => key !== 'date' && key !== 'fullDate')
       : []
     
+    console.log('Data keys:', dataKeys)
+    console.log('Chart config:', chartConfig)
+    console.log('Is stacked:', isStacked)
+    console.log('Colors in config:', Object.entries(chartConfig).map(([k, v]) => `${k}: ${v.color}`))
+    
     // Use dataKeys as sanitizedGroups to ensure we only render bars for existing data
     const sanitizedGroups = dataKeys.filter(key => chartConfig[key])
+
+    console.log('Sanitized groups:', sanitizedGroups)
 
     // If no groups to display, show message
     if (sanitizedGroups.length === 0) {
@@ -230,6 +306,31 @@ export const FutureChart = React.forwardRef<HTMLDivElement, FutureChartProps>(
       return (
         <div className="flex items-center justify-center h-[400px] text-muted-foreground">
           <span>No data groups found to display</span>
+        </div>
+      )
+    }
+    
+    // Ensure all data points have numeric values for all groups
+    const safeChartData = chartData.map(point => {
+      const safePoint: any = { ...point }
+      sanitizedGroups.forEach(group => {
+        if (!(group in safePoint) || safePoint[group] === null || safePoint[group] === undefined) {
+          safePoint[group] = 0
+        } else {
+          safePoint[group] = Number(safePoint[group]) || 0
+        }
+      })
+      return safePoint
+    })
+    
+    console.log('Safe chart data:', safeChartData)
+    
+    // If we still have issues, try a simple fallback
+    if (safeChartData.length === 0 || sanitizedGroups.length === 0) {
+      console.error('Empty chart data or no groups to display')
+      return (
+        <div className="flex items-center justify-center h-[400px] text-muted-foreground">
+          <span>Unable to render chart - no valid data</span>
         </div>
       )
     }
@@ -241,16 +342,7 @@ export const FutureChart = React.forwardRef<HTMLDivElement, FutureChartProps>(
         className={isFullscreen ? "h-[calc(100vh-250px)]" : "h-[400px] w-full"}
       >
         <BarChart
-          data={chartData.map(point => {
-            // Ensure each data point has all required keys
-            const safePoint = { ...point }
-            sanitizedGroups.forEach(group => {
-              if (!(group in safePoint)) {
-                safePoint[group] = 0
-              }
-            })
-            return safePoint
-          })}
+          data={safeChartData}
           margin={{ top: 20, right: 20, left: 20, bottom: 5 }}
         >
           <CartesianGrid vertical={false} />
@@ -266,15 +358,27 @@ export const FutureChart = React.forwardRef<HTMLDivElement, FutureChartProps>(
             axisLine={false}
             tickMargin={8}
             tickFormatter={formatCurrency}
+            domain={[0, 'dataMax']}
           />
           <ChartTooltip cursor={false} content={<CustomTooltip />} />
           <ChartLegend content={<ChartLegendContent payload={[]} />} />
-          {sanitizedGroups.map((sanitizedGroup) => {
+          {sanitizedGroups.length > 0 && sanitizedGroups.map((sanitizedGroup) => {
+            console.log(`Rendering bar for group: ${sanitizedGroup}`)
+            console.log('Sample data values for this group:', safeChartData.map(d => d[sanitizedGroup]))
+            
+            // Validate that this group actually has data
+            const groupValues = safeChartData.map(d => d[sanitizedGroup]).filter(v => v !== undefined && v !== null && !isNaN(v))
+            if (groupValues.length === 0) {
+              console.warn(`Skipping group ${sanitizedGroup} - no valid values`)
+              return null
+            }
+            
             return (
               <Bar 
                 key={sanitizedGroup} 
                 dataKey={sanitizedGroup}
-                fill={`var(--color-${sanitizedGroup})`}
+                stackId={isStacked ? "stack" : undefined}
+                fill={`var(--color-${sanitizedGroup}}`}
               />
             )
           })}
