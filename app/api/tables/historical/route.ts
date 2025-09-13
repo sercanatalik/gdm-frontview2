@@ -96,15 +96,27 @@ function buildHistoricalQuery(
   
   // Build the aggregation and grouping
   const aggregation = `sum(toFloat64OrZero(toString(${fieldName}))) as value`
-  const groupByClause = groupBy ? `${groupBy}, ` : ''
-  const selectClause = groupBy ? `${groupBy}, ${aggregation}` : aggregation
-  const orderByClause = groupBy ? `ORDER BY ${groupBy}, asOfDate` : 'ORDER BY asOfDate'
+  
+  // Build SELECT clause properly
+  let selectClause: string
+  let groupByClause: string
+  let orderByClause: string
+  
+  if (groupBy) {
+    selectClause = `${groupBy} as groupBy, asOfDate, ${aggregation}`
+    groupByClause = `GROUP BY ${groupBy}, asOfDate`
+    orderByClause = `ORDER BY ${groupBy}, asOfDate`
+  } else {
+    selectClause = `null as groupBy, asOfDate, ${aggregation}`
+    groupByClause = `GROUP BY asOfDate`
+    orderByClause = `ORDER BY asOfDate`
+  }
   
   return `
-    SELECT ${groupByClause}asOfDate, ${selectClause}
+    SELECT ${selectClause}
     FROM ${tableName} FINAL
     WHERE asOfDate <= '${baseDate}'${filterConditions}
-    ${groupBy ? `GROUP BY ${groupBy}, asOfDate` : 'GROUP BY asOfDate'}
+    ${groupByClause}
     ${orderByClause}
   `
 }
@@ -155,7 +167,7 @@ export async function POST(request: NextRequest) {
     const query = buildHistoricalQuery(
       table,
       fieldName,
-      groupBy || undefined,
+      groupBy,
       actualBaseDate,
       filters
     )
@@ -170,14 +182,14 @@ export async function POST(request: NextRequest) {
       asOfDate: string
       value: number
       [key: string]: any
-    }>(query, undefined, cacheKey, 300)
+    }>(query, undefined, cacheKey, 1)
     
     return NextResponse.json({
       data: result,
       meta: {
         table,
         fieldName,
-        groupBy,
+        groupBy: groupBy || null,
         baseDate: actualBaseDate,
         recordCount: result.length
       }
