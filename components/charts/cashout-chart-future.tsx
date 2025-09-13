@@ -373,12 +373,17 @@ export const FutureChart = React.forwardRef<HTMLDivElement, FutureChartProps>(
               return null
             }
             
+            // Use direct colors from config when stacked (monochrome colors)
+            const barFill = isStacked && chartConfig[sanitizedGroup] 
+              ? chartConfig[sanitizedGroup].color 
+              : `var(--color-${sanitizedGroup})`
+            
             return (
               <Bar 
                 key={sanitizedGroup} 
                 dataKey={sanitizedGroup}
                 stackId={isStacked ? "stack" : undefined}
-                fill={`var(--color-${sanitizedGroup}}`}
+                fill={barFill}
               />
             )
           })}
