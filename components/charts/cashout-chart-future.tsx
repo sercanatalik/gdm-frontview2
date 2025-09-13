@@ -30,8 +30,9 @@ export const processFutureData = (data: Record<string, unknown>[]) => {
   const hasGroupByField = data.some(item => 'groupBy' in item)
   
   if (hasGroupByField) {
-    // Data comes with groupBy field, transform it directly
+    // First pass: collect data and calculate totals for each group
     const groupedByDate: Record<string, Record<string, number>> = {}
+    const globalGroupTotals: Record<string, number> = {}
     
     data.forEach(item => {
       const asOfDate = item.asOfDate as string
@@ -41,25 +42,60 @@ export const processFutureData = (data: Record<string, unknown>[]) => {
       const groupValue = item.groupBy ? String(item.groupBy) : 'Total'
       const value = Number(item.monthly_value || 0)
       
+      // Skip if value is not valid
+      if (isNaN(value)) return
+      
       if (!groupedByDate[dateStr]) {
         groupedByDate[dateStr] = {}
       }
       
       const sanitizedGroupValue = sanitizeKey(groupValue)
-      groupedByDate[dateStr][sanitizedGroupValue] = value
+      groupedByDate[dateStr][sanitizedGroupValue] = (groupedByDate[dateStr][sanitizedGroupValue] || 0) + value
+      
+      // Track global totals for determining top 4
+      globalGroupTotals[sanitizedGroupValue] = (globalGroupTotals[sanitizedGroupValue] || 0) + value
     })
     
-    // Convert to chart format
-    return Object.entries(groupedByDate)
-      .map(([date, groups]) => ({
-        date: new Date(date).toLocaleDateString('en-US', { 
-          month: 'short', 
-          year: 'numeric'
-        }),
-        fullDate: date,
-        ...groups
-      }))
+    // Determine the top 4 groups globally
+    const globalTop4 = Object.entries(globalGroupTotals)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([key]) => key)
+    
+    // Second pass: process each date keeping only the global top 4 and aggregate others
+    const result = Object.entries(groupedByDate)
+      .map(([date, groups]) => {
+        const point: any = {
+          date: new Date(date).toLocaleDateString('en-US', { 
+            month: 'short', 
+            year: 'numeric'
+          }),
+          fullDate: date
+        }
+        
+        let othersTotal = 0
+        
+        // Process each group for this date
+        Object.entries(groups).forEach(([key, value]) => {
+          const numValue = typeof value === 'number' && !isNaN(value) ? value : 0
+          
+          if (globalTop4.includes(key)) {
+            point[key] = numValue
+          } else {
+            othersTotal += numValue
+          }
+        })
+        
+        // Add "Others" if there are any
+        if (othersTotal > 0) {
+          point[sanitizeKey('Others')] = othersTotal
+        }
+        
+        return point
+      })
       .sort((a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime())
+      
+    return result
   }
 
   // Original processing for ungrouped data

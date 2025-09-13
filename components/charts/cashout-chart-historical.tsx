@@ -30,8 +30,9 @@ export const processHistoricalData = (data: Record<string, unknown>[]) => {
   const hasGroupByField = data.some(item => 'groupBy' in item)
   
   if (hasGroupByField) {
-    // Data comes with groupBy field, transform it directly
+    // First pass: collect data and calculate totals for each group
     const groupedByDate: Record<string, Record<string, number>> = {}
+    const globalGroupTotals: Record<string, number> = {}
     
     data.forEach(item => {
       const asOfDate = item.asOfDate as string
@@ -49,10 +50,19 @@ export const processHistoricalData = (data: Record<string, unknown>[]) => {
       }
       
       const sanitizedGroupValue = sanitizeKey(groupValue)
-      groupedByDate[dateStr][sanitizedGroupValue] = value
+      groupedByDate[dateStr][sanitizedGroupValue] = (groupedByDate[dateStr][sanitizedGroupValue] || 0) + value
+      
+      // Track global totals for determining top 4
+      globalGroupTotals[sanitizedGroupValue] = (globalGroupTotals[sanitizedGroupValue] || 0) + value
     })
     
-    // Convert to chart format with guaranteed numeric values
+    // Determine the top 4 groups globally
+    const globalTop4 = Object.entries(globalGroupTotals)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([key]) => key)
+    
+    // Second pass: process each date keeping only the global top 4 and aggregate others
     const result = Object.entries(groupedByDate)
       .map(([date, groups]) => {
         const point: any = {
@@ -63,10 +73,23 @@ export const processHistoricalData = (data: Record<string, unknown>[]) => {
           fullDate: date
         }
         
-        // Ensure all values are proper numbers
+        let othersTotal = 0
+        
+        // Process each group for this date
         Object.entries(groups).forEach(([key, value]) => {
-          point[key] = typeof value === 'number' && !isNaN(value) ? value : 0
+          const numValue = typeof value === 'number' && !isNaN(value) ? value : 0
+          
+          if (globalTop4.includes(key)) {
+            point[key] = numValue
+          } else {
+            othersTotal += numValue
+          }
         })
+        
+        // Add "Others" if there are any
+        if (othersTotal > 0) {
+          point[sanitizeKey('Others')] = othersTotal
+        }
         
         return point
       })
