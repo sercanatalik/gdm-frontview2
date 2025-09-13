@@ -22,18 +22,62 @@ interface FutureChartProps {
 }
 
 export const processFutureData = (data: Record<string, unknown>[]) => {
+  if (!data || data.length === 0) {
+    return []
+  }
+
+  // Check if data is already grouped (has groupBy field) or needs grouping
+  const hasGroupByField = data.some(item => 'groupBy' in item)
+  
+  if (hasGroupByField) {
+    // Data comes with groupBy field, transform it directly
+    const groupedByDate: Record<string, Record<string, number>> = {}
+    
+    data.forEach(item => {
+      const asOfDate = item.asOfDate as string
+      if (!asOfDate) return
+      
+      const dateStr = asOfDate.split(' ')[0]
+      const groupValue = item.groupBy ? String(item.groupBy) : 'Total'
+      const value = Number(item.monthly_value || 0)
+      
+      if (!groupedByDate[dateStr]) {
+        groupedByDate[dateStr] = {}
+      }
+      
+      const sanitizedGroupValue = sanitizeKey(groupValue)
+      groupedByDate[dateStr][sanitizedGroupValue] = value
+    })
+    
+    // Convert to chart format
+    return Object.entries(groupedByDate)
+      .map(([date, groups]) => ({
+        date: new Date(date).toLocaleDateString('en-US', { 
+          month: 'short', 
+          year: 'numeric'
+        }),
+        fullDate: date,
+        ...groups
+      }))
+      .sort((a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime())
+  }
+
+  // Original processing for ungrouped data
   const groupedData: Record<string, Record<string, number>> = {}
   const globalGroupTotals: Record<string, number> = {}
   
   // First pass: collect all data and calculate global totals
   data.forEach(item => {
     const asOfDate = item.asOfDate as string
+    if (!asOfDate) return
+    
     const dateStr = asOfDate.split(' ')[0]
+    
+    // Find any other field that's not asOfDate, value, or monthly_value
     const groupByField = Object.keys(item).find(key => 
       key !== 'asOfDate' && key !== 'value' && key !== 'monthly_value' && key !== 'groupBy'
     )
-    const groupValue = groupByField ? String(item[groupByField] || 'Unknown') : 
-                       item.groupBy !== null ? String(item.groupBy) : 'Total'
+    const groupValue = groupByField ? String(item[groupByField] || 'Unknown') : 'Total'
     const value = Number(item.monthly_value || 0)
     
     if (!groupedData[dateStr]) {
@@ -46,6 +90,11 @@ export const processFutureData = (data: Record<string, unknown>[]) => {
     // Track global totals for determining top 4
     globalGroupTotals[sanitizedGroupValue] = (globalGroupTotals[sanitizedGroupValue] || 0) + value
   })
+  
+  // If no data was grouped, return empty array
+  if (Object.keys(groupedData).length === 0) {
+    return []
+  }
   
   // Determine the top 4 groups globally
   const globalTop4 = Object.entries(globalGroupTotals)
@@ -118,9 +167,36 @@ export const FutureChart = React.forwardRef<HTMLDivElement, FutureChartProps>(
     }
 
     const chartData = processFutureData(data.data)
+    
+    // If no chart data after processing, show no data message
+    if (!chartData || chartData.length === 0) {
+      return (
+        <div className="flex items-center justify-center h-[400px] text-muted-foreground">
+          <span>No data available for the selected period</span>
+        </div>
+      )
+    }
+    
     const isStacked = Boolean(data.meta.groupBy)
     const chartConfig = generateChartConfig(chartData, isStacked)
-    const sanitizedGroups = Object.keys(chartConfig)
+    
+    // Get the actual data keys from the first data point (excluding date fields)
+    const dataKeys = chartData.length > 0 
+      ? Object.keys(chartData[0]).filter(key => key !== 'date' && key !== 'fullDate')
+      : []
+    
+    // Use dataKeys as sanitizedGroups to ensure we only render bars for existing data
+    const sanitizedGroups = dataKeys.filter(key => chartConfig[key])
+
+    // If no groups to display, show message
+    if (sanitizedGroups.length === 0) {
+      console.error('No valid data groups found. ChartData:', chartData, 'Config:', chartConfig)
+      return (
+        <div className="flex items-center justify-center h-[400px] text-muted-foreground">
+          <span>No data groups found to display</span>
+        </div>
+      )
+    }
 
     return (
       <ChartContainer 
@@ -129,7 +205,16 @@ export const FutureChart = React.forwardRef<HTMLDivElement, FutureChartProps>(
         className={isFullscreen ? "h-[calc(100vh-250px)]" : "h-[400px] w-full"}
       >
         <BarChart
-          data={chartData}
+          data={chartData.map(point => {
+            // Ensure each data point has all required keys
+            const safePoint = { ...point }
+            sanitizedGroups.forEach(group => {
+              if (!(group in safePoint)) {
+                safePoint[group] = 0
+              }
+            })
+            return safePoint
+          })}
           margin={{ top: 20, right: 20, left: 20, bottom: 5 }}
         >
           <CartesianGrid vertical={false} />
@@ -148,15 +233,15 @@ export const FutureChart = React.forwardRef<HTMLDivElement, FutureChartProps>(
           />
           <ChartTooltip cursor={false} content={<CustomTooltip />} />
           <ChartLegend content={<ChartLegendContent payload={[]} />} />
-          {sanitizedGroups.map((sanitizedGroup) => (
-            <Bar
-              key={sanitizedGroup}
-              dataKey={sanitizedGroup}
-              stackId={isStacked ? "stacked" : undefined}
-              fill={`var(--color-${sanitizedGroup})`}
-              radius={isStacked ? [0, 0, 0, 0] : [4, 4, 0, 0]}
-            />
-          ))}
+          {sanitizedGroups.map((sanitizedGroup) => {
+            return (
+              <Bar 
+                key={sanitizedGroup} 
+                dataKey={sanitizedGroup}
+                fill={`var(--color-${sanitizedGroup})`}
+              />
+            )
+          })}
         </BarChart>
       </ChartContainer>
     )
