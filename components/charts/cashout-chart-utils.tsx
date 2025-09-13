@@ -28,8 +28,20 @@ export const FIELD_OPTIONS = [
 
 // Utilities
 export const formatCurrency = (value: number): string => {
-  const millions = value / 1000000
-  return `$${millions.toFixed(1)}M`
+  if (value >= 1000000000) {
+    const billions = value / 1000000000
+    return `$${billions.toFixed(1)}B`
+  } else if (value >= 1000000) {
+    const millions = value / 1000000
+    return `$${millions.toFixed(1)}M`
+  } 
+  else if (value >= 100000) {
+    const millions = value / 1000000
+    return `$${millions.toFixed(1)}K`
+  }else {
+    const thousands = value / 1000
+    return `$${thousands.toFixed(0)}`
+  }
 }
 
 export const sanitizeKey = (key: string): string => {
