@@ -12,7 +12,7 @@ export default function DataGridPage() {
 
   useEffect(() => {
     // Generate sample data
-    const sampleData = Array.from({ length: 100 }, (_, i) => ({
+    const sampleData = Array.from({ length: 10000 }, (_, i) => ({
       id: i + 1,
       name: `Customer ${i + 1}`,
       department: ["Sales", "Marketing", "Engineering", "Support", "Finance"][Math.floor(Math.random() * 5)],
@@ -28,7 +28,7 @@ export default function DataGridPage() {
   }, [])
 
   return (
-    <div className="p-0">
+    <div className="p-0 h-screen flex flex-col">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-3xl font-bold tracking-tight">Data Grid</h2>
 
@@ -45,8 +45,8 @@ export default function DataGridPage() {
         </div>
       </div>
 
-      <div className="space-y-6">
-        <div className="border rounded-lg p-4 bg-background" style={{ height: "600px" }}>
+      <div className="flex-1">
+        <div className="border rounded-lg p-4 bg-background w-full h-full">
           <PerspectiveViewer
             data={data}
             theme="pro-dark"
