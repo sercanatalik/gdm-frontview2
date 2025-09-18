@@ -51,8 +51,6 @@ export default function DataGridPage() {
             data={data}
             theme="pro-dark"
             view="datagrid"
-            columns={["name", "department", "status", "priority", "revenue", "employees", "date_created", "satisfaction", "country"]}
-            settings={true}
           />
         </div>
       </div>
