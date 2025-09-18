@@ -16,7 +16,7 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-7 gap-2">
           <NavigationCard  href="/credit" title="Credit"  />
           <NavigationCard href="/financing" title="Financing" />
-          <NavigationCard href="/ai" title="AI SDK Client" />  
+          <NavigationCard href="/datagrid" title="Data Grid" />  
         </div>
       </div>
     </div>
