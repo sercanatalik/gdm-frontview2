@@ -266,7 +266,7 @@ export default function FinancingPage() {
         {showLazyContent && (
           <div className="space-y-6 animate-in fade-in-50 slide-in-from-bottom-4 duration-700">
             {/* Lazy Loaded Performance Card */}
-            <div className="grid grid-cols-1 gap-6">
+            {/* <div className="grid grid-cols-1 gap-6">
               <div className="border border-border rounded-lg p-6 bg-card">
                 <h3 className="text-lg font-semibold mb-4">Performance Analysis</h3>
                 <PerformanceCard
@@ -274,7 +274,7 @@ export default function FinancingPage() {
                   filters={filters}
                 />
               </div>
-            </div>
+            </div> */}
 
             {/* Additional Lazy Loaded Content */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
