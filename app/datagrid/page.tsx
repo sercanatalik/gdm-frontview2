@@ -12,6 +12,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useTableDesc } from "@/lib/query/table-desc"
+import { useTableData } from "@/lib/query/table-data"
+import { useStore } from "@tanstack/react-store"
+import { filtersStore } from "@/lib/store/filters"
 import "@/styles/perspective.css"
 
 const tableConfig = {
@@ -20,26 +24,25 @@ const tableConfig = {
 }
 
 export default function DataGridPage() {
-  // Sample data for demonstration
-  const [data, setData] = useState<any[]>([])
   const [selectedTable, setSelectedTable] = useState<string>("f_exposure")
 
-  useEffect(() => {
-    // Generate sample data
-    const sampleData = Array.from({ length: 10000 }, (_, i) => ({
-      id: i + 1,
-      name: `Customer ${i + 1}`,
-      department: ["Sales", "Marketing", "Engineering", "Support", "Finance"][Math.floor(Math.random() * 5)],
-      status: ["Active", "Pending", "Inactive"][Math.floor(Math.random() * 3)],
-      priority: ["High", "Medium", "Low"][Math.floor(Math.random() * 3)],
-      revenue: Math.floor(Math.random() * 100000) + 10000,
-      employees: Math.floor(Math.random() * 500) + 10,
-      date_created: new Date(2024, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1).toISOString().split('T')[0],
-      satisfaction: (Math.random() * 5).toFixed(2),
-      country: ["USA", "UK", "Germany", "France", "Japan", "Canada"][Math.floor(Math.random() * 6)],
-    }))
-    setData(sampleData)
-  }, [])
+  // Get filters and asOfDate from store
+  const filters = useStore(filtersStore, (state) => state.filters)
+  const asOfDate = useStore(filtersStore, (state) => state.asOfDate)
+
+  // Fetch table description
+  const { data: tableDesc, isLoading: isLoadingDesc } = useTableDesc(selectedTable)
+
+  // Fetch table data
+  const { data: tableData, isLoading: isLoadingData } = useTableData({
+    tableName: selectedTable,
+    filters: filters,
+    asOfDate: asOfDate || undefined,
+    limit: 10000
+  })
+
+  // Use fetched data or empty array
+  const data = tableData?.data || []
 
   return (
     <div className="p-0 h-screen flex flex-col">
@@ -74,11 +77,17 @@ export default function DataGridPage() {
 
       <div className="flex-1">
         <div className="border rounded-lg p-4 bg-background w-full h-full">
-          <PerspectiveViewer
-            data={data}
-            theme="pro-dark"
-            view="datagrid"
-          />
+          {isLoadingData ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-muted-foreground">Loading table data...</div>
+            </div>
+          ) : (
+            <PerspectiveViewer
+              data={data}
+              theme="pro-dark"
+              view="datagrid"
+            />
+          )}
         </div>
       </div>
 

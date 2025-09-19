@@ -31,7 +31,7 @@ interface TableDataResponse {
 }
 
 async function fetchTableData(params: TableDataParams): Promise<TableDataResponse> {
-  const response = await fetch('gdm-frontview/api/table-data', {
+  const response = await fetch('/gdm-frontview/api/tables/data', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
