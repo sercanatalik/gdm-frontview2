@@ -86,6 +86,57 @@ export default function FinancingPage() {
             asOfDate={asOfDate}
             filters={filters}
           />
+           <GroupedStatCard
+            measure={{
+              key: 'desk_analysis',
+              label: 'By Ccy',
+              field: 'fundingAmount',
+              tableName: 'f_exposure',
+              aggregation: 'sum',
+              formatter: formatters.currency,
+              result1: { field: 'counterParty', aggregation: 'countDistinct' },
+              result2: { field: 'collateralAmount', aggregation: 'sum' },
+              limit: 12
+            }}
+            groupBy="hmsSL1"
+            relativeDt="-1d"
+            asOfDate={asOfDate}
+            filters={filters}
+          />
+           <GroupedStatCard
+            measure={{
+              key: 'desk_analysis',
+              label: 'By Ccy',
+              field: 'fundingAmount',
+              tableName: 'f_exposure',
+              aggregation: 'sum',
+              formatter: formatters.currency,
+              result1: { field: 'counterParty', aggregation: 'countDistinct' },
+              result2: { field: 'collateralAmount', aggregation: 'sum' },
+              limit: 12
+            }}
+            groupBy="tradingLocation"
+            relativeDt="-1d"
+            asOfDate={asOfDate}
+            filters={filters}
+          />
+           <GroupedStatCard
+            measure={{
+              key: 'desk_analysis',
+              label: 'By Ccy',
+              field: 'fundingAmount',
+              tableName: 'f_exposure',
+              aggregation: 'sum',
+              formatter: formatters.currency,
+              result1: { field: 'counterParty', aggregation: 'countDistinct' },
+              result2: { field: 'collateralAmount', aggregation: 'sum' },
+              limit: 12
+            }}
+            groupBy="collatCurrency"
+            relativeDt="-1d"
+            asOfDate={asOfDate}
+            filters={filters}
+          />
 
 
         </div>
