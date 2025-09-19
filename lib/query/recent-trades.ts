@@ -1,94 +1,149 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
+
+interface FilterCondition {
+  type: string
+  operator: string
+  value: string[]
+  field?: string
+}
 
 export interface Trade {
   counterParty: string
   collateralAmount: number
   fundingAmount: number
-  instrument: string
+  collateralDesc: string
   tradeDate: string
-  "t.maturityDt": string
-  desk: string
+  maturityDt: string
+  hmsDesk: string
+  collatCurrency: string
+  primaryTrader: string
+  hmsSL1: string
+  executionDt:string
+
 }
 
-// React Query hook for fetching recent trades data
-export const useRecentTrades = (
-  filters: any[] = [],
-  limit: number = 50,
-  asOfDate?: string
-) => {
-  return useQuery({
-    queryKey: ['recent-trades', filters, limit, asOfDate],
-    queryFn: async (): Promise<Trade[]> => {
-      const response = await fetch('/gdm-frontview/api/data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          table: 'f_exposure',
-          limit,
-          filters,
-          asOfDate
-        }),
-      })
+interface RecentTradesParams {
+  tableName?: string
+  filters?: FilterCondition[]
+  limit?: number
+  asOfDate?: string | null
+}
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
+interface RecentTradesResponse {
+  data: Trade[]
+  meta: {
+    table: string
+    limit: number
+    recordCount: number
+  }
+}
 
-      const result = await response.json()
-      return result.data || []
+async function fetchRecentTrades(params: RecentTradesParams): Promise<Trade[]> {
+  const response = await fetch('/gdm-frontview/api/tables/data', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
     },
+    body: JSON.stringify({
+      tableName: params.tableName  || 'f_exposure',
+      limit: params.limit || 50,
+      filters: params.filters || [],
+      asOfDate: params.asOfDate,
+      orderBy: 'tradeDt',
+      orderDirection: 'DESC'
+      
+    }),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null)
+    throw new Error(errorData?.error || `Failed to fetch recent trades: ${response.status}`)
+  }
+
+  const result: RecentTradesResponse = await response.json()
+  return result.data || []
+}
+
+export const useRecentTrades = (params?: RecentTradesParams) => {
+  return useQuery<Trade[], Error>({
+    queryKey: ['recent-trades', params],
+    queryFn: () => fetchRecentTrades(params || {}),
     staleTime: 1 * 60 * 1000, // 1 minute
     gcTime: 5 * 60 * 1000, // 5 minutes
+    placeholderData: keepPreviousData,
+    retry: 1,
     enabled: true,
   })
 }
 
-// React Query hook for fetching trades maturing soon
-export const useTradesMaturingSoon = (
-  filters: any[] = [],
-  limit: number = 50,
-  asOfDate?: string
-) => {
-  return useQuery({
-    queryKey: ['trades-maturing-soon', filters, limit, asOfDate],
-    queryFn: async (): Promise<Trade[]> => {
-      // Filter for trades with future maturity dates (after today)
-      const today = new Date()
-      
-      const maturityFilter = {
-        field: 'maturityDt',
-        operator: '>=',
-        value: [today.toISOString().split('T')[0]],
-        type: 'maturityDt'
-      }
-      
-      const combinedFilters = [...filters, maturityFilter]
+interface MaturingTradesParams {
+  table?: string
+  filters?: FilterCondition[]
+  limit?: number
+  asOfDate?: string | null
+  daysAhead?: number
+}
 
-      const response = await fetch('/gdm-frontview/api/data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          table: 'f_exposure',
-          limit,
-          filters: combinedFilters,
-          asOfDate,
-          orderBy: [{ column: 'maturityDt', direction: 'ASC' }]
-        }),
-      })
+async function fetchMaturingTrades(params: MaturingTradesParams): Promise<Trade[]> {
+  const today = new Date()
+  const daysAhead = params.daysAhead || 30
+  const futureDate = new Date(today)
+  futureDate.setDate(futureDate.getDate() + daysAhead)
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
+  const maturityFilter: FilterCondition = {
+    field: 'maturityDt',
+    operator: '>=',
+    value: [today.toISOString().split('T')[0]],
+    type: 'maturityDt'
+  }
 
-      const result = await response.json()
-      return result.data || []
+  const maturityEndFilter: FilterCondition = {
+    field: 'maturityDt',
+    operator: '<=',
+    value: [futureDate.toISOString().split('T')[0]],
+    type: 'maturityDt'
+  }
+
+  const combinedFilters = [
+    ...(params.filters || []),
+    maturityFilter,
+    maturityEndFilter
+  ]
+
+  const response = await fetch('/gdm-frontview/api/tables/data', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
     },
+    body: JSON.stringify({
+      tableName: params.table || 'f_exposure',
+      limit: params.limit || 500,
+      filters: combinedFilters,
+      asOfDate: params.asOfDate,
+      orderBy: 'maturityDt',
+      orderDirection: 'ASC'
+    }),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null)
+    throw new Error(errorData?.error || `Failed to fetch maturing trades: ${response.status}`)
+  }
+
+  const result = await response.json()
+  return result.data || []
+}
+
+export const useTradesMaturingSoon = (params?: MaturingTradesParams) => {
+  return useQuery<Trade[], Error>({
+    queryKey: ['trades-maturing-soon', params],
+    queryFn: () => fetchMaturingTrades(params || {}),
     staleTime: 1 * 60 * 1000, // 1 minute
     gcTime: 5 * 60 * 1000, // 5 minutes
+    placeholderData: keepPreviousData,
+    retry: 1,
     enabled: true,
   })
 }
+
+export type { FilterCondition, RecentTradesParams, MaturingTradesParams }

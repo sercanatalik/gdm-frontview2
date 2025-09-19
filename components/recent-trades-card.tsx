@@ -11,6 +11,7 @@ import { useRecentTrades, useTradesMaturingSoon, type Trade } from "@/lib/query/
 import html2canvas from 'html2canvas-pro'
 import * as FileSaver from "file-saver"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import moment from "moment"
 
 interface RecentTradesCardProps {
   filters?: any[]
@@ -26,8 +27,16 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   
-  const { data: recentTrades = [], isLoading: isLoadingRecent, error: errorRecent } = useRecentTrades(filters, 100, asOfDate)
-  const { data: maturingTrades = [], isLoading: isLoadingMaturing, error: errorMaturing } = useTradesMaturingSoon(filters, 100, asOfDate)
+  const { data: recentTrades = [], isLoading: isLoadingRecent, error: errorRecent } = useRecentTrades({
+    filters,
+    limit: 100,
+    asOfDate
+  })
+  const { data: maturingTrades = [], isLoading: isLoadingMaturing, error: errorMaturing } = useTradesMaturingSoon({
+    filters,
+    limit: 100,
+    asOfDate
+  })
   
   const cardRef = useRef<HTMLDivElement>(null)
 
@@ -46,10 +55,18 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
     return `${millions >= 0 ? '+' : ''}${millions.toFixed(2)} mio`
   }
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string, useRelative: boolean = false) => {
     try {
-      const date = new Date(dateString)
-      return date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })
+      const date = moment(dateString)
+      if (!date.isValid()) {
+        return dateString
+      }
+
+      if (useRelative) {
+        return date.fromNow()
+      }
+
+      return date.format('MMM D, YYYY')
     } catch {
       return dateString
     }
@@ -67,8 +84,8 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
   const getTotalStats = () => {
     const tradeCount = trades.length
     const counterparties = new Set(trades.map(t => t.counterParty)).size
-    const instruments = new Set(trades.map(t => t.instrument)).size
-    const currencies = new Set(trades.map(t => t.instrument.split('_')[0])).size
+    const instruments = new Set(trades.map(t => t.collateralDesc)).size
+    const currencies = new Set(trades.map(t => t.collatCurrency.split('_')[0])).size
 
     return { tradeCount, counterparties, instruments, currencies }
   }
@@ -140,12 +157,12 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
     const headers = ['Counterparty', 'Instrument', 'Trade Date', 'Maturity Date', 'Collateral Amount', 'Funding Amount', 'Desk']
     const csvData = trades.map(trade => [
       trade.counterParty,
-      trade.instrument,
+      trade.collateralAmount,
       trade.tradeDate,
       trade.maturityDt,
       trade.collateralAmount,
       trade.fundingAmount,
-      trade.desk
+      trade.executionDt
     ])
 
     const csvContent = [
@@ -257,7 +274,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                   <div>
                     <div className="font-medium text-sm">{trade.counterParty}</div>
                     <div className="text-xs text-muted-foreground">
-                      {trade.instrument} • {formatDate(trade.tradeDate)}
+                      {trade.collateralDesc} -- {formatDate(trade.executionDt, true)}
                     </div>
                   </div>
                 </div>
