@@ -5,10 +5,24 @@ import { riskFilterConfig } from "@/components/filters/risk-filter.config"
 import { AsOfDateSelect } from "@/components/filters/as-of-date-select"
 import { PerspectiveViewer } from "@/components/datagrid/perspective-viewer"
 import { useState, useEffect } from "react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import "@/styles/perspective.css"
+
+const tableConfig = {
+  "Risk": "f_exposure",
+  "Trades": "f_trade"
+}
+
 export default function DataGridPage() {
   // Sample data for demonstration
   const [data, setData] = useState<any[]>([])
+  const [selectedTable, setSelectedTable] = useState<string>("f_exposure")
 
   useEffect(() => {
     // Generate sample data
@@ -33,15 +47,28 @@ export default function DataGridPage() {
         <h2 className="text-3xl font-bold tracking-tight">Data Grid</h2>
 
         <div className="flex items-center gap-3">
+          
           <RiskFilter
-            tableName={riskFilterConfig.tableName}
+            tableName={selectedTable}
             filterTypes={riskFilterConfig.filterTypes}
             filterOperators={riskFilterConfig.filterOperators}
             iconMapping={riskFilterConfig.iconMapping}
             operatorConfig={riskFilterConfig.operatorConfig}
             dateValues={riskFilterConfig.dateValues}
           />
-          <AsOfDateSelect tableName={riskFilterConfig.tableName} />
+          <AsOfDateSelect tableName={selectedTable} />
+          <Select value={selectedTable} onValueChange={setSelectedTable}>
+            <SelectTrigger className="h-8 text-sm rounded-sm border-none bg-transparent hover:bg-accent hover:text-accent-foreground gap-1.5 px-3 w-auto min-w-[100px]">
+              <SelectValue placeholder="Select table" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(tableConfig).map(([label, value]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
