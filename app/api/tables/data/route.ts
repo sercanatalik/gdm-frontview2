@@ -84,15 +84,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate limit if provided
-    if (limit !== undefined) {
-      if (typeof limit !== 'number' || limit < 1 || limit > 10000) {
-        return NextResponse.json(
-          { error: 'Invalid limit. Must be a number between 1 and 10000' },
-          { status: 400 }
-        )
-      }
-    }
+   
 
     // Validate offset
     if (typeof offset !== 'number' || offset < 0) {
@@ -177,7 +169,7 @@ export async function POST(request: NextRequest) {
         totalRecords,
         recordCount: dataResult.length,
         offset,
-        limit: limit || null,
+        limit: limit || 5000,
         hasMore: limit ? (offset + dataResult.length) < totalRecords : false,
         timestamp: new Date().toISOString()
       }
@@ -185,29 +177,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Table data API error:', error)
-
-    if (error instanceof Error) {
-      if (error.message.includes('Table') && error.message.includes("doesn't exist")) {
-        return NextResponse.json(
-          { error: 'Table not found' },
-          { status: 404 }
-        )
-      }
-
-      if (error.message.includes('column') || error.message.includes('field')) {
-        return NextResponse.json(
-          { error: 'Invalid field or column in query' },
-          { status: 400 }
-        )
-      }
-
-      if (error.message.includes('Memory limit')) {
-        return NextResponse.json(
-          { error: 'Query exceeds memory limit. Please use filters or pagination' },
-          { status: 400 }
-        )
-      }
-    }
 
     return NextResponse.json(
       { error: 'Internal server error' },

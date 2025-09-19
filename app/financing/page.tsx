@@ -14,6 +14,9 @@ import { filtersStore } from "@/lib/store/filters"
 import { formatters } from "@/lib/query/stats"
 import { useState, useEffect, useRef } from "react"
 import { Loader2 } from "lucide-react"
+import { PerspectiveViewer } from "@/components/datagrid/perspective-viewer"
+import { useTableData } from "@/lib/query/table-data"
+import "@/styles/perspective.css"
 
 export default function FinancingPage() {
   const filters = useStore(filtersStore, (state) => state.filters)
@@ -23,6 +26,19 @@ export default function FinancingPage() {
   const [showLazyContent, setShowLazyContent] = useState(false)
   const [isLoadingLazy, setIsLoadingLazy] = useState(false)
   const lazyTriggerRef = useRef<HTMLDivElement>(null)
+
+  // Fetch table data for perspective viewer (only when lazy content is shown)
+  const { data: tableData, isLoading: isLoadingTableData } = useTableData(
+    showLazyContent ? {
+      tableName: "f_exposure",
+      filters: filters,
+      asOfDate: asOfDate || undefined,
+      limit: 20000
+    } : null
+  )
+
+  // Use fetched data or empty array
+  const perspectiveData = tableData?.data || []
 
   // Intersection Observer for lazy loading
   useEffect(() => {
@@ -322,6 +338,45 @@ export default function FinancingPage() {
                 </div>
               </div>
             </div>
+
+            {/* Perspective Viewer */}
+            <div className="border border-border rounded-lg bg-card col-span-full">
+              <div className="p-4 border-b border-border">
+                <h4 className="text-base font-medium">Exposure Data Grid</h4>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {isLoadingTableData ? (
+                    <span>Loading data...</span>
+                  ) : (
+                    <span>{perspectiveData.length.toLocaleString()} records from f_exposure table • Filters and asOfDate applied</span>
+                  )}
+                </div>
+              </div>
+              <div className="h-[1000px] relative">
+                {isLoadingTableData ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="flex items-center space-x-2">
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                      <span className="text-sm text-muted-foreground">Loading table data...</span>
+                    </div>
+                  </div>
+                ) : perspectiveData.length > 0 ? (
+                  <PerspectiveViewer
+                    data={perspectiveData}
+                    theme="pro-dark"
+                    view="datagrid"
+                    className="h-full"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">No data available</p>
+                      <p className="text-xs text-muted-foreground mt-1">Try adjusting your filters or date selection</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
         )}
 
