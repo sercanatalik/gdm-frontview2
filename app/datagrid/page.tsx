@@ -18,10 +18,11 @@ import { useStore } from "@tanstack/react-store"
 import { filtersStore } from "@/lib/store/filters"
 import "@/styles/perspective.css"
 
-const tableConfig = {
-  "Risk": "f_exposure",
-  "Trades": "f_trade"
-}
+const tableConfig = [
+  { name: "f_exposure", label: "Risk" ,filterable: true,asOfDate: true },
+
+  { name: "f_trade", label: "Trades", filterable: false, asOfDate: true }
+] 
 
 export default function DataGridPage() {
   const [selectedTable, setSelectedTable] = useState<string>("f_exposure")
@@ -29,6 +30,9 @@ export default function DataGridPage() {
   // Get filters and asOfDate from store
   const filters = useStore(filtersStore, (state) => state.filters)
   const asOfDate = useStore(filtersStore, (state) => state.asOfDate)
+
+  // Get current table config
+  const currentTableConfig = tableConfig.find(t => t.name === selectedTable)
 
   // Fetch table description
   const { data: tableDesc, isLoading: isLoadingDesc } = useTableDesc(selectedTable)
@@ -50,24 +54,27 @@ export default function DataGridPage() {
         <h2 className="text-3xl font-bold tracking-tight">Data Grid</h2>
 
         <div className="flex items-center gap-3">
-          
-          <RiskFilter
-            tableName={selectedTable}
-            filterTypes={riskFilterConfig.filterTypes}
-            filterOperators={riskFilterConfig.filterOperators}
-            iconMapping={riskFilterConfig.iconMapping}
-            operatorConfig={riskFilterConfig.operatorConfig}
-            dateValues={riskFilterConfig.dateValues}
-          />
-          <AsOfDateSelect tableName={selectedTable} />
+          {currentTableConfig?.filterable && (
+            <RiskFilter
+              tableName={selectedTable}
+              filterTypes={riskFilterConfig.filterTypes}
+              filterOperators={riskFilterConfig.filterOperators}
+              iconMapping={riskFilterConfig.iconMapping}
+              operatorConfig={riskFilterConfig.operatorConfig}
+              dateValues={riskFilterConfig.dateValues}
+            />
+          )}
+          {currentTableConfig?.asOfDate && (
+            <AsOfDateSelect tableName={selectedTable} />
+          )}
           <Select value={selectedTable} onValueChange={setSelectedTable}>
             <SelectTrigger className="h-8 text-sm rounded-sm border-none bg-transparent hover:bg-accent hover:text-accent-foreground gap-1.5 px-3 w-auto min-w-[100px]">
               <SelectValue placeholder="Select table" />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(tableConfig).map(([label, value]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
+              {tableConfig.map((table) => (
+                <SelectItem key={table.name} value={table.name}>
+                  {table.label}
                 </SelectItem>
               ))}
             </SelectContent>

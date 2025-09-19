@@ -213,7 +213,6 @@ export const HistoricalChart = React.forwardRef<HTMLDivElement, HistoricalChartP
       )
     }
     
-    console.log('Processed chart data:', chartData)
     
     const isStacked = Boolean(data.meta.groupBy)
     const chartConfig = generateChartConfig(chartData, isStacked)
@@ -223,18 +222,15 @@ export const HistoricalChart = React.forwardRef<HTMLDivElement, HistoricalChartP
       ? Object.keys(chartData[0]).filter(key => key !== 'date' && key !== 'fullDate')
       : []
     
-    console.log('Data keys:', dataKeys)
-    console.log('Chart config:', chartConfig)
+    
     
     // Use dataKeys as sanitizedGroups to ensure we only render bars for existing data
     const sanitizedGroups = dataKeys.filter(key => chartConfig[key])
 
-    console.log('Sanitized groups:', sanitizedGroups)
-
+    
     // If no groups to display, show message
     if (sanitizedGroups.length === 0) {
-      console.error('No valid data groups found. ChartData:', chartData, 'Config:', chartConfig)
-      return (
+       return (
         <div className="flex items-center justify-center h-[400px] text-muted-foreground">
           <span>No data groups found to display</span>
         </div>
@@ -254,7 +250,6 @@ export const HistoricalChart = React.forwardRef<HTMLDivElement, HistoricalChartP
       return safePoint
     })
     
-    console.log('Safe chart data:', safeChartData)
     
     // If we still have issues, try a simple fallback
     if (safeChartData.length === 0 || sanitizedGroups.length === 0) {
@@ -294,13 +289,11 @@ export const HistoricalChart = React.forwardRef<HTMLDivElement, HistoricalChartP
           <ChartTooltip cursor={false} content={<CustomTooltip />} />
           <ChartLegend content={<ChartLegendContent payload={[]} />} />
           {sanitizedGroups.length > 0 && sanitizedGroups.map((sanitizedGroup) => {
-            console.log(`Rendering bar for group: ${sanitizedGroup}`)
-            console.log('Sample data values for this group:', safeChartData.map(d => d[sanitizedGroup]))
+            // console.log('Sample data values for this group:', safeChartData.map(d => d[sanitizedGroup]))
             
             // Validate that this group actually has data
             const groupValues = safeChartData.map(d => d[sanitizedGroup]).filter(v => v !== undefined && v !== null && !isNaN(v))
             if (groupValues.length === 0) {
-              console.warn(`Skipping group ${sanitizedGroup} - no valid values`)
               return null
             }
             

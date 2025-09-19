@@ -280,7 +280,7 @@ export const FutureChart = React.forwardRef<HTMLDivElement, FutureChartProps>(
       )
     }
     
-    console.log('Processed chart data:', chartData)
+    // console.log('Processed chart data:', chartData)
     
     const isStacked = Boolean(data.meta.groupBy)
     const chartConfig = generateChartConfig(chartData, isStacked)
@@ -290,15 +290,11 @@ export const FutureChart = React.forwardRef<HTMLDivElement, FutureChartProps>(
       ? Object.keys(chartData[0]).filter(key => key !== 'date' && key !== 'fullDate')
       : []
     
-    console.log('Data keys:', dataKeys)
-    console.log('Chart config:', chartConfig)
-    console.log('Is stacked:', isStacked)
-    console.log('Colors in config:', Object.entries(chartConfig).map(([k, v]) => `${k}: ${v.color}`))
+   
     
     // Use dataKeys as sanitizedGroups to ensure we only render bars for existing data
     const sanitizedGroups = dataKeys.filter(key => chartConfig[key])
 
-    console.log('Sanitized groups:', sanitizedGroups)
 
     // If no groups to display, show message
     if (sanitizedGroups.length === 0) {

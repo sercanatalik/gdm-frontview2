@@ -54,7 +54,6 @@ export function AsOfDateSelect({
           }
         }
       } catch (err) {
-        console.error('Error fetching dates:', err)
         setError(err instanceof Error ? err.message : 'Failed to fetch dates')
       } finally {
         setIsLoading(false)
