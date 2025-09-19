@@ -18,7 +18,7 @@ interface TableDescResponse {
 }
 
 async function fetchTableDesc(tableName: string): Promise<TableDescResponse> {
-  const response = await fetch(`/api/table-desc?table_name=${encodeURIComponent(tableName)}`)
+  const response = await fetch(`gdm-frontview/api/table-desc?table_name=${encodeURIComponent(tableName)}`)
 
   if (!response.ok) {
     const error = await response.json()
