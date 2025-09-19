@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils"
 import { Loader2, AlertCircle, Expand, Download } from "lucide-react"
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import html2canvas from 'html2canvas-pro'
+import { filtersActions } from "@/lib/store/filters"
+import { nanoid } from "nanoid"
 
 interface GroupedStatCardProps {
   measure: GroupedStatMeasure
@@ -43,6 +45,34 @@ const CHART_COLORS = [
 function GroupedStatCard({ measure, groupBy, relativeDt, asOfDate, className, filters }: GroupedStatCardProps) {
   const { data, isLoading, error } = useGroupedStatsData(measure, groupBy, relativeDt, asOfDate, filters)
   const modalContentRef = useRef<HTMLDivElement>(null)
+
+  // Handle clicking on a stat item to add it as a filter
+  const handleItemClick = (groupValue: string) => {
+    if (groupValue === 'Others') return // Don't allow filtering by "Others"
+
+    // Check if a filter for this groupBy type already exists
+    const existingFilter = filters?.find(f => f.type === groupBy && f.field === groupBy)
+
+    if (existingFilter) {
+      // If filter exists, update its value instead of creating a new one
+      const updatedValues = existingFilter.value.includes(groupValue)
+        ? existingFilter.value
+        : [...existingFilter.value, groupValue]
+
+      filtersActions.updateFilter(existingFilter.id, { value: updatedValues })
+    } else {
+      // Create new filter if none exists
+      const newFilter = {
+        id: nanoid(),
+        type: groupBy,
+        operator: "is",
+        value: [groupValue],
+        field: groupBy,
+      }
+
+      filtersActions.addFilter(newFilter)
+    }
+  }
 
   const downloadAsPNG = async () => {
     if (!modalContentRef.current) return
@@ -168,11 +198,12 @@ function GroupedStatCard({ measure, groupBy, relativeDt, asOfDate, className, fi
                   const currencyType = measure.formatter === formatters.currency ? 'currency' : 'count'
                   
                   return (
-                    <div 
-                      key={item.groupValue} 
+                    <div
+                      key={item.groupValue}
                       className={`flex items-center justify-between py-1.5 border-b border-border/50 last:border-b-0 ${
-                        isOthers ? 'bg-muted/30 rounded-sm px-1' : ''
+                        isOthers ? 'bg-muted/30 rounded-sm px-1' : 'cursor-pointer hover:bg-muted/20 transition-colors'
                       }`}
+                      onClick={() => !isOthers && handleItemClick(item.groupValue)}
                     >
                       <div className="flex items-center space-x-2">
                         <div
@@ -280,11 +311,12 @@ function GroupedStatCard({ measure, groupBy, relativeDt, asOfDate, className, fi
                 const currencyType = measure.formatter === formatters.currency ? 'currency' : 'count'
                 
                 return (
-                  <div 
-                    key={item.groupValue} 
+                  <div
+                    key={item.groupValue}
                     className={`flex items-center justify-between p-3 border border-border rounded-md ${
-                      isOthers ? 'bg-muted/30' : ''
+                      isOthers ? 'bg-muted/30' : 'cursor-pointer hover:bg-muted/20 transition-colors'
                     }`}
+                    onClick={() => !isOthers && handleItemClick(item.groupValue)}
                   >
                     <div className="flex items-center space-x-3">
                       <div
