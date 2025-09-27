@@ -26,6 +26,45 @@ export const processFutureData = (data: Record<string, unknown>[]) => {
     return []
   }
 
+  const transformToCumulativeRemaining = (processedData: Array<Record<string, any>>) => {
+    if (processedData.length === 0) {
+      return []
+    }
+
+    const groupTotals: Record<string, number> = {}
+    processedData.forEach(point => {
+      Object.entries(point).forEach(([key, value]) => {
+        if (key === "date" || key === "fullDate") {
+          return
+        }
+
+        const numericValue = typeof value === "number" ? value : Number(value)
+        if (!isNaN(numericValue)) {
+          groupTotals[key] = (groupTotals[key] || 0) + numericValue
+        }
+      })
+    })
+
+    const runningSums: Record<string, number> = {}
+
+    return processedData.map(point => {
+      const cumulativePoint: Record<string, number | string> = {
+        date: point.date,
+        fullDate: point.fullDate
+      }
+
+      Object.keys(groupTotals).forEach(group => {
+        const currentValue = Number(point[group] || 0)
+        runningSums[group] = (runningSums[group] || 0) + (isNaN(currentValue) ? 0 : currentValue)
+
+        const remaining = groupTotals[group] - runningSums[group]
+        cumulativePoint[group] = remaining > 0 ? remaining : 0
+      })
+
+      return cumulativePoint
+    })
+  }
+
   // Check if data is already grouped (has groupBy field) or needs grouping
   const hasGroupByField = data.some(item => 'groupBy' in item)
   
@@ -94,43 +133,8 @@ export const processFutureData = (data: Record<string, unknown>[]) => {
         return point
       })
       .sort((a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime())
-    
-    // Calculate cumulative values (decreasing from total)
-    // First, get the initial total for each group
-    const groupInitialTotals: Record<string, number> = {}
-    const allGroups = new Set<string>()
-    
-    processedData.forEach(point => {
-      Object.keys(point).forEach(key => {
-        if (key !== 'date' && key !== 'fullDate') {
-          allGroups.add(key)
-          groupInitialTotals[key] = (groupInitialTotals[key] || 0) + (point[key] || 0)
-        }
-      })
-    })
-    
-    // Now calculate cumulative values (starting from total and decreasing)
-    const cumulativeData = processedData.map((point, index) => {
-      const cumulativePoint: any = {
-        date: point.date,
-        fullDate: point.fullDate
-      }
-      
-      // For each group, calculate cumulative remaining value
-      allGroups.forEach(group => {
-        // Sum of all previous values for this group (what has already flowed out)
-        let previousSum = 0
-        for (let i = 0; i < index; i++) {
-          previousSum += processedData[i][group] || 0
-        }
-        // Remaining value = total - what has flowed out
-        cumulativePoint[group] = groupInitialTotals[group] - previousSum
-      })
-      
-      return cumulativePoint
-    })
-    
-    return cumulativeData
+
+    return transformToCumulativeRemaining(processedData)
   }
 
   // Original processing for ungrouped data
@@ -186,7 +190,6 @@ export const processFutureData = (data: Record<string, unknown>[]) => {
       }
     })
     
-    // Add "Others" if there are any
     if (othersTotal > 0) {
       result[sanitizeKey('Others')] = othersTotal
     }
@@ -201,39 +204,8 @@ export const processFutureData = (data: Record<string, unknown>[]) => {
     }
   })
   .sort((a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime())
-  
-  // Calculate cumulative values for ungrouped data
-  const groupInitialTotals: Record<string, number> = {}
-  const allGroups = new Set<string>()
-  
-  processedData.forEach(point => {
-    Object.keys(point).forEach(key => {
-      if (key !== 'date' && key !== 'fullDate') {
-        allGroups.add(key)
-        groupInitialTotals[key] = (groupInitialTotals[key] || 0) + (point[key] || 0)
-      }
-    })
-  })
-  
-  // Calculate cumulative remaining values
-  const cumulativeData = processedData.map((point, index) => {
-    const cumulativePoint: any = {
-      date: point.date,
-      fullDate: point.fullDate
-    }
-    
-    allGroups.forEach(group => {
-      let previousSum = 0
-      for (let i = 0; i < index; i++) {
-        previousSum += processedData[i][group] || 0
-      }
-      cumulativePoint[group] = groupInitialTotals[group] - previousSum
-    })
-    
-    return cumulativePoint
-  })
-  
-  return cumulativeData
+
+  return transformToCumulativeRemaining(processedData)
 }
 
 export const FutureChart = React.forwardRef<HTMLDivElement, FutureChartProps>(

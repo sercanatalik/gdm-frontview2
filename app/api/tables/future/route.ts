@@ -69,7 +69,7 @@ const findClosestFutureDate = async (targetDate: string, tableName: string): Pro
   
   const query = `
     SELECT DISTINCT asOfDate
-    FROM ${tableName}
+    FROM ${tableName} final
     WHERE asOfDate >= '${targetDate}'
     ORDER BY asOfDate ASC
     LIMIT 1
@@ -101,10 +101,10 @@ function buildFutureQuery(
   return `
     WITH monthly_data AS (
       SELECT
-        toStartOfMonth(t.maturityDt) as month_start,
+        toStartOfMonth(maturityDt) as month_start,
         sum(toFloat64OrZero(toString(${fieldName}))) as monthly_value${breakdownClause}
-      FROM ${tableName}
-      WHERE t.maturityDt >= '${fromDate}' 
+      FROM ${tableName} final
+      WHERE maturityDt >= '${fromDate}' 
         AND asOfDate = '${asOfDate}'${filterConditions}
       GROUP BY month_start${breakdownClause}
       ORDER BY month_start
