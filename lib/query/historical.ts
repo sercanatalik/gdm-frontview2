@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 
 export interface HistoricalDataPoint {
   asOfDate: string
-  value: number
   [key: string]: any
 }
 

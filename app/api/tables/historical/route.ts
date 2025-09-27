@@ -93,32 +93,31 @@ function buildHistoricalQuery(
   filters: FilterCondition[] = []
 ): string {
   const filterConditions = buildFilterConditions(filters)
-  
-  // Build the aggregation and grouping
-  const aggregation = `sum(toFloat64OrZero(toString(${fieldName}))) as value`
-  
-  // Build SELECT clause properly
-  let selectClause: string
-  let groupByClause: string
-  let orderByClause: string
-  
+
   if (groupBy) {
-    selectClause = `${groupBy} as groupBy, asOfDate, ${aggregation}`
-    groupByClause = `GROUP BY ${groupBy}, asOfDate`
-    orderByClause = `ORDER BY ${groupBy}, asOfDate`
+    // Query for grouped data
+    return `
+      SELECT
+        asOfDate,
+        ${groupBy},
+        SUM(${fieldName}) as ${fieldName}
+      FROM ${tableName} FINAL
+      WHERE asOfDate <= '${baseDate}'${filterConditions}
+      GROUP BY asOfDate, ${groupBy}
+      ORDER BY asOfDate, ${groupBy} 
+    `
   } else {
-    selectClause = `null as groupBy, asOfDate, ${aggregation}`
-    groupByClause = `GROUP BY asOfDate`
-    orderByClause = `ORDER BY asOfDate`
+    // Query for ungrouped data
+    return `
+      SELECT
+        asOfDate,
+        SUM(${fieldName}) as ${fieldName}
+      FROM ${tableName} FINAL
+      WHERE asOfDate <= '${baseDate}'${filterConditions}
+      GROUP BY asOfDate
+      ORDER BY asOfDate
+    `
   }
-  
-  return `
-    SELECT ${selectClause}
-    FROM ${tableName} FINAL
-    WHERE asOfDate <= '${baseDate}'${filterConditions}
-    ${groupByClause}
-    ${orderByClause}
-  `
 }
 
 
@@ -180,9 +179,8 @@ export async function POST(request: NextRequest) {
     
     const result = await cacheService.query<{
       asOfDate: string
-      value: number
       [key: string]: any
-    }>(query, undefined, cacheKey, 1)
+    }>(query, undefined, cacheKey, 300)
     
     return NextResponse.json({
       data: result,
