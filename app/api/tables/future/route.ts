@@ -93,38 +93,79 @@ function buildFutureQuery(
   filters: FilterCondition[] = []
 ): string {
   const filterConditions = buildFilterConditions(filters)
-  
-  // Build breakdown clause for groupBy
-  const breakdownClause = groupBy ? `, ${groupBy}` : ''
-  const breakdownPartition = groupBy ? `PARTITION BY ${groupBy}` : ''
-  
-  return `
-    WITH monthly_data AS (
+
+  if (groupBy) {
+    // Query for stacked groups - return individual group values that will be stacked
+    return `
+      WITH monthly_data AS (
+        SELECT
+          toStartOfMonth(maturityDt) as month,
+          ${groupBy},
+          SUM(${fieldName}) as monthly_amount
+        FROM ${tableName} final
+        WHERE maturityDt >= '${fromDate}'
+          AND asOfDate = '${asOfDate}'${filterConditions}
+        GROUP BY month, ${groupBy}
+      ),
+      total_per_group AS (
+        SELECT
+          ${groupBy},
+          SUM(monthly_amount) as total
+        FROM monthly_data
+        GROUP BY ${groupBy}
+      ),
+      cumulative_data AS (
+        SELECT
+          m.month,
+          m.${groupBy},
+          m.monthly_amount,
+          SUM(m.monthly_amount) OVER (PARTITION BY m.${groupBy} ORDER BY m.month ROWS UNBOUNDED PRECEDING) as cumulative_out,
+          t.total - SUM(m.monthly_amount) OVER (PARTITION BY m.${groupBy} ORDER BY m.month ROWS UNBOUNDED PRECEDING) as remaining
+        FROM monthly_data m
+        JOIN total_per_group t ON m.${groupBy} = t.${groupBy}
+      )
       SELECT
-        toStartOfMonth(maturityDt) as month_start,
-        sum(toFloat64OrZero(toString(${fieldName}))) as monthly_value${breakdownClause}
-      FROM ${tableName} final
-      WHERE maturityDt >= '${fromDate}' 
-        AND asOfDate = '${asOfDate}'${filterConditions}
-      GROUP BY month_start${breakdownClause}
-      ORDER BY month_start
-    ),
-    cumulative_data AS (
+        month as maturityDt,
+        ${groupBy},
+        monthly_amount as ${fieldName},
+        remaining as cumulative_${fieldName}
+      FROM cumulative_data
+      ORDER BY month, ${groupBy}
+    `
+  } else {
+    // Query for single series - no grouping
+    return `
+      WITH monthly_data AS (
+        SELECT
+          toStartOfMonth(maturityDt) as month,
+          SUM(${fieldName}) as monthly_amount
+        FROM ${tableName} final
+        WHERE maturityDt >= '${fromDate}'
+          AND asOfDate = '${asOfDate}'${filterConditions}
+        GROUP BY month
+      ),
+      total_amounts AS (
+        SELECT
+          SUM(monthly_amount) as total
+        FROM monthly_data
+      ),
+      cumulative_data AS (
+        SELECT
+          m.month,
+          m.monthly_amount,
+          SUM(m.monthly_amount) OVER (ORDER BY m.month ROWS UNBOUNDED PRECEDING) as cumulative_out,
+          t.total - SUM(m.monthly_amount) OVER (ORDER BY m.month ROWS UNBOUNDED PRECEDING) as remaining
+        FROM monthly_data m
+        CROSS JOIN total_amounts t
+      )
       SELECT
-        month_start,
-        monthly_value${breakdownClause},
-        sum(monthly_value) OVER (${breakdownPartition} ORDER BY month_start 
-          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as cumulative_value
-      FROM monthly_data
-    )
-    
-    SELECT
-      formatDateTime(month_start, '%Y-%m-%d') as asOfDate${breakdownClause},
-      cumulative_value as value,
-      monthly_value
-    FROM cumulative_data
-    ORDER BY month_start${breakdownClause}
-  `
+        month as maturityDt,
+        monthly_amount as ${fieldName},
+        remaining as cumulative_${fieldName}
+      FROM cumulative_data
+      ORDER BY month
+    `
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -188,9 +229,7 @@ export async function POST(request: NextRequest) {
     const cacheKey = `future:${table}:${fieldName}:${groupBy || 'none'}:${actualAsOfDate}:${fromDate}:${filterHash}`
     
     const result = await cacheService.query<{
-      asOfDate: string
-      value: number
-      monthly_value: number
+      maturityDt: string
       [key: string]: any
     }>(query, undefined, cacheKey, 300)
     

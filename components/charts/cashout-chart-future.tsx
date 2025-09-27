@@ -26,186 +26,161 @@ export const processFutureData = (data: Record<string, unknown>[]) => {
     return []
   }
 
-  const transformToCumulativeRemaining = (processedData: Array<Record<string, any>>) => {
-    if (processedData.length === 0) {
-      return []
-    }
+  // Determine field name from the cumulative field (e.g., cumulative_cashOut -> cashOut)
+  const cumulativeField = Object.keys(data[0] || {}).find(key => key.startsWith('cumulative_'))
+  const fieldName = cumulativeField ? cumulativeField.replace('cumulative_', '') : null
 
-    const groupTotals: Record<string, number> = {}
-    processedData.forEach(point => {
-      Object.entries(point).forEach(([key, value]) => {
-        if (key === "date" || key === "fullDate") {
-          return
-        }
-
-        const numericValue = typeof value === "number" ? value : Number(value)
-        if (!isNaN(numericValue)) {
-          groupTotals[key] = (groupTotals[key] || 0) + numericValue
-        }
-      })
-    })
-
-    const runningSums: Record<string, number> = {}
-
-    return processedData.map(point => {
-      const cumulativePoint: Record<string, number | string> = {
-        date: point.date,
-        fullDate: point.fullDate
-      }
-
-      Object.keys(groupTotals).forEach(group => {
-        const currentValue = Number(point[group] || 0)
-        runningSums[group] = (runningSums[group] || 0) + (isNaN(currentValue) ? 0 : currentValue)
-
-        const remaining = groupTotals[group] - runningSums[group]
-        cumulativePoint[group] = remaining > 0 ? remaining : 0
-      })
-
-      return cumulativePoint
-    })
-  }
-
-  // Check if data is already grouped (has groupBy field) or needs grouping
-  const hasGroupByField = data.some(item => 'groupBy' in item)
+  // Check if data has a groupBy column
+  const groupByField = Object.keys(data[0] || {}).find(key =>
+    key !== 'maturityDt' && key !== fieldName && key !== cumulativeField
+  )
   
-  if (hasGroupByField) {
-    // First pass: collect data and calculate totals for each group
+  if (groupByField) {
+    // Group data by date and groupBy field, using cumulative values (remaining amounts)
     const groupedByDate: Record<string, Record<string, number>> = {}
-    const globalGroupTotals: Record<string, number> = {}
-    
+    const totalsByGroup: Record<string, number> = {}
+
+    // First pass: find the maximum cumulative value (initial total) for each group
     data.forEach(item => {
-      const asOfDate = item.asOfDate as string
-      if (!asOfDate) return
-      
-      const dateStr = asOfDate.split(' ')[0]
-      const groupValue = item.groupBy ? String(item.groupBy) : 'Total'
-      const value = Number(item.monthly_value || 0)
-      
-      // Skip if value is not valid
-      if (isNaN(value)) return
-      
-      if (!groupedByDate[dateStr]) {
-        groupedByDate[dateStr] = {}
-      }
-      
+      const groupValue = String(item[groupByField] || 'Unknown')
+      const cumulativeValue = Number(item[cumulativeField!] || 0)
       const sanitizedGroupValue = sanitizeKey(groupValue)
-      groupedByDate[dateStr][sanitizedGroupValue] = (groupedByDate[dateStr][sanitizedGroupValue] || 0) + value
-      
-      // Track global totals for determining top 4
-      globalGroupTotals[sanitizedGroupValue] = (globalGroupTotals[sanitizedGroupValue] || 0) + value
+
+      // The maximum cumulative value is the initial total for each group
+      if (!totalsByGroup[sanitizedGroupValue] || cumulativeValue > totalsByGroup[sanitizedGroupValue]) {
+        totalsByGroup[sanitizedGroupValue] = cumulativeValue
+      }
     })
-    
-    // Determine the top 4 groups globally
-    const globalTop4 = Object.entries(globalGroupTotals)
+
+    // Second pass: collect the remaining values for each month/group
+    // We need to track the latest value for each group at each month
+    const latestValuesByGroupAndMonth: Record<string, Record<string, number>> = {}
+
+    data.forEach(item => {
+      const maturityDt = item.maturityDt as string
+      if (!maturityDt) return
+
+      const dateStr = new Date(maturityDt).toISOString().slice(0, 7) // YYYY-MM format
+      const groupValue = String(item[groupByField] || 'Unknown')
+      const cumulativeValue = Number(item[cumulativeField!] || 0) // This is the remaining amount
+
+      // Skip if value is not valid
+      if (isNaN(cumulativeValue)) return
+
+      const sanitizedGroupValue = sanitizeKey(groupValue)
+
+      if (!latestValuesByGroupAndMonth[sanitizedGroupValue]) {
+        latestValuesByGroupAndMonth[sanitizedGroupValue] = {}
+      }
+
+      // Store the latest (smallest) value for this group at this month
+      // Since data is ordered by date, the last value for each month is the end-of-month value
+      latestValuesByGroupAndMonth[sanitizedGroupValue][dateStr] = cumulativeValue
+    })
+
+    // Get all unique months from all groups
+    const allMonths = new Set<string>()
+    Object.values(latestValuesByGroupAndMonth).forEach(monthData => {
+      Object.keys(monthData).forEach(month => allMonths.add(month))
+    })
+
+    // Build the grouped data structure with all groups present at each month
+    Array.from(allMonths).forEach(dateStr => {
+      groupedByDate[dateStr] = {}
+
+      Object.entries(latestValuesByGroupAndMonth).forEach(([group, monthData]) => {
+        // Use the value for this month if it exists, otherwise find the latest previous value
+        let value = monthData[dateStr]
+
+        if (value === undefined) {
+          // Find the latest value before this month
+          const sortedMonths = Object.keys(monthData).sort()
+          const previousMonths = sortedMonths.filter(m => m <= dateStr)
+          if (previousMonths.length > 0) {
+            value = monthData[previousMonths[previousMonths.length - 1]]
+          } else {
+            // If no previous value, use the total (initial value)
+            value = totalsByGroup[group] || 0
+          }
+        }
+
+        groupedByDate[dateStr][group] = value || 0
+      })
+    })
+
+    // Determine the top 4 groups by total value
+    const globalTop4 = Object.entries(totalsByGroup)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 4)
       .map(([key]) => key)
     
-    // Second pass: process each date keeping only the global top 4 and aggregate others
+    // Process each date keeping only the top 4 groups and aggregate others
     const processedData = Object.entries(groupedByDate)
-      .map(([date, groups]) => {
+      .map(([dateStr, groups]) => {
         const point: any = {
-          date: new Date(date).toLocaleDateString('en-US', { 
-            month: 'short', 
+          date: new Date(dateStr + '-01').toLocaleDateString('en-US', {
+            month: 'short',
             year: 'numeric'
           }),
-          fullDate: date
+          fullDate: dateStr + '-01'
         }
-        
+
         let othersTotal = 0
-        
+
         // Process each group for this date
         Object.entries(groups).forEach(([key, value]) => {
-          const numValue = typeof value === 'number' && !isNaN(value) ? value : 0
-          
           if (globalTop4.includes(key)) {
-            point[key] = numValue
+            point[key] = value
           } else {
-            othersTotal += numValue
+            othersTotal += value
           }
         })
-        
+
         // Add "Others" if there are any
         if (othersTotal > 0) {
           point[sanitizeKey('Others')] = othersTotal
         }
-        
+
         return point
       })
       .sort((a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime())
 
-    return transformToCumulativeRemaining(processedData)
+    return processedData
   }
 
-  // Original processing for ungrouped data
-  const groupedData: Record<string, Record<string, number>> = {}
-  const globalGroupTotals: Record<string, number> = {}
-  
-  // First pass: collect all data and calculate global totals
+  // Process ungrouped data (single series)
+  const processedByMonth: Record<string, number> = {}
+
   data.forEach(item => {
-    const asOfDate = item.asOfDate as string
-    if (!asOfDate) return
-    
-    const dateStr = asOfDate.split(' ')[0]
-    
-    // Find any other field that's not asOfDate, value, or monthly_value
-    const groupByField = Object.keys(item).find(key => 
-      key !== 'asOfDate' && key !== 'value' && key !== 'monthly_value' && key !== 'groupBy'
-    )
-    const groupValue = groupByField ? String(item[groupByField] || 'Unknown') : 'Total'
-    const value = Number(item.monthly_value || 0)
-    
-    if (!groupedData[dateStr]) {
-      groupedData[dateStr] = {}
-    }
-    
-    const sanitizedGroupValue = sanitizeKey(groupValue)
-    groupedData[dateStr][sanitizedGroupValue] = (groupedData[dateStr][sanitizedGroupValue] || 0) + value
-    
-    // Track global totals for determining top 4
-    globalGroupTotals[sanitizedGroupValue] = (globalGroupTotals[sanitizedGroupValue] || 0) + value
+    const maturityDt = item.maturityDt as string
+    if (!maturityDt) return
+
+    const dateStr = new Date(maturityDt).toISOString().slice(0, 7) // YYYY-MM format
+    const cumulativeValue = Number(item[cumulativeField!] || 0)
+
+    // Store the latest cumulative value for each month
+    processedByMonth[dateStr] = cumulativeValue
   })
   
-  // If no data was grouped, return empty array
-  if (Object.keys(groupedData).length === 0) {
+  // If no data was processed, return empty array
+  if (Object.keys(processedByMonth).length === 0) {
     return []
   }
-  
-  // Determine the top 4 groups globally
-  const globalTop4 = Object.entries(globalGroupTotals)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 4)
-    .map(([key]) => key)
-  
-  // Second pass: process each date keeping only the global top 4 and aggregate others
-  const processedData = Object.entries(groupedData).map(([date, groups]) => {
-    const result: Record<string, number> = {}
-    let othersTotal = 0
-    
-    Object.entries(groups).forEach(([key, value]) => {
-      if (globalTop4.includes(key)) {
-        result[key] = value
-      } else {
-        othersTotal += value
-      }
-    })
-    
-    if (othersTotal > 0) {
-      result[sanitizeKey('Others')] = othersTotal
-    }
-    
+
+  // Convert to array format for charting
+  const processedData = Object.entries(processedByMonth).map(([dateStr, value]) => {
     return {
-      date: new Date(date).toLocaleDateString('en-US', { 
-        month: 'short', 
+      date: new Date(dateStr + '-01').toLocaleDateString('en-US', {
+        month: 'short',
         year: 'numeric'
       }),
-      fullDate: date,
-      ...result
+      fullDate: dateStr + '-01',
+      Total: value
     }
   })
   .sort((a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime())
 
-  return transformToCumulativeRemaining(processedData)
+  return processedData
 }
 
 export const FutureChart = React.forwardRef<HTMLDivElement, FutureChartProps>(
