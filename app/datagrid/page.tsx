@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import { AsOfDateSelect } from "@/components/filters/as-of-date-select";
 import { RiskFilter } from "@/components/filters/risk-filter";
 import { riskFilterConfig } from "@/components/filters/risk-filter.config";
-import { PerspectiveViewer } from "@/components/datagrid/perspective-viewer";
 import {
   Select,
   SelectContent,
@@ -13,16 +12,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useTableDesc } from "@/lib/query/table-desc";
 import { useTableData } from "@/lib/query/table-data";
 import { filtersStore } from "@/lib/store/filters";
 import { useStore } from "@tanstack/react-store";
-import "@/styles/perspective.css";
 
 const TABLE_CONFIG = [
   { name: "f_exposure", label: "Risk", filterable: true, asOfDate: true },
   { name: "f_trade", label: "Trades", filterable: false, asOfDate: true },
 ] as const;
+
+const MAX_VISIBLE_ROWS = 100;
+
+const formatCellValue = (value: unknown) => {
+  if (value === null || value === undefined) {
+    return "—";
+  }
+
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+
+  return String(value);
+};
 
 export default function DataGridPage() {
   const [selectedTable, setSelectedTable] = useState<string>("f_exposure");
@@ -46,8 +63,10 @@ export default function DataGridPage() {
     limit: 10000,
   });
 
-  const data = useMemo(() => tableData?.data ?? [], [tableData]);
+  const data = useMemo<ReadonlyArray<Record<string, unknown>>>(() => tableData?.data ?? [], [tableData]);
   const rowCount = data.length;
+  const columns = useMemo(() => tableDesc?.columns.map((column) => column.name) ?? [], [tableDesc]);
+  const visibleRows = useMemo(() => data.slice(0, MAX_VISIBLE_ROWS), [data]);
 
   return (
     <div className="flex h-screen flex-col p-0">
@@ -97,13 +116,43 @@ export default function DataGridPage() {
       </div>
 
       <div className="flex-1">
-        <div className="h-full w-full rounded-lg border bg-background p-4">
+        <div className="flex h-full w-full flex-col rounded-lg border bg-background p-4">
           {isLoadingData ? (
-            <div className="flex h-full items-center justify-center">
+            <div className="flex flex-1 items-center justify-center">
               <div className="text-muted-foreground">Loading table data...</div>
             </div>
+          ) : data.length === 0 ? (
+            <div className="flex flex-1 items-center justify-center text-muted-foreground">
+              No data available for the selected table.
+            </div>
           ) : (
-            <PerspectiveViewer data={data} theme="pro-dark" view="datagrid" />
+            <>
+              <div className="flex-1 overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {columns.map((column) => (
+                        <TableHead key={column}>{column}</TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {visibleRows.map((row, index) => (
+                      <TableRow key={`${rowCount}-${index}`}>
+                        {columns.map((column) => (
+                          <TableCell key={`${column}-${index}`} className="whitespace-nowrap text-xs">
+                            {formatCellValue(row[column])}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="pt-3 text-xs text-muted-foreground">
+                Showing {visibleRows.length.toLocaleString()} of {rowCount.toLocaleString()} rows.
+              </div>
+            </>
           )}
         </div>
       </div>

@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 
-import { PerspectiveViewer } from "@/components/datagrid/perspective-viewer";
 import { CashoutChart } from "@/components/charts/cashout-chart";
 import { AsOfDateSelect } from "@/components/filters/as-of-date-select";
 import { RiskFilter } from "@/components/filters/risk-filter";
@@ -14,8 +13,6 @@ import { StatCards, defaultStatConfigs } from "@/components/stats/stat-cards";
 import { useStore } from "@tanstack/react-store";
 import { filtersStore } from "@/lib/store/filters";
 import { formatters } from "@/lib/query/stats";
-import { useTableData } from "@/lib/query/table-data";
-import "@/styles/perspective.css";
 
 const LAZY_LOAD_DELAY = 1500;
 
@@ -61,19 +58,6 @@ export default function FinancingPage() {
   const [showLazyContent, setShowLazyContent] = useState(false);
   const [isLoadingLazy, setIsLoadingLazy] = useState(false);
   const lazyTriggerRef = useRef<HTMLDivElement>(null);
-
-  const { data: tableData, isLoading: isLoadingTableData } = useTableData(
-    showLazyContent
-      ? {
-          tableName: "f_exposure",
-          filters,
-          asOfDate: asOfDate || undefined,
-          limit: 20000,
-        }
-      : null
-  );
-
-  const perspectiveData = useMemo(() => tableData?.data ?? [], [tableData]);
 
   useEffect(() => {
     if (showLazyContent) {
@@ -199,50 +183,6 @@ export default function FinancingPage() {
                   <p>• Additional analytics and reports available</p>
                   <p>• Real-time updates with filter synchronization</p>
                 </div>
-              </div>
-            </div>
-
-            <div className="col-span-full rounded-lg border border-border bg-card">
-              <div className="border-b border-border p-4">
-                <h4 className="text-base font-medium">Exposure Data Grid</h4>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  {isLoadingTableData ? (
-                    <span>Loading data...</span>
-                  ) : (
-                    <span>
-                      {perspectiveData.length.toLocaleString()} records from f_exposure
-                      table • Filters and asOfDate applied
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="relative h-[1000px]">
-                {isLoadingTableData ? (
-                  <div className="flex h-full items-center justify-center">
-                    <div className="flex items-center space-x-2">
-                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                      <span className="text-sm text-muted-foreground">
-                        Loading table data...
-                      </span>
-                    </div>
-                  </div>
-                ) : perspectiveData.length > 0 ? (
-                  <PerspectiveViewer
-                    data={perspectiveData}
-                    theme="pro-dark"
-                    view="datagrid"
-                    className="h-full"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center">
-                    <div className="text-center">
-                      <p className="text-sm text-muted-foreground">No data available</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Try adjusting your filters or date selection
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
