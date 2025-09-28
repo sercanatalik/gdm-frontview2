@@ -1,10 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import type { ColDef, ValueFormatterParams } from "ag-grid-community";
+import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
+import { AllEnterpriseModule } from "ag-grid-enterprise";
+
+import { AgGridReact } from "ag-grid-react";
+import "ag-grid-community/styles/ag-theme-quartz.css";
+
+ModuleRegistry.registerModules([AllCommunityModule,AllEnterpriseModule]);
 
 import { AsOfDateSelect } from "@/components/filters/as-of-date-select";
 import { RiskFilter } from "@/components/filters/risk-filter";
 import { riskFilterConfig } from "@/components/filters/risk-filter.config";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -12,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useTableDesc } from "@/lib/query/table-desc";
 import { useTableData } from "@/lib/query/table-data";
 import { filtersStore } from "@/lib/store/filters";
@@ -22,8 +30,6 @@ const TABLE_CONFIG = [
   { name: "f_exposure", label: "Risk", filterable: true, asOfDate: true },
   { name: "f_trade", label: "Trades", filterable: false, asOfDate: true },
 ] as const;
-
-const MAX_VISIBLE_ROWS = 100;
 
 const formatCellValue = (value: unknown) => {
   if (value === null || value === undefined) {
@@ -43,6 +49,7 @@ const formatCellValue = (value: unknown) => {
 
 export default function DataGridPage() {
   const [selectedTable, setSelectedTable] = useState<string>("f_exposure");
+  const [quickFilter, setQuickFilter] = useState("");
 
   const filters = useStore(filtersStore, (state) => state.filters);
   const asOfDate = useStore(filtersStore, (state) => state.asOfDate);
@@ -64,9 +71,45 @@ export default function DataGridPage() {
   });
 
   const data = useMemo<ReadonlyArray<Record<string, unknown>>>(() => tableData?.data ?? [], [tableData]);
-  const rowCount = data.length;
-  const columns = useMemo(() => tableDesc?.columns.map((column) => column.name) ?? [], [tableDesc]);
-  const visibleRows = useMemo(() => data.slice(0, MAX_VISIBLE_ROWS), [data]);
+  const rowData = useMemo(() => data.map((row) => ({ ...row })), [data]);
+  const rowCount = rowData.length;
+  const columnDefs = useMemo<ColDef<Record<string, unknown>>[]>(
+    () =>
+      (tableDesc?.columns ?? []).map((column) => {
+        const normalizedType = column.type?.toLowerCase() ?? "";
+        const isStringType = normalizedType.includes("string");
+
+        return {
+          field: column.name,
+          headerName: column.name,
+          sortable: true,
+          filter: true,
+          resizable: true,
+          valueFormatter: (params: ValueFormatterParams<Record<string, unknown>>) =>
+            formatCellValue(params.value),
+          enableRowGroup: isStringType || undefined,
+        } satisfies ColDef<Record<string, unknown>>;
+      }),
+    [tableDesc]
+  );
+
+  const defaultColDef = useMemo<ColDef<Record<string, unknown>>>(
+    () => ({
+      flex: 1,
+      minWidth: 160,
+      sortable: true,
+      filter: true,
+      resizable: true,
+    }),
+    []
+  );
+
+  const handleQuickFilterChange = useCallback(
+    (value: string) => {
+      setQuickFilter(value);
+    },
+    []
+  );
 
   return (
     <div className="flex h-screen flex-col p-0">
@@ -113,6 +156,14 @@ export default function DataGridPage() {
             ? `${tableDesc.meta.columnCount} columns`
             : ""}
         </span>
+        <div className="flex w-full max-w-sm items-center gap-2 md:ml-auto">
+          <Input
+            value={quickFilter}
+            onChange={(event) => handleQuickFilterChange(event.target.value)}
+            placeholder="Quick search..."
+            className="h-8"
+          />
+        </div>
       </div>
 
       <div className="flex-1">
@@ -126,33 +177,24 @@ export default function DataGridPage() {
               No data available for the selected table.
             </div>
           ) : (
-            <>
-              <div className="flex-1 overflow-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {columns.map((column) => (
-                        <TableHead key={column}>{column}</TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {visibleRows.map((row, index) => (
-                      <TableRow key={`${rowCount}-${index}`}>
-                        {columns.map((column) => (
-                          <TableCell key={`${column}-${index}`} className="whitespace-nowrap text-xs">
-                            {formatCellValue(row[column])}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+            <div className="flex h-full flex-1 flex-col">
+              <div className="ag-theme-quartz flex-1" style={{ width: '100%', height: '100%' }}>
+                <AgGridReact<Record<string, unknown>>
+                  rowData={rowData}
+                  columnDefs={columnDefs}
+                  defaultColDef={defaultColDef}
+                  animateRows
+                  rowGroupPanelShow="always"
+                  sideBar="columns"
+                  quickFilterText={quickFilter}
+                />
               </div>
               <div className="pt-3 text-xs text-muted-foreground">
-                Showing {visibleRows.length.toLocaleString()} of {rowCount.toLocaleString()} rows.
+                Showing {rowCount.toLocaleString()} row{rowCount === 1 ? "" : "s"} • {columnDefs.length}
+                {" "}
+                column{columnDefs.length === 1 ? "" : "s"}.
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>

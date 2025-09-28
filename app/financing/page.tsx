@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 import { CashoutChart } from "@/components/charts/cashout-chart";
@@ -40,8 +40,11 @@ const PRIMARY_GROUPED_CARD_CONFIGS: GroupedCardConfig[] = [
 ];
 
 const LAZY_GROUPED_CARD_CONFIGS: GroupedCardConfig[] = [
-  { id: "portfolio", label: "By Portfolio", groupBy: "hmsPortfolio", limit: 8 },
-  { id: "counterparty", label: "By Counterparty", groupBy: "counterParty", limit: 10 },
+  { id: "desk", label: "By Desk", groupBy: "hmsDesk" },
+  { id: "sl1", label: "By Ccy", groupBy: "hmsSL1" },
+  { id: "location", label: "By Ccy", groupBy: "tradingLocation" },
+  { id: "collateral", label: "By Ccy", groupBy: "collatCurrency" },
+  
 ];
 
 const buildGroupedMeasure = (config: GroupedCardConfig) => ({
@@ -58,22 +61,34 @@ export default function FinancingPage() {
   const [showLazyContent, setShowLazyContent] = useState(false);
   const [isLoadingLazy, setIsLoadingLazy] = useState(false);
   const lazyTriggerRef = useRef<HTMLDivElement>(null);
+  const hasTriggeredLazyLoadRef = useRef(false);
+  const loadTimeoutRef = useRef<number | null>(null);
+
+  const triggerLazyLoad = useCallback(() => {
+    if (hasTriggeredLazyLoadRef.current || showLazyContent) {
+      return;
+    }
+
+    hasTriggeredLazyLoadRef.current = true;
+    setIsLoadingLazy(true);
+
+    loadTimeoutRef.current = window.setTimeout(() => {
+      setShowLazyContent(true);
+      setIsLoadingLazy(false);
+      loadTimeoutRef.current = null;
+    }, LAZY_LOAD_DELAY);
+  }, [showLazyContent]);
 
   useEffect(() => {
     if (showLazyContent) {
       return;
     }
 
-    let timeoutId: number | undefined;
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
-        if (entry.isIntersecting && !isLoadingLazy) {
-          setIsLoadingLazy(true);
-          timeoutId = window.setTimeout(() => {
-            setShowLazyContent(true);
-            setIsLoadingLazy(false);
-          }, LAZY_LOAD_DELAY);
+        if (entry.isIntersecting) {
+          triggerLazyLoad();
         }
       },
       {
@@ -84,15 +99,22 @@ export default function FinancingPage() {
     const trigger = lazyTriggerRef.current;
     if (trigger) {
       observer.observe(trigger);
+
+       const rect = trigger.getBoundingClientRect();
+       const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+       if (rect.top <= viewportHeight) {
+         triggerLazyLoad();
+       }
     }
 
     return () => {
       observer.disconnect();
-      if (timeoutId) {
-        window.clearTimeout(timeoutId);
+      if (loadTimeoutRef.current) {
+        window.clearTimeout(loadTimeoutRef.current);
+        loadTimeoutRef.current = null;
       }
     };
-  }, [isLoadingLazy, showLazyContent]);
+  }, [showLazyContent, triggerLazyLoad]);
 
   return (
     <div className="p-0">

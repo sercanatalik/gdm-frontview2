@@ -6,7 +6,7 @@ import {
   Home,
   Inbox,
   Search,
-  Settings,
+  Table
 } from "lucide-react";
 
 export const teams = [
@@ -42,21 +42,21 @@ export const creditItems = [
   {
     title: "Settings",
     url: "#",
-    icon: Settings,
+    icon: Table,
   },
 ];
 
 export const financingItems = [
   {
     title: "Dashboard",
-    url: "#",
+    url: "/financing",
     icon: Home,
   },
  
   {
-    title: "Settings",
-    url: "#",
-    icon: Settings,
+    title: "Data Grid",
+    url: "/datagrid",
+    icon: Table,
   },
 ];
 

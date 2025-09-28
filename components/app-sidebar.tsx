@@ -27,6 +27,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu"
+import Link from "next/link"
 import {
   Sidebar,
   SidebarContent,
@@ -171,13 +172,13 @@ export function AppSidebar() {
                     asChild
                     tooltip={item.title}
                   >
-                    <a
+                    <Link
                       href={item.url}
                       className="flex w-full items-center gap-2"
                     >
                       <item.icon className="size-4" />
                       <span className="truncate">{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
