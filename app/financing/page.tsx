@@ -1,81 +1,120 @@
+"use client";
 
-"use client"
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Loader2 } from "lucide-react";
 
-import { RiskFilter } from "@/components/filters/risk-filter"
-import { riskFilterConfig } from "@/components/filters/risk-filter.config"
-import { AsOfDateSelect } from "@/components/filters/as-of-date-select"
-import { StatCards, defaultStatConfigs } from "@/components/stats/stat-cards"
-import { GroupedStatCard } from "@/components/stats/grouped-stat-card"
-import { CashoutChart } from "@/components/charts/cashout-chart"
-import { RecentTradesCard } from "@/components/recent-trades-card"
-import PerformanceCard from "@/components/performance-card"
-import { useStore } from "@tanstack/react-store"
-import { filtersStore } from "@/lib/store/filters"
-import { formatters } from "@/lib/query/stats"
-import { useState, useEffect, useRef } from "react"
-import { Loader2 } from "lucide-react"
-import { PerspectiveViewer } from "@/components/datagrid/perspective-viewer"
-import { useTableData } from "@/lib/query/table-data"
-import "@/styles/perspective.css"
+import { PerspectiveViewer } from "@/components/datagrid/perspective-viewer";
+import { CashoutChart } from "@/components/charts/cashout-chart";
+import { AsOfDateSelect } from "@/components/filters/as-of-date-select";
+import { RiskFilter } from "@/components/filters/risk-filter";
+import { riskFilterConfig } from "@/components/filters/risk-filter.config";
+import { RecentTradesCard } from "@/components/recent-trades-card";
+import { GroupedStatCard } from "@/components/stats/grouped-stat-card";
+import { StatCards, defaultStatConfigs } from "@/components/stats/stat-cards";
+import { useStore } from "@tanstack/react-store";
+import { filtersStore } from "@/lib/store/filters";
+import { formatters } from "@/lib/query/stats";
+import { useTableData } from "@/lib/query/table-data";
+import "@/styles/perspective.css";
+
+const LAZY_LOAD_DELAY = 1500;
+
+const GROUPED_CARD_BASE_MEASURE = {
+  field: "fundingAmount",
+  tableName: "f_exposure",
+  aggregation: "sum",
+  formatter: formatters.currency,
+  result1: { field: "counterParty", aggregation: "countDistinct" },
+  result2: { field: "collateralAmount", aggregation: "sum" },
+} as const;
+
+type GroupedCardConfig = {
+  id: string;
+  label: string;
+  groupBy: string;
+  limit?: number;
+};
+
+const PRIMARY_GROUPED_CARD_CONFIGS: GroupedCardConfig[] = [
+  { id: "desk", label: "By Desk", groupBy: "hmsDesk" },
+  { id: "sl1", label: "By Ccy", groupBy: "hmsSL1" },
+  { id: "location", label: "By Ccy", groupBy: "tradingLocation" },
+  { id: "collateral", label: "By Ccy", groupBy: "collatCurrency" },
+];
+
+const LAZY_GROUPED_CARD_CONFIGS: GroupedCardConfig[] = [
+  { id: "portfolio", label: "By Portfolio", groupBy: "hmsPortfolio", limit: 8 },
+  { id: "counterparty", label: "By Counterparty", groupBy: "counterParty", limit: 10 },
+];
+
+const buildGroupedMeasure = (config: GroupedCardConfig) => ({
+  key: `desk_analysis_${config.id}`,
+  label: config.label,
+  ...GROUPED_CARD_BASE_MEASURE,
+  limit: config.limit ?? 12,
+});
 
 export default function FinancingPage() {
-  const filters = useStore(filtersStore, (state) => state.filters)
-  const asOfDate = useStore(filtersStore, (state) => state.asOfDate)
+  const filters = useStore(filtersStore, (state) => state.filters);
+  const asOfDate = useStore(filtersStore, (state) => state.asOfDate);
 
-  // Lazy loading state
-  const [showLazyContent, setShowLazyContent] = useState(false)
-  const [isLoadingLazy, setIsLoadingLazy] = useState(false)
-  const lazyTriggerRef = useRef<HTMLDivElement>(null)
+  const [showLazyContent, setShowLazyContent] = useState(false);
+  const [isLoadingLazy, setIsLoadingLazy] = useState(false);
+  const lazyTriggerRef = useRef<HTMLDivElement>(null);
 
-  // Fetch table data for perspective viewer (only when lazy content is shown)
   const { data: tableData, isLoading: isLoadingTableData } = useTableData(
-    showLazyContent ? {
-      tableName: "f_exposure",
-      filters: filters,
-      asOfDate: asOfDate || undefined,
-      limit: 20000
-    } : null
-  )
+    showLazyContent
+      ? {
+          tableName: "f_exposure",
+          filters,
+          asOfDate: asOfDate || undefined,
+          limit: 20000,
+        }
+      : null
+  );
 
-  // Use fetched data or empty array
-  const perspectiveData = tableData?.data || []
+  const perspectiveData = useMemo(() => tableData?.data ?? [], [tableData]);
 
-  // Intersection Observer for lazy loading
   useEffect(() => {
+    if (showLazyContent) {
+      return;
+    }
+
+    let timeoutId: number | undefined;
     const observer = new IntersectionObserver(
       (entries) => {
-        const entry = entries[0]
-        if (entry.isIntersecting && !showLazyContent && !isLoadingLazy) {
-          setIsLoadingLazy(true)
-          // Simulate loading delay
-          setTimeout(() => {
-            setShowLazyContent(true)
-            setIsLoadingLazy(false)
-          }, 1500)
+        const entry = entries[0];
+        if (entry.isIntersecting && !isLoadingLazy) {
+          setIsLoadingLazy(true);
+          timeoutId = window.setTimeout(() => {
+            setShowLazyContent(true);
+            setIsLoadingLazy(false);
+          }, LAZY_LOAD_DELAY);
         }
       },
       {
-        rootMargin: '100px' // Trigger 100px before the element comes into view
+        rootMargin: "100px",
       }
-    )
+    );
 
-    if (lazyTriggerRef.current) {
-      observer.observe(lazyTriggerRef.current)
+    const trigger = lazyTriggerRef.current;
+    if (trigger) {
+      observer.observe(trigger);
     }
 
     return () => {
-      if (lazyTriggerRef.current) {
-        observer.unobserve(lazyTriggerRef.current)
+      observer.disconnect();
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
       }
-    }
-  }, [showLazyContent, isLoadingLazy])
+    };
+  }, [isLoadingLazy, showLazyContent]);
 
   return (
     <div className="p-0">
-      <div className="flex justify-between items-center mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Financing Frontview</h2>
         <div className="flex items-center gap-3">
-
           <RiskFilter
             tableName={riskFilterConfig.tableName}
             filterTypes={riskFilterConfig.filterTypes}
@@ -89,22 +128,16 @@ export default function FinancingPage() {
       </div>
 
       <div className="space-y-6">
-        {/* Stat Cards */}
         <StatCards
           measures={defaultStatConfigs}
           relativeDt="-6m"
           asOfDate={asOfDate}
-          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6"
           filters={filters}
         />
 
-        {/* Grouped Stats Cards */}
-
-        {/* Historical Cashout Chart - 5 columns of 8 on the left */}
         <div className="grid grid-cols-8 gap-6">
           <div className="col-span-5 space-y-6">
-
-
             <CashoutChart />
           </div>
           <div className="col-span-3">
@@ -112,224 +145,54 @@ export default function FinancingPage() {
           </div>
         </div>
 
-        {/* Performance Table */}
-        <div className="grid grid-cols-1 gap-6">
-          {/* <PerformanceCard
-            asOfDate={asOfDate ?? undefined}
-            filters={filters}
-          /> */}
+        <div className="my-3 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {PRIMARY_GROUPED_CARD_CONFIGS.map((config) => (
+            <GroupedStatCard
+              key={config.id}
+              measure={buildGroupedMeasure(config)}
+              groupBy={config.groupBy}
+              relativeDt="-1d"
+              asOfDate={asOfDate}
+              filters={filters}
+            />
+          ))}
         </div>
 
-        {/* Grouped Stats Cards - Row 1 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 my-3">
-          <GroupedStatCard
-            measure={{
-              key: 'desk_analysis',
-              label: 'By Desk',
-              field: 'fundingAmount',
-              tableName: 'f_exposure',
-              aggregation: 'sum',
-              formatter: formatters.currency,
-              result1: { field: 'counterParty', aggregation: 'countDistinct' },
-              result2: { field: 'collateralAmount', aggregation: 'sum' },
-              limit: 12
-            }}
-            groupBy="hmsDesk"
-            relativeDt="-1d"
-            asOfDate={asOfDate}
-            filters={filters}
-          />
-           <GroupedStatCard
-            measure={{
-              key: 'desk_analysis',
-              label: 'By Ccy',
-              field: 'fundingAmount',
-              tableName: 'f_exposure',
-              aggregation: 'sum',
-              formatter: formatters.currency,
-              result1: { field: 'counterParty', aggregation: 'countDistinct' },
-              result2: { field: 'collateralAmount', aggregation: 'sum' },
-              limit: 12
-            }}
-            groupBy="hmsSL1"
-            relativeDt="-1d"
-            asOfDate={asOfDate}
-            filters={filters}
-          />
-           <GroupedStatCard
-            measure={{
-              key: 'desk_analysis',
-              label: 'By Ccy',
-              field: 'fundingAmount',
-              tableName: 'f_exposure',
-              aggregation: 'sum',
-              formatter: formatters.currency,
-              result1: { field: 'counterParty', aggregation: 'countDistinct' },
-              result2: { field: 'collateralAmount', aggregation: 'sum' },
-              limit: 12
-            }}
-            groupBy="tradingLocation"
-            relativeDt="-1d"
-            asOfDate={asOfDate}
-            filters={filters}
-          />
-           <GroupedStatCard
-            measure={{
-              key: 'desk_analysis',
-              label: 'By Ccy',
-              field: 'fundingAmount',
-              tableName: 'f_exposure',
-              aggregation: 'sum',
-              formatter: formatters.currency,
-              result1: { field: 'counterParty', aggregation: 'countDistinct' },
-              result2: { field: 'collateralAmount', aggregation: 'sum' },
-              limit: 12
-            }}
-            groupBy="collatCurrency"
-            relativeDt="-1d"
-            asOfDate={asOfDate}
-            filters={filters}
-          />
-
-
-        </div>
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 my-3">
-          <GroupedStatCard
-            measure={{
-              key: 'desk_analysis',
-              label: 'By Desk',
-              field: 'fundingAmount',
-              tableName: 'f_exposure',
-              aggregation: 'sum',
-              formatter: formatters.currency,
-              result1: { field: 'counterParty', aggregation: 'countDistinct' },
-              result2: { field: 'collateralAmount', aggregation: 'sum' },
-              limit: 12
-            }}
-            groupBy="hmsDesk"
-            relativeDt="-1d"
-            asOfDate={asOfDate}
-            filters={filters}
-          />
-           <GroupedStatCard
-            measure={{
-              key: 'desk_analysis',
-              label: 'By Ccy',
-              field: 'fundingAmount',
-              tableName: 'f_exposure',
-              aggregation: 'sum',
-              formatter: formatters.currency,
-              result1: { field: 'counterParty', aggregation: 'countDistinct' },
-              result2: { field: 'collateralAmount', aggregation: 'sum' },
-              limit: 12
-            }}
-            groupBy="hmsSL1"
-            relativeDt="-1d"
-            asOfDate={asOfDate}
-            filters={filters}
-          />
-           <GroupedStatCard
-            measure={{
-              key: 'desk_analysis',
-              label: 'By Ccy',
-              field: 'fundingAmount',
-              tableName: 'f_exposure',
-              aggregation: 'sum',
-              formatter: formatters.currency,
-              result1: { field: 'counterParty', aggregation: 'countDistinct' },
-              result2: { field: 'collateralAmount', aggregation: 'sum' },
-              limit: 12
-            }}
-            groupBy="tradingLocation"
-            relativeDt="-1d"
-            asOfDate={asOfDate}
-            filters={filters}
-          />
-           <GroupedStatCard
-            measure={{
-              key: 'desk_analysis',
-              label: 'By Ccy',
-              field: 'fundingAmount',
-              tableName: 'f_exposure',
-              aggregation: 'sum',
-              formatter: formatters.currency,
-              result1: { field: 'counterParty', aggregation: 'countDistinct' },
-              result2: { field: 'collateralAmount', aggregation: 'sum' },
-              limit: 12
-            }}
-            groupBy="collatCurrency"
-            relativeDt="-1d"
-            asOfDate={asOfDate}
-            filters={filters}
-          />
-
-
-        </div>
-
-        {/* Lazy Loading Trigger */}
         <div ref={lazyTriggerRef} className="h-10" />
 
-        {/* Lazy Loading Section */}
         {isLoadingLazy && (
-          <div className="flex justify-center items-center py-8">
+          <div className="flex items-center justify-center py-8">
             <div className="flex items-center space-x-2">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <span className="text-sm text-muted-foreground">Loading additional content...</span>
+              <span className="text-sm text-muted-foreground">
+                Loading additional content...
+              </span>
             </div>
           </div>
         )}
 
         {showLazyContent && (
           <div className="space-y-6 animate-in fade-in-50 slide-in-from-bottom-4 duration-700">
-            {/* Lazy Loaded Performance Card */}
             {/* <div className="grid grid-cols-1 gap-6">
-              <div className="border border-border rounded-lg p-6 bg-card">
-                <h3 className="text-lg font-semibold mb-4">Performance Analysis</h3>
-                <PerformanceCard
-                  asOfDate={asOfDate ?? undefined}
-                  filters={filters}
-                />
+              <div className="rounded-lg border border-border bg-card p-6">
+                <h3 className="mb-4 text-lg font-semibold">Performance Analysis</h3>
+                <PerformanceCard asOfDate={asOfDate ?? undefined} filters={filters} />
               </div>
             </div> */}
 
-            {/* Additional Lazy Loaded Content */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <GroupedStatCard
-                measure={{
-                  key: 'additional_analysis_1',
-                  label: 'By Portfolio',
-                  field: 'fundingAmount',
-                  tableName: 'f_exposure',
-                  aggregation: 'sum',
-                  formatter: formatters.currency,
-                  result1: { field: 'counterParty', aggregation: 'countDistinct' },
-                  result2: { field: 'collateralAmount', aggregation: 'sum' },
-                  limit: 8
-                }}
-                groupBy="hmsPortfolio"
-                relativeDt="-1d"
-                asOfDate={asOfDate}
-                filters={filters}
-              />
-              <GroupedStatCard
-                measure={{
-                  key: 'additional_analysis_2',
-                  label: 'By Counterparty',
-                  field: 'fundingAmount',
-                  tableName: 'f_exposure',
-                  aggregation: 'sum',
-                  formatter: formatters.currency,
-                  result1: { field: 'counterParty', aggregation: 'countDistinct' },
-                  result2: { field: 'collateralAmount', aggregation: 'sum' },
-                  limit: 10
-                }}
-                groupBy="counterParty"
-                relativeDt="-1d"
-                asOfDate={asOfDate}
-                filters={filters}
-              />
-              <div className="border border-border rounded-lg p-6 bg-card">
-                <h4 className="text-base font-medium mb-3">Quick Insights</h4>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {LAZY_GROUPED_CARD_CONFIGS.map((config) => (
+                <GroupedStatCard
+                  key={config.id}
+                  measure={buildGroupedMeasure(config)}
+                  groupBy={config.groupBy}
+                  relativeDt="-1d"
+                  asOfDate={asOfDate}
+                  filters={filters}
+                />
+              ))}
+              <div className="rounded-lg border border-border bg-card p-6">
+                <h4 className="mb-3 text-base font-medium">Quick Insights</h4>
                 <div className="space-y-2 text-sm text-muted-foreground">
                   <p>• Data loaded dynamically when scrolled into view</p>
                   <p>• Performance optimized with lazy loading</p>
@@ -339,24 +202,28 @@ export default function FinancingPage() {
               </div>
             </div>
 
-            {/* Perspective Viewer */}
-            <div className="border border-border rounded-lg bg-card col-span-full">
-              <div className="p-4 border-b border-border">
+            <div className="col-span-full rounded-lg border border-border bg-card">
+              <div className="border-b border-border p-4">
                 <h4 className="text-base font-medium">Exposure Data Grid</h4>
-                <div className="text-xs text-muted-foreground mt-1">
+                <div className="mt-1 text-xs text-muted-foreground">
                   {isLoadingTableData ? (
                     <span>Loading data...</span>
                   ) : (
-                    <span>{perspectiveData.length.toLocaleString()} records from f_exposure table • Filters and asOfDate applied</span>
+                    <span>
+                      {perspectiveData.length.toLocaleString()} records from f_exposure
+                      table • Filters and asOfDate applied
+                    </span>
                   )}
                 </div>
               </div>
-              <div className="h-[1000px] relative">
+              <div className="relative h-[1000px]">
                 {isLoadingTableData ? (
-                  <div className="flex items-center justify-center h-full">
+                  <div className="flex h-full items-center justify-center">
                     <div className="flex items-center space-x-2">
                       <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                      <span className="text-sm text-muted-foreground">Loading table data...</span>
+                      <span className="text-sm text-muted-foreground">
+                        Loading table data...
+                      </span>
                     </div>
                   </div>
                 ) : perspectiveData.length > 0 ? (
@@ -367,21 +234,20 @@ export default function FinancingPage() {
                     className="h-full"
                   />
                 ) : (
-                  <div className="flex items-center justify-center h-full">
+                  <div className="flex h-full items-center justify-center">
                     <div className="text-center">
                       <p className="text-sm text-muted-foreground">No data available</p>
-                      <p className="text-xs text-muted-foreground mt-1">Try adjusting your filters or date selection</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Try adjusting your filters or date selection
+                      </p>
                     </div>
                   </div>
                 )}
               </div>
             </div>
-
           </div>
         )}
-
       </div>
     </div>
-
-  )
+  );
 }

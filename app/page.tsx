@@ -2,23 +2,27 @@ import { Metadata } from "next";
 
 import { NavigationCard } from "@/components/ui/navigation-card";
 
+const NAVIGATION_LINKS = [
+  { href: "/credit", title: "Credit" },
+  { href: "/financing", title: "Financing" },
+  { href: "/datagrid", title: "Data Grid" },
+];
+
 export const metadata: Metadata = {
   title: "Home",
 };
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-background p-2 text-foreground">
+    <main className="min-h-screen bg-background p-2 text-foreground">
       <div className="container">
-        <h1 className="mb-5 text-3xl font-bold">
-         GDM FrontView Apps
-        </h1>
-        <div className="grid grid-cols-1 md:grid-cols-7 gap-2">
-          <NavigationCard  href="/credit" title="Credit"  />
-          <NavigationCard href="/financing" title="Financing" />
-          <NavigationCard href="/datagrid" title="Data Grid" />  
+        <h1 className="mb-5 text-3xl font-bold">GDM FrontView Apps</h1>
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-7">
+          {NAVIGATION_LINKS.map((link) => (
+            <NavigationCard key={link.href} {...link} />
+          ))}
         </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -1,23 +1,34 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import type { CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Trash2, Edit3, Plus, RefreshCw, Search, Database, AlertCircle, Eye, Copy } from 'lucide-react'
+import { AlertCircle, Copy, Database, Edit3, Eye, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiPath } from '@/lib/utils'
 import JsonView from '@uiw/react-json-view'
 
 interface CacheEntry {
   key: string
-  value: any
+  value: unknown
   ttl: number | null
   size: number
 }
@@ -28,6 +39,84 @@ interface CacheData {
   pattern: string
 }
 
+const INITIAL_FORM_STATE = {
+  key: '',
+  value: '',
+  ttl: '',
+  jsonMode: false,
+}
+
+const formatSize = (bytes: number) => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
+}
+
+const formatTTL = (ttl: number | null) => {
+  if (!ttl || ttl <= 0) return 'No expiry'
+  if (ttl < 60) return `${ttl}s`
+  if (ttl < 3600) return `${Math.floor(ttl / 60)}m ${ttl % 60}s`
+  return `${Math.floor(ttl / 3600)}h ${Math.floor((ttl % 3600) / 60)}m`
+}
+
+const isObject = (value: unknown): value is Record<string, unknown> => {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+const isArray = (value: unknown): value is unknown[] => Array.isArray(value)
+
+const isJsonValue = (value: unknown) => isObject(value) || isArray(value)
+
+const parseValue = (value: string, jsonMode: boolean) => {
+  if (!jsonMode) {
+    return value
+  }
+
+  return JSON.parse(value)
+}
+
+const parseTtl = (ttl: string) => {
+  if (!ttl) {
+    return undefined
+  }
+
+  const parsed = parseInt(ttl, 10)
+  if (Number.isNaN(parsed)) {
+    throw new Error('TTL must be a number')
+  }
+
+  return parsed
+}
+
+const serializeValue = (value: unknown) => {
+  if (typeof value === 'string') {
+    return value
+  }
+
+  try {
+    return JSON.stringify(value, null, 2)
+  } catch {
+    return String(value)
+  }
+}
+
+const jsonViewStyles: CSSProperties = {
+  '--w-rjv-font-family':
+    'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+  '--w-rjv-font-size': '12px',
+  '--w-rjv-line-height': '1.4',
+  '--w-rjv-color-text': 'hsl(var(--foreground))',
+  '--w-rjv-color-background': 'transparent',
+  '--w-rjv-color-string': 'hsl(var(--primary))',
+  '--w-rjv-color-number': 'hsl(var(--chart-1))',
+  '--w-rjv-color-boolean': 'hsl(var(--chart-2))',
+  '--w-rjv-color-null': 'hsl(var(--muted-foreground))',
+  '--w-rjv-color-key': 'hsl(var(--foreground))',
+  '--w-rjv-color-brackets': 'hsl(var(--muted-foreground))',
+}
+
 export default function CacheAdminPage() {
   const [cacheData, setCacheData] = useState<CacheData>({ keys: [], total: 0, pattern: '*' })
   const [loading, setLoading] = useState(false)
@@ -36,43 +125,52 @@ export default function CacheAdminPage() {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showViewDialog, setShowViewDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
-  
-  // Add/Edit form state
-  const [formData, setFormData] = useState({
-    key: '',
-    value: '',
-    ttl: '',
-    jsonMode: false
-  })
+  const [formData, setFormData] = useState(INITIAL_FORM_STATE)
 
-  const fetchCacheData = async (pattern: string = '*') => {
+  const totalSize = useMemo(
+    () => cacheData.keys.reduce((sum, entry) => sum + entry.size, 0),
+    [cacheData.keys]
+  )
+
+  const fetchCacheData = useCallback(async (pattern: string = '*') => {
     setLoading(true)
     try {
       const response = await fetch(apiPath(`/api/cache?pattern=${encodeURIComponent(pattern)}`))
       const result = await response.json()
-      
+
       if (result.success) {
         setCacheData(result.data)
       } else {
-        toast.error('Failed to fetch cache data')
+        toast.error(result.error || 'Failed to fetch cache data')
       }
-    } catch (error) {
+    } catch {
       toast.error('Network error while fetching cache data')
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const handleSearch = () => {
-    fetchCacheData(searchPattern)
-  }
+  const refreshCurrentPattern = useCallback(() => {
+    return fetchCacheData(searchPattern)
+  }, [fetchCacheData, searchPattern])
 
-  const handleAddEntry = async () => {
+  useEffect(() => {
+    fetchCacheData()
+  }, [fetchCacheData])
+
+  const handleSearch = useCallback(() => {
+    refreshCurrentPattern()
+  }, [refreshCurrentPattern])
+
+  const handleAddEntry = useCallback(async () => {
+    if (!formData.key.trim()) {
+      toast.error('Key is required')
+      return
+    }
+
     try {
-      let value = formData.value
-      if (formData.jsonMode) {
-        value = JSON.parse(formData.value)
-      }
+      const value = parseValue(formData.value, formData.jsonMode)
+      const ttl = parseTtl(formData.ttl)
 
       const response = await fetch(apiPath('/api/cache'), {
         method: 'POST',
@@ -80,32 +178,36 @@ export default function CacheAdminPage() {
         body: JSON.stringify({
           key: formData.key,
           value,
-          ttl: formData.ttl ? parseInt(formData.ttl) : undefined
-        })
+          ttl,
+        }),
       })
 
       const result = await response.json()
       if (result.success) {
         toast.success('Cache entry added successfully')
         setShowAddDialog(false)
-        setFormData({ key: '', value: '', ttl: '', jsonMode: false })
-        fetchCacheData(searchPattern)
+        setFormData(INITIAL_FORM_STATE)
+        refreshCurrentPattern()
       } else {
         toast.error(result.error || 'Failed to add cache entry')
       }
     } catch (error) {
+      if (error instanceof Error && error.message === 'TTL must be a number') {
+        toast.error(error.message)
+        return
+      }
       toast.error('Invalid JSON or network error')
     }
-  }
+  }, [formData, refreshCurrentPattern])
 
-  const handleEditEntry = async () => {
-    if (!selectedKey) return
-    
+  const handleEditEntry = useCallback(async () => {
+    if (!selectedKey) {
+      return
+    }
+
     try {
-      let value = formData.value
-      if (formData.jsonMode) {
-        value = JSON.parse(formData.value)
-      }
+      const value = parseValue(formData.value, formData.jsonMode)
+      const ttl = parseTtl(formData.ttl)
 
       const response = await fetch(apiPath('/api/cache'), {
         method: 'POST',
@@ -113,8 +215,8 @@ export default function CacheAdminPage() {
         body: JSON.stringify({
           key: selectedKey.key,
           value,
-          ttl: formData.ttl ? parseInt(formData.ttl) : undefined
-        })
+          ttl,
+        }),
       })
 
       const result = await response.json()
@@ -122,142 +224,149 @@ export default function CacheAdminPage() {
         toast.success('Cache entry updated successfully')
         setShowEditDialog(false)
         setSelectedKey(null)
-        fetchCacheData(searchPattern)
+        setFormData(INITIAL_FORM_STATE)
+        refreshCurrentPattern()
       } else {
         toast.error(result.error || 'Failed to update cache entry')
       }
     } catch (error) {
+      if (error instanceof Error && error.message === 'TTL must be a number') {
+        toast.error(error.message)
+        return
+      }
       toast.error('Invalid JSON or network error')
     }
-  }
+  }, [formData, refreshCurrentPattern, selectedKey])
 
-  const handleDeleteEntry = async (key: string) => {
-    try {
-      const response = await fetch(apiPath(`/api/cache?key=${encodeURIComponent(key)}`), {
-        method: 'DELETE'
-      })
+  const handleDeleteEntry = useCallback(
+    async (key: string) => {
+      try {
+        const response = await fetch(apiPath(`/api/cache?key=${encodeURIComponent(key)}`), {
+          method: 'DELETE',
+        })
 
-      const result = await response.json()
-      if (result.success) {
-        toast.success('Cache entry deleted successfully')
-        fetchCacheData(searchPattern)
-      } else {
-        toast.error(result.error || 'Failed to delete cache entry')
+        const result = await response.json()
+        if (result.success) {
+          toast.success('Cache entry deleted successfully')
+          refreshCurrentPattern()
+        } else {
+          toast.error(result.error || 'Failed to delete cache entry')
+        }
+      } catch {
+        toast.error('Network error while deleting cache entry')
       }
-    } catch (error) {
-      toast.error('Network error while deleting cache entry')
-    }
-  }
+    },
+    [refreshCurrentPattern]
+  )
 
-  const handleDeleteAll = async () => {
+  const handleDeleteAll = useCallback(async () => {
     try {
       const response = await fetch(apiPath('/api/cache?action=flush'), {
-        method: 'DELETE'
+        method: 'DELETE',
       })
 
       const result = await response.json()
       if (result.success) {
         toast.success('All cache entries cleared successfully')
-        fetchCacheData(searchPattern)
+        refreshCurrentPattern()
       } else {
         toast.error(result.error || 'Failed to clear cache')
       }
-    } catch (error) {
+    } catch {
       toast.error('Network error while clearing cache')
     }
-  }
+  }, [refreshCurrentPattern])
 
-  const handleDeletePattern = async () => {
+  const handleDeletePattern = useCallback(async () => {
     try {
       const response = await fetch(apiPath(`/api/cache?pattern=${encodeURIComponent(searchPattern)}`), {
-        method: 'DELETE'
+        method: 'DELETE',
       })
 
       const result = await response.json()
       if (result.success) {
         toast.success(`Deleted ${result.data.deleted} cache entries`)
-        fetchCacheData(searchPattern)
+        refreshCurrentPattern()
       } else {
         toast.error(result.error || 'Failed to delete cache entries')
       }
-    } catch (error) {
+    } catch {
       toast.error('Network error while deleting cache entries')
     }
-  }
+  }, [refreshCurrentPattern, searchPattern])
 
-  const openEditDialog = (entry: CacheEntry) => {
+  const openEditDialog = useCallback((entry: CacheEntry) => {
     setSelectedKey(entry)
     setFormData({
       key: entry.key,
-      value: typeof entry.value === 'string' ? entry.value : JSON.stringify(entry.value, null, 2),
+      value: serializeValue(entry.value),
       ttl: entry.ttl?.toString() || '',
-      jsonMode: typeof entry.value !== 'string'
+      jsonMode: isJsonValue(entry.value),
     })
     setShowEditDialog(true)
-  }
+  }, [])
 
-  const openViewDialog = (entry: CacheEntry) => {
+  const openViewDialog = useCallback((entry: CacheEntry) => {
     setSelectedKey(entry)
     setShowViewDialog(true)
-  }
+  }, [])
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    toast.success('Copied to clipboard')
-  }
+  const handleAddDialogChange = useCallback((open: boolean) => {
+    setShowAddDialog(open)
+    if (!open) {
+      setFormData(INITIAL_FORM_STATE)
+    }
+  }, [])
 
-  const formatSize = (bytes: number) => {
-    if (bytes === 0) return '0 B'
-    const k = 1024
-    const sizes = ['B', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
+  const handleEditDialogChange = useCallback((open: boolean) => {
+    setShowEditDialog(open)
+    if (!open) {
+      setSelectedKey(null)
+      setFormData(INITIAL_FORM_STATE)
+    }
+  }, [])
 
-  const formatTTL = (ttl: number | null) => {
-    if (!ttl || ttl <= 0) return 'No expiry'
-    if (ttl < 60) return `${ttl}s`
-    if (ttl < 3600) return `${Math.floor(ttl / 60)}m ${ttl % 60}s`
-    return `${Math.floor(ttl / 3600)}h ${Math.floor((ttl % 3600) / 60)}m`
-  }
+  const handleViewDialogChange = useCallback((open: boolean) => {
+    setShowViewDialog(open)
+    if (!open) {
+      setSelectedKey(null)
+    }
+  }, [])
 
-  const isObject = (value: any): boolean => {
-    return value !== null && typeof value === 'object' && !Array.isArray(value)
-  }
+  const copyToClipboard = useCallback(async (text: string) => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      toast.error('Clipboard not available')
+      return
+    }
 
-  const isArray = (value: any): boolean => {
-    return Array.isArray(value)
-  }
-
-  const isJsonValue = (value: any): boolean => {
-    return isObject(value) || isArray(value)
-  }
-
-  useEffect(() => {
-    fetchCacheData()
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success('Copied to clipboard')
+    } catch {
+      toast.error('Failed to copy to clipboard')
+    }
   }, [])
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="container mx-auto space-y-6 p-6">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Redis Cache Admin</h1>
           <p className="text-muted-foreground">Manage and monitor Redis cache entries</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => fetchCacheData(searchPattern)} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
+          <Button onClick={refreshCurrentPattern} variant="outline" size="sm">
+            <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
           </Button>
           <Button onClick={() => setShowAddDialog(true)} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Add Entry
           </Button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Keys</CardTitle>
@@ -282,17 +391,14 @@ export default function CacheAdminPage() {
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatSize(cacheData.keys.reduce((sum, entry) => sum + entry.size, 0))}
-            </div>
+            <div className="text-2xl font-bold">{formatSize(totalSize)}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search and Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Search & Actions</CardTitle>
+          <CardTitle>Search &amp; Actions</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
@@ -303,7 +409,7 @@ export default function CacheAdminPage() {
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
             <Button onClick={handleSearch} variant="outline">
-              <Search className="h-4 w-4 mr-2" />
+              <Search className="mr-2 h-4 w-4" />
               Search
             </Button>
           </div>
@@ -311,7 +417,7 @@ export default function CacheAdminPage() {
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" size="sm">
-                  <Trash2 className="h-4 w-4 mr-2" />
+                  <Trash2 className="mr-2 h-4 w-4" />
                   Delete All
                 </Button>
               </AlertDialogTrigger>
@@ -328,11 +434,11 @@ export default function CacheAdminPage() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-            
+
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" size="sm">
-                  <Trash2 className="h-4 w-4 mr-2" />
+                  <Trash2 className="mr-2 h-4 w-4" />
                   Delete Pattern
                 </Button>
               </AlertDialogTrigger>
@@ -340,7 +446,8 @@ export default function CacheAdminPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete Pattern: {searchPattern}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will delete all cache entries matching the pattern "{searchPattern}". This action cannot be undone.
+                    This will delete all cache entries matching the pattern{' '}
+                    <span className="font-mono">{searchPattern}</span>. This action cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -353,17 +460,17 @@ export default function CacheAdminPage() {
         </CardContent>
       </Card>
 
-      {/* Cache Entries Table */}
       <Card>
         <CardHeader>
           <CardTitle>Cache Entries</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8">Loading cache data...</div>
+            <div className="py-8 text-center">Loading cache data...</div>
           ) : cacheData.keys.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No cache entries found matching pattern "{searchPattern}"
+            <div className="py-8 text-center text-muted-foreground">
+              No cache entries found matching pattern{' '}
+              <span className="font-mono">{searchPattern}</span>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -379,7 +486,7 @@ export default function CacheAdminPage() {
                 <TableBody>
                   {cacheData.keys.map((entry) => (
                     <TableRow key={entry.key}>
-                      <TableCell className="font-mono max-w-xs truncate">
+                      <TableCell className="max-w-xs truncate font-mono">
                         <div className="flex items-center gap-2">
                           {entry.key}
                           {isJsonValue(entry.value) && (
@@ -397,25 +504,13 @@ export default function CacheAdminPage() {
                       <TableCell>{formatSize(entry.size)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openViewDialog(entry)}
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => openViewDialog(entry)}>
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(entry)}
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => openEditDialog(entry)}>
                             <Edit3 className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyToClipboard(entry.key)}
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(entry.key)}>
                             <Copy className="h-4 w-4" />
                           </Button>
                           <AlertDialog>
@@ -428,7 +523,8 @@ export default function CacheAdminPage() {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Delete Cache Entry</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Are you sure you want to delete the cache entry "{entry.key}"?
+                                  Are you sure you want to delete the cache entry{' '}
+                                  <span className="font-mono">{entry.key}</span>?
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
@@ -450,9 +546,8 @@ export default function CacheAdminPage() {
         </CardContent>
       </Card>
 
-      {/* Add Entry Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={showAddDialog} onOpenChange={handleAddDialogChange}>
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Cache Entry</DialogTitle>
           </DialogHeader>
@@ -496,8 +591,8 @@ export default function CacheAdminPage() {
                 </Button>
               </div>
             </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => handleAddDialogChange(false)}>
                 Cancel
               </Button>
               <Button onClick={handleAddEntry}>Add Entry</Button>
@@ -506,9 +601,8 @@ export default function CacheAdminPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Entry Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={showEditDialog} onOpenChange={handleEditDialogChange}>
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Cache Entry: {selectedKey?.key}</DialogTitle>
           </DialogHeader>
@@ -541,8 +635,8 @@ export default function CacheAdminPage() {
                 </Button>
               </div>
             </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => handleEditDialogChange(false)}>
                 Cancel
               </Button>
               <Button onClick={handleEditEntry}>Update Entry</Button>
@@ -551,9 +645,8 @@ export default function CacheAdminPage() {
         </DialogContent>
       </Dialog>
 
-      {/* View Entry Dialog */}
-      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={showViewDialog} onOpenChange={handleViewDialogChange}>
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>View Cache Entry</DialogTitle>
           </DialogHeader>
@@ -561,29 +654,15 @@ export default function CacheAdminPage() {
             <div className="space-y-4">
               <div>
                 <Label>Key</Label>
-                <div className="font-mono text-sm bg-muted p-2 rounded">
-                  {selectedKey.key}
-                </div>
+                <div className="rounded bg-muted p-2 font-mono text-sm">{selectedKey.key}</div>
               </div>
               <div>
                 <Label>Value</Label>
                 {isJsonValue(selectedKey.value) ? (
-                  <div className="bg-muted p-2 rounded overflow-auto max-h-96">
-                    <JsonView 
+                  <div className="max-h-96 overflow-auto rounded bg-muted p-2">
+                    <JsonView
                       value={selectedKey.value}
-                      style={{
-                        '--w-rjv-font-family': 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
-                        '--w-rjv-font-size': '12px',
-                        '--w-rjv-line-height': '1.4',
-                        '--w-rjv-color-text': 'hsl(var(--foreground))',
-                        '--w-rjv-color-background': 'transparent',
-                        '--w-rjv-color-string': 'hsl(var(--primary))',
-                        '--w-rjv-color-number': 'hsl(var(--chart-1))',
-                        '--w-rjv-color-boolean': 'hsl(var(--chart-2))',
-                        '--w-rjv-color-null': 'hsl(var(--muted-foreground))',
-                        '--w-rjv-color-key': 'hsl(var(--foreground))',
-                        '--w-rjv-color-brackets': 'hsl(var(--muted-foreground))',
-                      } as any}
+                      style={jsonViewStyles}
                       displayDataTypes={false}
                       displayObjectSize={false}
                       enableClipboard={false}
@@ -592,10 +671,10 @@ export default function CacheAdminPage() {
                     />
                   </div>
                 ) : (
-                  <pre className="text-sm bg-muted p-2 rounded overflow-auto max-h-96">
-                    {typeof selectedKey.value === 'string' 
-                      ? selectedKey.value 
-                      : JSON.stringify(selectedKey.value, null, 2)}
+                  <pre className="max-h-96 overflow-auto rounded bg-muted p-2 text-sm">
+                    {typeof selectedKey.value === 'string'
+                      ? selectedKey.value
+                      : serializeValue(selectedKey.value)}
                   </pre>
                 )}
               </div>
