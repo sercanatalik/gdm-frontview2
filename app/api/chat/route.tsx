@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   }
 
   const data = await response.json();
-  console.log('Response:', data);
+  // console.log('Response:', data);
 
   const responseText = data.response || data.message || '';
 
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
         controller.enqueue(
           encoder.encode(`data: ${JSON.stringify({ type: 'text-delta', id: messageId, delta: chunk })}\n\n`)
         );
-        console.log('Sending chunk:', chunk);
+        // console.log('Sending chunk:', chunk);
         // Small delay to simulate streaming
         await new Promise(resolve => setTimeout(resolve, 20));
       }
