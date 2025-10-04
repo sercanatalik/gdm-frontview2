@@ -23,7 +23,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("")
 
   const { messages, sendMessage, status } = useChat({
-    transport: new DefaultChatTransport({ api: "api/chat" }),
+    transport: new DefaultChatTransport({ api: "../api/chat/langchain" }),
   })
 
   const suggestions = [
