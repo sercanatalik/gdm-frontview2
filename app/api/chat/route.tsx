@@ -27,11 +27,11 @@ export async function POST(req: Request) {
   const payload = {
     message: userMessage,
     thread_id: threadId,
+    stream: true,
   };
-  console.log('Request payload:', JSON.stringify(payload));
 
-  // Use non-streaming endpoint since streaming has a backend bug
-  const response = await fetch('http://localhost:3030/chat', {
+  // Use streaming endpoint
+  const response = await fetch('http://localhost:3030/chat/stream', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -45,42 +45,83 @@ export async function POST(req: Request) {
     throw new Error(`API error: ${response.statusText} - ${errorText}`);
   }
 
-  const data = await response.json();
-  // console.log('Response:', data);
-
-  const responseText = data.response || data.message || '';
-
-  // Use SSE format for AI SDK v5
+  // Transform backend SSE stream to AI SDK v5 format
   const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
   const messageId = `msg_${Date.now()}`;
 
   const stream = new ReadableStream({
     async start(controller) {
+      const reader = response.body?.getReader();
+      if (!reader) {
+        controller.close();
+        return;
+      }
+
       // Send text-start event
       controller.enqueue(
         encoder.encode(`data: ${JSON.stringify({ type: 'text-start', id: messageId })}\n\n`)
       );
 
-      // Send text in chunks as text-delta events
-      const chunkSize = 5; // characters per chunk
-      for (let i = 0; i < responseText.length; i += chunkSize) {
-        const chunk = responseText.slice(i, i + chunkSize);
+      try {
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6).trim();
+              if (!data) continue;
+
+              try {
+                const parsed = JSON.parse(data);
+                console.log('Parsed chunk:', parsed);
+                // Handle error responses
+                if (parsed.error) {
+                  console.error('Backend error:', parsed.error);
+                  controller.error(new Error(parsed.error));
+                  return;
+                }
+
+                // Check if done
+                if (parsed.done) {
+                  continue;
+                }
+
+                // Extract chunk from backend format
+                const chunk = parsed.chunk || '';
+
+                if (chunk) {
+                  // Send as text-delta event
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ type: 'text-delta', id: messageId, delta: chunk })}\n\n`)
+                  );
+                }
+              } catch (e) {
+                console.error('Parse error:', e, 'Line:', line);
+              }
+            }
+          }
+        }
+
+        // Send text-end event
         controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ type: 'text-delta', id: messageId, delta: chunk })}\n\n`)
+          encoder.encode(`data: ${JSON.stringify({ type: 'text-end', id: messageId })}\n\n`)
         );
-        // console.log('Sending chunk:', chunk);
-        // Small delay to simulate streaming
-        await new Promise(resolve => setTimeout(resolve, 20));
+      } catch (error) {
+        console.error('Stream error:', error);
+        controller.error(error);
+      } finally {
+        // Send [DONE] marker
+        controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
+        controller.close();
       }
-
-      // Send text-end event
-      controller.enqueue(
-        encoder.encode(`data: ${JSON.stringify({ type: 'text-end', id: messageId })}\n\n`)
-      );
-
-      // Send [DONE] marker
-      controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
-      controller.close();
     },
   });
 
