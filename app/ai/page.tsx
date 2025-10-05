@@ -20,23 +20,50 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 
 export default function AIPlaygroundPage() {
-  const { messages, sendMessage, status, error } = useChat({
+  // First chat instance
+  const {
+    messages: messages1,
+    sendMessage: sendMessage1,
+    status: status1,
+    error: error1,
+  } = useChat({
     transport: new DefaultChatTransport({ api: 'api/chat' }),
     onError: (error) => {
-      console.error('Chat error:', error);
+      console.error('Chat 1 error:', error);
     },
   });
 
+  // Second chat instance
+  const {
+    messages: messages2,
+    sendMessage: sendMessage2,
+    status: status2,
+    error: error2,
+  } = useChat({
+    transport: new DefaultChatTransport({ api: 'api/ai/financing' }),
+    onError: (error) => {
+      console.error('Chat 2 error:', error);
+    },
+  });
+
+  // Common submit handler - sends to both chats
   const onSubmit = (message: PromptInputMessage) => {
     const text = message.text || '';
 
     if (text.trim() || message.files?.length) {
-      sendMessage({
+      const payload = {
         text,
         files: message.files,
-      });
+      };
+
+      // Send to both chat instances
+      sendMessage1(payload);
+      sendMessage2(payload);
     }
   };
+
+  // Determine if either chat is not ready
+  const isDisabled = status1 !== 'ready' || status2 !== 'ready';
 
   return (
     <div className="p-0">
@@ -49,12 +76,12 @@ export default function AIPlaygroundPage() {
         <div className="grid grid-cols-2 gap-6">
           {/* First Conversation Column */}
           <div className="rounded-lg border border-border bg-card">
-            <ChatConversation messages={messages} error={error} />
+            <ChatConversation messages={messages1} error={error1} />
           </div>
 
           {/* Second Conversation Column */}
           <div className="rounded-lg border border-border bg-card">
-            <ChatConversation messages={messages} error={error} />
+            <ChatConversation messages={messages2} error={error2} />
           </div>
         </div>
 
@@ -67,7 +94,7 @@ export default function AIPlaygroundPage() {
               </PromptInputAttachments>
               <PromptInputTextarea
                 placeholder="Ask anything..."
-                disabled={status !== 'ready'}
+                disabled={isDisabled}
               />
             </PromptInputBody>
             <PromptInputToolbar>
@@ -79,7 +106,7 @@ export default function AIPlaygroundPage() {
                   </PromptInputActionMenuContent>
                 </PromptInputActionMenu>
               </PromptInputTools>
-              <PromptInputSubmit disabled={status !== 'ready'} />
+              <PromptInputSubmit disabled={isDisabled} />
             </PromptInputToolbar>
           </PromptInput>
         </div>
