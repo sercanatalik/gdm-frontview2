@@ -1,12 +1,6 @@
 'use client';
 
-import {
-  Conversation,
-  ConversationContent,
-  ConversationScrollButton,
-} from '@/components/ai-elements/conversation';
-import { Message, MessageContent } from '@/components/ai-elements/message';
-import { Response } from '@/components/ai-elements/response';
+import { ChatConversation } from '@/components/ai-elements/chat-conversation';
 import {
   PromptInput,
   PromptInputActionAddAttachments,
@@ -51,63 +45,43 @@ export default function AIPlaygroundPage() {
       </div>
 
       <div className="space-y-6">
-        <div className="rounded-lg border border-border bg-card">
-          <div className="flex h-[600px] flex-col">
-            <Conversation>
-              <ConversationContent>
-                {messages.length === 0 ? (
-                  <div className="flex h-full items-center justify-center text-muted-foreground">
-                    Start a conversation...
-                  </div>
-                ) : (
-                  messages.map((message) => (
-                    <Message from={message.role} key={message.id}>
-                      <MessageContent>
-                        {message.parts?.map((part, index) => {
-                          if (part.type === 'text') {
-                            return (
-                              <Response key={index}>
-                                {part.text}
-                              </Response>
-                            );
-                          }
-                          return null;
-                        })}
-                      </MessageContent>
-                    </Message>
-                  ))
-                )}
-                {error && (
-                  <div className="rounded-md bg-destructive/10 p-4 text-sm text-destructive">
-                    Error: {error.message}
-                  </div>
-                )}
-              </ConversationContent>
-              <ConversationScrollButton />
-            </Conversation>
-            <PromptInput onSubmit={onSubmit} className="border-t" globalDrop multiple>
-              <PromptInputBody>
-                <PromptInputAttachments>
-                  {(attachment) => <PromptInputAttachment data={attachment} />}
-                </PromptInputAttachments>
-                <PromptInputTextarea
-                  placeholder="Ask anything..."
-                  disabled={status !== 'ready'}
-                />
-              </PromptInputBody>
-              <PromptInputToolbar>
-                <PromptInputTools>
-                  <PromptInputActionMenu>
-                    <PromptInputActionMenuTrigger />
-                    <PromptInputActionMenuContent>
-                      <PromptInputActionAddAttachments />
-                    </PromptInputActionMenuContent>
-                  </PromptInputActionMenu>
-                </PromptInputTools>
-                <PromptInputSubmit disabled={status !== 'ready'} />
-              </PromptInputToolbar>
-            </PromptInput>
+        {/* Two Conversation Columns */}
+        <div className="grid grid-cols-2 gap-6">
+          {/* First Conversation Column */}
+          <div className="rounded-lg border border-border bg-card">
+            <ChatConversation messages={messages} error={error} />
           </div>
+
+          {/* Second Conversation Column */}
+          <div className="rounded-lg border border-border bg-card">
+            <ChatConversation messages={messages} error={error} />
+          </div>
+        </div>
+
+        {/* Common Prompt Input for Both Conversations */}
+        <div className="rounded-lg border border-border bg-card">
+          <PromptInput onSubmit={onSubmit} globalDrop multiple>
+            <PromptInputBody>
+              <PromptInputAttachments>
+                {(attachment) => <PromptInputAttachment data={attachment} />}
+              </PromptInputAttachments>
+              <PromptInputTextarea
+                placeholder="Ask anything..."
+                disabled={status !== 'ready'}
+              />
+            </PromptInputBody>
+            <PromptInputToolbar>
+              <PromptInputTools>
+                <PromptInputActionMenu>
+                  <PromptInputActionMenuTrigger />
+                  <PromptInputActionMenuContent>
+                    <PromptInputActionAddAttachments />
+                  </PromptInputActionMenuContent>
+                </PromptInputActionMenu>
+              </PromptInputTools>
+              <PromptInputSubmit disabled={status !== 'ready'} />
+            </PromptInputToolbar>
+          </PromptInput>
         </div>
       </div>
     </div>
