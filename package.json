@@ -9,11 +9,14 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.23",
+    "@ai-sdk/langchain": "^1.0.60",
     "@ai-sdk/openai": "^2.0.42",
     "@ai-sdk/react": "^2.0.60",
     "@clickhouse/client": "^1.11.2",
     "@hookform/resolvers": "^5.1.1",
     "@icons-pack/react-simple-icons": "^13.7.0",
+    "@langchain/anthropic": "^0.3.30",
     "@modelcontextprotocol/sdk": "^1.17.2",
     "@nanostores/react": "github:ai/react",
     "@radix-ui/react-accordion": "^1.2.11",
