@@ -7,6 +7,13 @@ import {
 } from '@/components/ai-elements/conversation';
 import { Message, MessageContent } from '@/components/ai-elements/message';
 import { Response } from '@/components/ai-elements/response';
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from '@/components/ai-elements/tool';
 import { UIMessage } from 'ai';
 
 interface ChatConversationProps {
@@ -28,6 +35,8 @@ export function ChatConversation({ messages, error }: ChatConversationProps) {
               <Message from={message.role} key={message.id}>
                 <MessageContent>
                   {message.parts?.map((part, index) => {
+
+                    // Handle text parts
                     if (part.type === 'text') {
                       return (
                         <Response key={index}>
@@ -35,6 +44,50 @@ export function ChatConversation({ messages, error }: ChatConversationProps) {
                         </Response>
                       );
                     }
+
+                    // Handle dynamic tool calls
+                    if (part.type === 'dynamic-tool') {
+                      return (
+                        <Tool key={index} defaultOpen={false}>
+                          <ToolHeader
+                            type={part.type}
+                            title={part.toolName}
+                            state={part.state}
+                          />
+                          <ToolContent>
+                            <ToolInput input={part.input} />
+                            <ToolOutput
+                              output={part.output}
+                              errorText={part.errorText}
+                            />
+                          </ToolContent>
+                        </Tool>
+                      );
+                    }
+
+                    // Handle tool calls - check if part has the required tool properties
+                    if (part.type.includes('tool') && 'input' in part) {
+                      // Extract tool name from type (e.g., 'tool-execute_query' -> 'execute_query')
+                      const toolName = part.type
+
+                      return (
+                        <Tool key={index} defaultOpen={false}>
+                          <ToolHeader
+                            type={part.type}
+                            title={toolName}
+                            state={'state' in part ? part.state : 'output-available'}
+                          />
+                          <ToolContent>
+                            <ToolInput input={part.input} />
+                            <ToolOutput
+                              output={'output' in part ? part.output : undefined}
+                              errorText={'errorText' in part ? part.errorText : undefined}
+                            />
+                          </ToolContent>
+                        </Tool>
+                      );
+                    }
+
                     return null;
                   })}
                 </MessageContent>

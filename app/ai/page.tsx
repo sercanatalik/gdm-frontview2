@@ -1,39 +1,16 @@
 'use client';
 
 import { ChatConversation } from '@/components/ai-elements/chat-conversation';
-import {
-  PromptInput,
-  PromptInputActionAddAttachments,
-  PromptInputActionMenu,
-  PromptInputActionMenuContent,
-  PromptInputActionMenuTrigger,
-  PromptInputAttachment,
-  PromptInputAttachments,
-  PromptInputBody,
-  PromptInputSubmit,
-  PromptInputTextarea,
-  PromptInputToolbar,
-  PromptInputTools,
-  type PromptInputMessage,
-} from '@/components/ai-elements/prompt-input';
+import { ChatPrompt } from '@/components/ai-elements/chat-prompt';
+import { type PromptInputMessage } from '@/components/ai-elements/prompt-input';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 
-export default function AIPlaygroundPage() {
-  // First chat instance
-  const {
-    messages: messages1,
-    sendMessage: sendMessage1,
-    status: status1,
-    error: error1,
-  } = useChat({
-    transport: new DefaultChatTransport({ api: 'api/chat' }),
-    onError: (error) => {
-      console.error('Chat 1 error:', error);
-    },
-  });
 
-  // Second chat instance
+
+
+export default function AIPlaygroundPage() {
+  
   const {
     messages: messages2,
     sendMessage: sendMessage2,
@@ -56,14 +33,13 @@ export default function AIPlaygroundPage() {
         files: message.files,
       };
 
-      // Send to both chat instances
-      sendMessage1(payload);
+      // Send to chat instance
       sendMessage2(payload);
     }
   };
 
-  // Determine if either chat is not ready
-  const isDisabled = status1 !== 'ready' || status2 !== 'ready';
+  // Determine if chat is not ready
+  const isDisabled = status2 !== 'ready';
 
   return (
     <div className="p-0">
@@ -76,40 +52,20 @@ export default function AIPlaygroundPage() {
         <div className="grid grid-cols-2 gap-6">
           {/* First Conversation Column */}
           <div className="rounded-lg border border-border bg-card">
-            <ChatConversation messages={messages1} error={error1} />
+             <ChatConversation messages={messages2} error={error2} />
+         
+            {/* <ChatConversation messages={messages1} error={error1} /> */}
           </div>
 
           {/* Second Conversation Column */}
           <div className="rounded-lg border border-border bg-card">
-            <ChatConversation messages={messages2} error={error2} />
+            {/* <ChatConversation messages={messages2} error={error2} /> */}
           </div>
         </div>
 
-        {/* Common Prompt Input for Both Conversations */}
-        <div className="rounded-lg border border-border bg-card">
-          <PromptInput onSubmit={onSubmit} globalDrop multiple>
-            <PromptInputBody>
-              <PromptInputAttachments>
-                {(attachment) => <PromptInputAttachment data={attachment} />}
-              </PromptInputAttachments>
-              <PromptInputTextarea
-                placeholder="Ask anything..."
-                disabled={isDisabled}
-              />
-            </PromptInputBody>
-            <PromptInputToolbar>
-              <PromptInputTools>
-                <PromptInputActionMenu>
-                  <PromptInputActionMenuTrigger />
-                  <PromptInputActionMenuContent>
-                    <PromptInputActionAddAttachments />
-                  </PromptInputActionMenuContent>
-                </PromptInputActionMenu>
-              </PromptInputTools>
-              <PromptInputSubmit disabled={isDisabled} />
-            </PromptInputToolbar>
-          </PromptInput>
-        </div>
+        {/* Common Prompt Input for Conversation */}
+        <ChatPrompt onSubmit={onSubmit} disabled={isDisabled} />
+       
       </div>
     </div>
   );

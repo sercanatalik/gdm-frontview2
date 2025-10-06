@@ -1,45 +1,56 @@
-import { experimental_createMCPClient, streamText } from 'ai';
-import { Experimental_StdioMCPTransport } from 'ai/mcp-stdio';
-
 import { anthropic } from '@ai-sdk/anthropic';
-import { StreamableHTTPClientTransport } from '@@modelcontextprotocol/sdk/client/streamableHttp';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import {
+  experimental_createMCPClient,
+  stepCountIs,
+  UIMessage,
+  convertToModelMessages,
+  streamText,
+} from 'ai';
+import { SYSTEM_PROMPT } from './prompt';
+
+// Allow streaming responses up to 30 seconds
+export const maxDuration = 30;
+
+const MCP_SERVER_URL = 'http://127.0.0.1:8000/mcp';
+const MAX_STEPS = 15;
+const MAX_RETRIES = 5;
 
 export async function POST(req: Request) {
-  const { prompt }: { prompt: string } = await req.json();
-
   try {
-   
-    // You can also connect to StreamableHTTP MCP servers
+    const { messages }: { messages: UIMessage[] } = await req.json();
+
+    // Connect to StreamableHTTP MCP server
     const httpTransport = new StreamableHTTPClientTransport(
-      new URL('http://localhost:3030/mcp'),
+      new URL(MCP_SERVER_URL)
     );
     const httpClient = await experimental_createMCPClient({
       transport: httpTransport,
     });
 
-    const toolSetTwo = await httpClient.tools();
-    const tools = {
-      ...toolSetTwo,
-    };
+    const toolSet = await httpClient.tools();
 
-    const response = await streamText({
-      model: anthropic('claude-sonnet-4-0'),
-      tools,
-      prompt,
-      // When streaming, the client should be closed after the response is finished:
-      onFinish: async () => {
-        await httpClient.close();
-      },
-      // Closing clients onError is optional
-      // - Closing: Immediately frees resources, prevents hanging connections
-      // - Not closing: Keeps connection open for retries
-      onError: async error => {
-        await httpClient.close();
-      },
-    });
+    const result = streamText({
+      model: anthropic('claude-opus-4-20250514'),
+      system: SYSTEM_PROMPT,
+      messages: convertToModelMessages(messages),
+      tools: toolSet,
+      maxRetries: MAX_RETRIES,
+      stopWhen: stepCountIs(MAX_STEPS),
+    })
 
-    return response.toTextStreamResponse();
+    return result.toUIMessageStreamResponse();
   } catch (error) {
-    return new Response('Internal Server Error', { status: 500 });
+    console.error('AI financing route error:', error);
+    return new Response(
+      JSON.stringify({
+        error: 'Failed to process AI request',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 }

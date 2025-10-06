@@ -6,6 +6,7 @@ const NAVIGATION_LINKS = [
   { href: "/credit", title: "Credit" },
   { href: "/financing", title: "Financing" },
   { href: "/datagrid", title: "Data Grid" },
+  { href: "/ai", title: "AI Playground" },
 ];
 
 export const metadata: Metadata = {
