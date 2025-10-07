@@ -5,9 +5,18 @@ import {
   stepCountIs,
   UIMessage,
   convertToModelMessages,
-  streamText,
+  streamText,wrapLanguageModel
 } from 'ai';
+import { cacheMiddleware } from '@/lib/ai/cache-middleware';
+
 import { SYSTEM_PROMPT } from './prompt';
+
+
+const wrappedModel = wrapLanguageModel({
+  model: anthropic('claude-3-haiku-20240307'),
+  middleware: cacheMiddleware,
+});
+
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
@@ -27,11 +36,12 @@ export async function POST(req: Request) {
     const httpClient = await experimental_createMCPClient({
       transport: httpTransport,
     });
+    
 
     const toolSet = await httpClient.tools();
 
     const result = streamText({
-      model: anthropic('claude-opus-4-20250514'),
+      model: wrappedModel,
       system: SYSTEM_PROMPT,
       messages: convertToModelMessages(messages),
       tools: toolSet,
