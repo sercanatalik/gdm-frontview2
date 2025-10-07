@@ -7,7 +7,7 @@ import { DefaultChatTransport } from 'ai';
 import { SuggestedQueries } from './suggested-queries';
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 import { Header } from "@/components/header";
 import { Search } from "@/components/search";
 import { ToolOutputStream } from "@/components/ai-elements/tool-outputstream";
@@ -89,15 +89,16 @@ export default function AIPlaygroundPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-full -m-4">
       {/* Header Section */}
-      <div className="px-6 py-4 border-b bg-background shrink-0">
+      <div className="px-6 py-3 border-b bg-background shrink-0">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">AI Playground</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Interact with AI and view tool executions in real-time
-            </p>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold tracking-tight">AI Playground</h2>
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">
+              <Sparkles className="w-3 h-3 text-primary" />
+              <span className="text-xs font-medium text-primary">Powered by AI Markets</span>
+            </div>
           </div>
         </div>
       </div>
@@ -156,8 +157,8 @@ export default function AIPlaygroundPage() {
 
       {/* Suggested Queries - Show when no submission */}
       {!submitted && (
-        <div className="flex-1 flex items-end justify-center pb-0">
-          <div className="max-w-3xl w-full px-6">
+        <div className="flex-1 flex items-end justify-center pb-4">
+          <div className="max-w-4xl w-full px-6">
             <AnimatePresence mode="wait">
               <SuggestedQueries
                 handleSuggestionClick={handleSuggestionClick}

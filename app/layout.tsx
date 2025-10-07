@@ -47,12 +47,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           >
             <SidebarProvider defaultOpen={false}>
               <AppSidebar />
-              <SidebarInset>
-                <main>
+              <SidebarInset className="flex flex-col h-screen">
+                <main className="flex-1 flex flex-col overflow-hidden">
                   <Header />
                   <Separator orientation="horizontal" className="my-1" />
-                  <div className="h-full flex flex-col">
-                    <div className="container-fluid pt-4 pb-4 px-4">
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <div className="container-fluid h-full pt-4 pb-4 px-4">
                       {children}
                     </div>
                   </div>
