@@ -11,6 +11,7 @@ import { Loader2 } from 'lucide-react';
 import { Header } from "@/components/header";
 import { Search } from "@/components/search";
 import { ToolOutputStream } from "@/components/ai-elements/tool-outputstream";
+import { toolOutputsActions } from '@/lib/store/tool-outputs';
 
 
 
@@ -39,12 +40,6 @@ export default function AIPlaygroundPage() {
   const [results, setResults] = useState<any[]>([]);
   const [chartConfig, setChartConfig] = useState<any>(null);
   const [columns, setColumns] = useState<any[]>([]);
-  const [toolOutputs, setToolOutputs] = useState<Array<{
-    toolName: string;
-    output: unknown;
-    input: unknown;
-    state?: string;
-  }>>([]);
 
   const handleClear = () => {
     // Stop any ongoing streaming
@@ -61,7 +56,9 @@ export default function AIPlaygroundPage() {
     setChartConfig(null);
     setColumns([]);
     setLoading(false);
-    setToolOutputs([]);
+
+    // Clear tool outputs from store
+    toolOutputsActions.clearOutputs();
   };
 
   const handleSubmit = (value: string) => {
@@ -86,7 +83,9 @@ export default function AIPlaygroundPage() {
     input: unknown;
     state?: string;
   }) => {
-    setToolOutputs((prev) => [...prev, toolOutput]);
+    // Add to store - it will handle deduplication
+    // console.log('Adding tool output to store:', toolOutput.input);
+    toolOutputsActions.addOutput(toolOutput);
   };
 
   return (
@@ -110,7 +109,7 @@ export default function AIPlaygroundPage() {
           </div>
 
           {/* Second Conversation Column - Tool Outputs */}
-          <ToolOutputStream toolOutputs={toolOutputs} />
+          <ToolOutputStream />
         </div>
 
         {/* Search and Results Section */}
