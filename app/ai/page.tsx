@@ -173,18 +173,35 @@ export default function AIPlaygroundPage() {
               </div>
             </div>
           ) : (
-            /* Full Width Conversation - Debug Mode Off */
-            <div className="h-full p-4">
-              <div className="rounded-lg border bg-card shadow-sm h-full overflow-hidden flex flex-col">
-                <div className="px-4 py-3 border-b bg-muted/50">
-                  <h3 className="text-sm font-semibold">Conversation</h3>
+            /* 60/40 Split Layout - Debug Mode Off */
+            <div className="h-full grid grid-cols-5 gap-4 p-4">
+              {/* Conversation Column - 60% */}
+              <div className="col-span-3 flex flex-col">
+                <div className="rounded-lg border bg-card shadow-sm h-full overflow-hidden flex flex-col">
+                  <div className="px-4 py-3 border-b bg-muted/50">
+                    <h3 className="text-sm font-semibold">Conversation</h3>
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <ChatConversation
+                      messages={messages2}
+                      error={error2}
+                      onToolOutput={handleToolOutput}
+                    />
+                  </div>
                 </div>
-                <div className="flex-1 overflow-hidden">
-                  <ChatConversation
-                    messages={messages2}
-                    error={error2}
-                    onToolOutput={handleToolOutput}
-                  />
+              </div>
+
+              {/* Second Column - 40% */}
+              <div className="col-span-2 flex flex-col">
+                <div className="rounded-lg border bg-card shadow-sm h-full overflow-hidden flex flex-col">
+                  <div className="px-4 py-3 border-b bg-muted/50">
+                    <h3 className="text-sm font-semibold">Dynamic Charts</h3>
+                  </div>
+                  <div className="flex-1 overflow-auto p-4">
+                    <div className="text-sm text-muted-foreground text-center py-8">
+                       AI Charts will appear here
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
