@@ -23,6 +23,7 @@ export const Search = ({
         e.preventDefault();
         if (inputValue.trim()) {
           handleSubmit(inputValue);
+          setInputValue(''); // Clear input after sending
         }
       }}
       className={className || "mb-6"}
@@ -39,7 +40,14 @@ export const Search = ({
           <SearchIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
         </div>
         <div className="flex sm:flex-row items-center justify-center gap-2">
-          {submitted ? (
+          <Button
+            type="submit"
+            className="w-full sm:w-auto"
+            disabled={!inputValue.trim()}
+          >
+            Send
+          </Button>
+          {submitted && (
             <Button
               type="button"
               variant="outline"
@@ -47,10 +55,6 @@ export const Search = ({
               className="w-full sm:w-auto"
             >
               Clear
-            </Button>
-          ) : (
-            <Button type="submit" className="w-full sm:w-auto">
-              Send
             </Button>
           )}
         </div>

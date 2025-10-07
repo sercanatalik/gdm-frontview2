@@ -20,7 +20,6 @@ export default function AIPlaygroundPage() {
   const {
     messages: messages2,
     sendMessage: sendMessage2,
-    status: status2,
     error: error2,
     stop,
     setMessages,
@@ -33,12 +32,6 @@ export default function AIPlaygroundPage() {
 
   const [inputValue, setInputValue] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [loadingStep, setLoadingStep] = useState(1);
-  const [activeQuery, setActiveQuery] = useState('');
-  const [results, setResults] = useState<any[]>([]);
-  const [chartConfig, setChartConfig] = useState<any>(null);
-  const [columns, setColumns] = useState<any[]>([]);
 
   const handleClear = () => {
     // Stop any ongoing streaming
@@ -50,21 +43,13 @@ export default function AIPlaygroundPage() {
     // Reset UI state
     setSubmitted(false);
     setInputValue('');
-    setActiveQuery('');
-    setResults([]);
-    setChartConfig(null);
-    setColumns([]);
-    setLoading(false);
 
     // Clear tool outputs from store
     toolOutputsActions.clearOutputs();
   };
 
   const handleSubmit = (value: string) => {
-    setInputValue(value);
     setSubmitted(true);
-    setLoading(true);
-    setLoadingStep(1);
 
     // Send to chat
     sendMessage2({ text: value });
@@ -88,7 +73,7 @@ export default function AIPlaygroundPage() {
   };
 
   return (
-    <div className="flex flex-col h-full -m-4">
+    <div className="flex flex-col h-full">
       {/* Header Section */}
       <div className="px-6 py-3 border-b bg-background shrink-0">
         <div className="flex items-center justify-between">
@@ -104,15 +89,15 @@ export default function AIPlaygroundPage() {
 
       {/* Main Content Area - Only show after submission */}
       {submitted && (
-        <div className="flex-1 full overflow-hidden">
+        <div className="flex-1 w-full overflow-hidden">
           <div className="h-full grid grid-cols-2 gap-4 p-4">
             {/* Conversation Column - 50% */}
-            <div className="flex flex-col">
-              <div className="rounded-lg border bg-card shadow-sm h-full flex flex-col overflow-hidden">
+            <div className="flex flex-col h-full">
+              <div className="rounded-lg border bg-card shadow-sm flex flex-col overflow-hidden h-full">
                 <div className="px-4 py-3 border-b bg-muted/50 shrink-0">
                   <h3 className="text-sm font-semibold">GDM MCP - Conversation</h3>
                 </div>
-                <div className="flex-1 min-h-0 overflow-hidden">
+                <div className="flex-1 overflow-hidden">
                   <ChatConversation
                     messages={messages2}
                     error={error2}
@@ -123,9 +108,9 @@ export default function AIPlaygroundPage() {
             </div>
 
             {/* AI Charts Column - 50% */}
-            <div className="flex flex-col">
+            <div className="flex flex-col h-full">
               <div className="rounded-lg border bg-card shadow-sm h-full overflow-hidden flex flex-col">
-                <div className="px-4 py-3 border-b bg-muted/50">
+                <div className="px-4 py-3 border-b bg-muted/50 shrink-0">
                   <h3 className="text-sm font-semibold">AI Charts</h3>
                 </div>
                 <div className="flex-1 overflow-auto">

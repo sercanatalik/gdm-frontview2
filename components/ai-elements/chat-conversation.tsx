@@ -15,7 +15,7 @@ import {
   ToolOutput,
 } from '@/components/ai-elements/tool';
 import { UIMessage } from 'ai';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 interface ChatConversationProps {
   messages: UIMessage[];
@@ -30,6 +30,16 @@ interface ChatConversationProps {
 
 export function ChatConversation({ messages, error, onToolOutput }: ChatConversationProps) {
   const processedToolsRef = useRef<Set<string>>(new Set());
+
+  // Deduplicate messages by ID
+  const uniqueMessages = useMemo(() => {
+    return messages.reduce((acc, message) => {
+      if (!acc.find(m => m.id === message.id)) {
+        acc.push(message);
+      }
+      return acc;
+    }, [] as UIMessage[]);
+  }, [messages]);
 
   // Extract and send tool outputs to parent
   useEffect(() => {
@@ -73,15 +83,14 @@ export function ChatConversation({ messages, error, onToolOutput }: ChatConversa
   }, [messages, onToolOutput]);
 
   return (
-    <div className="flex h-full flex-col">
-      <Conversation>
-        <ConversationContent>
-        {messages.length === 0 ? (
+    <Conversation className="h-full">
+      <ConversationContent>
+        {uniqueMessages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-muted-foreground">
             Start a conversation...
           </div>
         ) : (
-          messages.map((message) => (
+          uniqueMessages.map((message) => (
             <Message from={message.role} key={message.id}>
               <MessageContent>
                 {message.parts?.map((part, index) => {
@@ -150,9 +159,8 @@ export function ChatConversation({ messages, error, onToolOutput }: ChatConversa
             Error: {error.message}
           </div>
         )}
-        </ConversationContent>
-        <ConversationScrollButton />
-      </Conversation>
-    </div>
+      </ConversationContent>
+      <ConversationScrollButton />
+    </Conversation>
   );
 }

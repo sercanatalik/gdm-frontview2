@@ -26,6 +26,7 @@ import { Label } from "recharts";
 import { transformDataForMultiLineChart } from "@/lib/ai/rechart-format";
 
 function toTitleCase(str: string): string {
+  if (!str) return "";
   return str
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -119,6 +120,7 @@ export function DynamicChart({
                 key={key}
                 dataKey={key}
                 fill={colors[index % colors.length]}
+                isAnimationActive={false}
               />
             ))}
           </BarChart>

@@ -12,7 +12,7 @@ interface DynamicChartsProps {
   query: string;
   data: any[];
   timestamp: number;
-  question: string;
+  question?: string;
 }
 
 export function DynamicCharts({ query, data, timestamp, question }: DynamicChartsProps) {
@@ -40,7 +40,8 @@ export function DynamicCharts({ query, data, timestamp, question }: DynamicChart
     };
 
     loadChartConfig();
-  }, [data, question]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timestamp]);
 
   const handleCopy = async () => {
     const content = JSON.stringify({ query, data }, null, 2);
