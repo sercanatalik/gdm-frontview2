@@ -14,6 +14,7 @@ import { ToolOutputStream } from "@/components/ai-elements/tool-outputstream";
 import { toolOutputsActions, toolOutputsStore } from '@/lib/store/tool-outputs';
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { AICharts } from "@/components/ai-elements/ai-charts";
 
 
 
@@ -179,7 +180,7 @@ export default function AIPlaygroundPage() {
               <div className="col-span-3 flex flex-col">
                 <div className="rounded-lg border bg-card shadow-sm h-full overflow-hidden flex flex-col">
                   <div className="px-4 py-3 border-b bg-muted/50">
-                    <h3 className="text-sm font-semibold">Conversation</h3>
+                    <h3 className="text-sm font-semibold"> GDM MCP -  Conversation</h3>
                   </div>
                   <div className="flex-1 overflow-hidden">
                     <ChatConversation
@@ -195,12 +196,10 @@ export default function AIPlaygroundPage() {
               <div className="col-span-2 flex flex-col">
                 <div className="rounded-lg border bg-card shadow-sm h-full overflow-hidden flex flex-col">
                   <div className="px-4 py-3 border-b bg-muted/50">
-                    <h3 className="text-sm font-semibold">Dynamic Charts</h3>
+                    <h3 className="text-sm font-semibold">AI Charts</h3>
                   </div>
-                  <div className="flex-1 overflow-auto p-4">
-                    <div className="text-sm text-muted-foreground text-center py-8">
-                       AI Charts will appear here
-                    </div>
+                  <div className="flex-1 overflow-auto">
+                    <AICharts />
                   </div>
                 </div>
               </div>
