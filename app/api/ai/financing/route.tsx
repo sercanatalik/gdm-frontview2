@@ -13,7 +13,8 @@ import { SYSTEM_PROMPT } from './prompt';
 
 
 const wrappedModel = wrapLanguageModel({
-  model: anthropic('claude-3-haiku-20240307'),
+  // model: anthropic('claude-3-haiku-20240307'),
+  model: anthropic('claude-sonnet-4-5-20250929'),
   middleware: cacheMiddleware,
 });
 

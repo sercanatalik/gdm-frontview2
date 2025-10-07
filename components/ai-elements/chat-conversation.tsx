@@ -15,13 +15,63 @@ import {
   ToolOutput,
 } from '@/components/ai-elements/tool';
 import { UIMessage } from 'ai';
+import { useEffect, useRef } from 'react';
 
 interface ChatConversationProps {
   messages: UIMessage[];
   error?: Error;
+  onToolOutput?: (toolOutput: {
+    toolName: string;
+    output: unknown;
+    input: unknown;
+    state?: string;
+  }) => void;
 }
 
-export function ChatConversation({ messages, error }: ChatConversationProps) {
+export function ChatConversation({ messages, error, onToolOutput }: ChatConversationProps) {
+  const processedToolsRef = useRef<Set<string>>(new Set());
+
+  // Extract and send tool outputs to parent
+  useEffect(() => {
+    if (!onToolOutput) return;
+
+    messages.forEach((message) => {
+      message.parts?.forEach((part, partIndex) => {
+        const toolKey = `${message.id}-${partIndex}`;
+
+        // Skip if already processed
+        if (processedToolsRef.current.has(toolKey)) return;
+
+        // Handle dynamic tool calls
+        if (part.type === 'dynamic-tool' && part.output && part.state === 'output-available') {
+          onToolOutput({
+            toolName: part.toolName,
+            output: part.output,
+            input: 'input' in part ? part.input : part.toolInput || undefined,
+            state: part.state,
+          });
+          processedToolsRef.current.add(toolKey);
+        }
+
+        // Handle regular tool calls
+        if (part.type.includes('tool') && 'input' in part) {
+          const output = 'output' in part ? part.output : undefined;
+          const state = 'state' in part ? part.state : 'output-available';
+
+          if (output && state === 'output-available') {
+            onToolOutput({
+              toolName: part.type,
+              output,
+              input: part.input,
+              state,
+            });
+            processedToolsRef.current.add(toolKey);
+          }
+        }
+      });
+    });
+  }, [messages, onToolOutput]);
+
   return (
     <div className="flex h-[600px] flex-col">
       <Conversation>
@@ -47,6 +97,7 @@ export function ChatConversation({ messages, error }: ChatConversationProps) {
 
                     // Handle dynamic tool calls
                     if (part.type === 'dynamic-tool') {
+
                       return (
                         <Tool key={index} defaultOpen={false}>
                           <ToolHeader
@@ -69,18 +120,20 @@ export function ChatConversation({ messages, error }: ChatConversationProps) {
                     if (part.type.includes('tool') && 'input' in part) {
                       // Extract tool name from type (e.g., 'tool-execute_query' -> 'execute_query')
                       const toolName = part.type
+                      const state = 'state' in part ? part.state : 'output-available';
+                      const output = 'output' in part ? part.output : undefined;
 
                       return (
                         <Tool key={index} defaultOpen={false}>
                           <ToolHeader
                             type={part.type}
                             title={toolName}
-                            state={'state' in part ? part.state : 'output-available'}
+                            state={state}
                           />
                           <ToolContent>
                             <ToolInput input={part.input} />
                             <ToolOutput
-                              output={'output' in part ? part.output : undefined}
+                              output={output}
                               errorText={'errorText' in part ? part.errorText : undefined}
                             />
                           </ToolContent>

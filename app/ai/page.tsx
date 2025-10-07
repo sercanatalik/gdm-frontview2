@@ -10,6 +10,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { Header } from "@/components/header";
 import { Search } from "@/components/search";
+import { ToolOutputStream } from "@/components/ai-elements/tool-outputstream";
 
 
 
@@ -38,6 +39,12 @@ export default function AIPlaygroundPage() {
   const [results, setResults] = useState<any[]>([]);
   const [chartConfig, setChartConfig] = useState<any>(null);
   const [columns, setColumns] = useState<any[]>([]);
+  const [toolOutputs, setToolOutputs] = useState<Array<{
+    toolName: string;
+    output: unknown;
+    input: unknown;
+    state?: string;
+  }>>([]);
 
   const handleClear = () => {
     // Stop any ongoing streaming
@@ -54,6 +61,7 @@ export default function AIPlaygroundPage() {
     setChartConfig(null);
     setColumns([]);
     setLoading(false);
+    setToolOutputs([]);
   };
 
   const handleSubmit = (value: string) => {
@@ -71,6 +79,16 @@ export default function AIPlaygroundPage() {
     handleSubmit(suggestion);
   };
 
+  // Handle tool output from chat conversation
+  const handleToolOutput = (toolOutput: {
+    toolName: string;
+    output: unknown;
+    input: unknown;
+    state?: string;
+  }) => {
+    setToolOutputs((prev) => [...prev, toolOutput]);
+  };
+
   return (
     <div className="p-0">
       <div className="mb-4 flex items-center justify-between">
@@ -82,15 +100,17 @@ export default function AIPlaygroundPage() {
         <div className="grid grid-cols-2 gap-6">
           {/* First Conversation Column */}
           <div className="rounded-lg border border-border bg-card">
-             <ChatConversation messages={messages2} error={error2} />
-         
+             <ChatConversation
+               messages={messages2}
+               error={error2}
+               onToolOutput={handleToolOutput}
+             />
+
             {/* <ChatConversation messages={messages1} error={error1} /> */}
           </div>
 
-          {/* Second Conversation Column */}
-          <div className="rounded-lg border border-border bg-card">
-            {/* <ChatConversation messages={messages2} error={error2} /> */}
-          </div>
+          {/* Second Conversation Column - Tool Outputs */}
+          <ToolOutputStream toolOutputs={toolOutputs} />
         </div>
 
         {/* Search and Results Section */}
