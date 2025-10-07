@@ -21,6 +21,8 @@ export default function AIPlaygroundPage() {
     sendMessage: sendMessage2,
     status: status2,
     error: error2,
+    stop,
+    setMessages,
   } = useChat({
     transport: new DefaultChatTransport({ api: 'api/ai/financing' }),
     onError: (error) => {
@@ -38,12 +40,20 @@ export default function AIPlaygroundPage() {
   const [columns, setColumns] = useState<any[]>([]);
 
   const handleClear = () => {
+    // Stop any ongoing streaming
+    stop();
+
+    // Reset conversation
+    setMessages([]);
+
+    // Reset UI state
     setSubmitted(false);
     setInputValue('');
     setActiveQuery('');
     setResults([]);
     setChartConfig(null);
     setColumns([]);
+    setLoading(false);
   };
 
   const handleSubmit = (value: string) => {
@@ -104,43 +114,7 @@ export default function AIPlaygroundPage() {
                     handleSuggestionClick={handleSuggestionClick}
                   />
                 ) : (
-                  <motion.div
-                    key="results"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    layout
-                    className="sm:h-full min-h-[400px] flex flex-col"
-                  >
-                    {activeQuery.length > 0 && (
-                      <QueryViewer
-                        activeQuery={activeQuery}
-                        inputValue={inputValue}
-                      />
-                    )}
-                    {loading ? (
-                      <div className="h-full absolute bg-background/50 w-full flex flex-col items-center justify-center space-y-4">
-                        <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
-                        <p className="text-foreground">
-                          {loadingStep === 1
-                            ? "Generating SQL query..."
-                            : "Running SQL query..."}
-                        </p>
-                      </div>
-                    ) : results.length === 0 ? (
-                      <div className="flex-grow flex items-center justify-center">
-                        <p className="text-center text-muted-foreground">
-                          No results found.
-                        </p>
-                      </div>
-                    ) : (
-                      <Results
-                        results={results}
-                        chartConfig={chartConfig}
-                        columns={columns}
-                      />
-                    )}
-                  </motion.div>
+                 <div></div>
                 )}
               </AnimatePresence>
             </div>

@@ -9,7 +9,7 @@ export const Search = ({
   submitted,
   handleClear,
 }: {
-  handleSubmit: () => Promise<void>;
+  handleSubmit: (value: string) => void;
   inputValue: string;
   setInputValue: React.Dispatch<React.SetStateAction<string>>;
   submitted: boolean;
@@ -17,9 +17,11 @@ export const Search = ({
 }) => {
   return (
     <form
-      onSubmit={async (e) => {
+      onSubmit={(e) => {
         e.preventDefault();
-        await handleSubmit();
+        if (inputValue.trim()) {
+          handleSubmit(inputValue);
+        }
       }}
       className="mb-6"
     >
@@ -28,7 +30,7 @@ export const Search = ({
           <Input
             type="text"
             placeholder="Ask about startup unicorns..."
-            value={inputValue}
+            value={inputValue || ''}
             onChange={(e) => setInputValue(e.target.value)}
             className="pr-10 text-base"
           />
