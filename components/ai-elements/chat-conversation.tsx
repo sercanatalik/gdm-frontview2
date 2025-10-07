@@ -73,7 +73,7 @@ export function ChatConversation({ messages, error, onToolOutput }: ChatConversa
   }, [messages, onToolOutput]);
 
   return (
-    <div className="flex h-[600px] flex-col">
+    <div className="flex h-full flex-col">
       <Conversation>
         <ConversationContent>
           {messages.length === 0 ? (

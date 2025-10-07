@@ -125,7 +125,7 @@ export default function AIPlaygroundPage() {
 
       {/* Main Content Area - Only show after submission */}
       {submitted && (
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 full overflow-hidden">
           {debugMode ? (
             <div className="h-full grid grid-cols-12 gap-4 p-4">
               {/* Conversation Column */}
@@ -134,7 +134,7 @@ export default function AIPlaygroundPage() {
                   <div className="px-4 py-3 border-b bg-muted/50">
                     <h3 className="text-sm font-semibold">Conversation</h3>
                   </div>
-                  <div className="flex-1 overflow-hidden">
+                  <div className="h-full flex overflow-hidden">
                     <ChatConversation
                       messages={messages2}
                       error={error2}
@@ -182,7 +182,7 @@ export default function AIPlaygroundPage() {
                   <div className="px-4 py-3 border-b bg-muted/50">
                     <h3 className="text-sm font-semibold"> GDM MCP -  Conversation</h3>
                   </div>
-                  <div className="flex-1 overflow-hidden">
+                  <div className="h-full flex overflow-hidden">
                     <ChatConversation
                       messages={messages2}
                       error={error2}
