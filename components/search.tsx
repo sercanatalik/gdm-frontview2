@@ -8,12 +8,14 @@ export const Search = ({
   setInputValue,
   submitted,
   handleClear,
+  className,
 }: {
   handleSubmit: (value: string) => void;
   inputValue: string;
   setInputValue: React.Dispatch<React.SetStateAction<string>>;
   submitted: boolean;
   handleClear: () => void;
+  className?: string;
 }) => {
   return (
     <form
@@ -23,7 +25,7 @@ export const Search = ({
           handleSubmit(inputValue);
         }
       }}
-      className="mb-6"
+      className={className || "mb-6"}
     >
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
         <div className="relative flex-grow">

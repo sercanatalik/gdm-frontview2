@@ -11,7 +11,7 @@ import { Loader2 } from 'lucide-react';
 import { Header } from "@/components/header";
 import { Search } from "@/components/search";
 import { ToolOutputStream } from "@/components/ai-elements/tool-outputstream";
-import { toolOutputsActions } from '@/lib/store/tool-outputs';
+import { toolOutputsActions, toolOutputsStore } from '@/lib/store/tool-outputs';
 
 
 
@@ -89,57 +89,96 @@ export default function AIPlaygroundPage() {
   };
 
   return (
-    <div className="p-0">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">AI Playground</h2>
+    <div className="flex flex-col h-screen">
+      {/* Header Section */}
+      <div className="px-6 py-4 border-b bg-background shrink-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">AI Playground</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Interact with AI and view tool executions in real-time
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-6">
-        {/* Two Conversation Columns */}
-        <div className="grid grid-cols-2 gap-6">
-          {/* First Conversation Column */}
-          <div className="rounded-lg border border-border bg-card">
-             <ChatConversation
-               messages={messages2}
-               error={error2}
-               onToolOutput={handleToolOutput}
-             />
+      {/* Main Content Area - Only show after submission */}
+      {submitted && (
+        <div className="flex-1 overflow-hidden">
+          <div className="h-full grid grid-cols-12 gap-4 p-4">
+            {/* Conversation Column */}
+            <div className="col-span-5 flex flex-col">
+              <div className="rounded-lg border bg-card shadow-sm h-full overflow-hidden flex flex-col">
+                <div className="px-4 py-3 border-b bg-muted/50">
+                  <h3 className="text-sm font-semibold">Conversation</h3>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <ChatConversation
+                    messages={messages2}
+                    error={error2}
+                    onToolOutput={handleToolOutput}
+                  />
+                </div>
+              </div>
+            </div>
 
-            {/* <ChatConversation messages={messages1} error={error1} /> */}
+            {/* Tool Outputs Column - Split into two panels */}
+            <div className="col-span-7 flex flex-col gap-4">
+              {/* Tool Inputs Panel */}
+              <div className="flex-1 rounded-lg border bg-card shadow-sm overflow-hidden flex flex-col">
+                <div className="px-4 py-3 border-b bg-muted/50 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold">Tool Inputs</h3>
+                  <span className="text-xs text-muted-foreground">
+                    {toolOutputsStore.state.outputs.length} calls
+                  </span>
+                </div>
+                <div className="flex-1 overflow-auto">
+                  <ToolOutputStream variant="input" />
+                </div>
+              </div>
+
+              {/* Tool Outputs Panel */}
+              <div className="flex-1 rounded-lg border bg-card shadow-sm overflow-hidden flex flex-col">
+                <div className="px-4 py-3 border-b bg-muted/50 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold">Tool Outputs</h3>
+                  <span className="text-xs text-muted-foreground">
+                    {toolOutputsStore.state.outputs.length} results
+                  </span>
+                </div>
+                <div className="flex-1 overflow-auto">
+                  <ToolOutputStream variant="output" />
+                </div>
+              </div>
+            </div>
           </div>
-
-          {/* Second Conversation Column - Tool Outputs */}
-          <ToolOutputStream />
         </div>
+      )}
 
-        {/* Search and Results Section */}
-        <div className="p-6 sm:p-8 flex flex-col flex-grow">
-          {/* <Header handleClear={handleClear} /> */}
+      {/* Suggested Queries - Show when no submission */}
+      {!submitted && (
+        <div className="flex-1 flex items-end justify-center pb-0">
+          <div className="max-w-3xl w-full px-6">
+            <AnimatePresence mode="wait">
+              <SuggestedQueries
+                handleSuggestionClick={handleSuggestionClick}
+              />
+            </AnimatePresence>
+          </div>
+        </div>
+      )}
+
+      {/* Search Section - Fixed at bottom */}
+      <div className="px-6 py-4 border-t bg-background shrink-0">
+        <div className="max-w-3xl mx-auto">
           <Search
             handleClear={handleClear}
             handleSubmit={handleSubmit}
             inputValue={inputValue}
             setInputValue={setInputValue}
             submitted={submitted}
+            className=""
           />
-          <div
-            id="main-container"
-            className="flex-grow flex flex-col sm:min-h-[420px]"
-          >
-            <div className="flex-grow h-full">
-              <AnimatePresence mode="wait">
-                {!submitted ? (
-                  <SuggestedQueries
-                    handleSuggestionClick={handleSuggestionClick}
-                  />
-                ) : (
-                 <div></div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
         </div>
-
       </div>
     </div>
   );
