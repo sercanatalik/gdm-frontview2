@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { Loader2, AlertCircle, ChevronLeft, ChevronRight, Download, Image, Copy, Clock, Calendar, TrendingUp, User, Building, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -394,7 +394,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                 </div>
                 <div>
                   <DialogTitle className="text-xl">{selectedTrade.instrument}</DialogTitle>
-                  <p className="text-sm text-muted-foreground">Trade Details</p>
+                  <DialogDescription>Comprehensive trade information and timeline</DialogDescription>
                 </div>
               </div>
               

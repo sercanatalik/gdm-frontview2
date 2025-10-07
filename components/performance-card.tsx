@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { Pie, PieChart, ResponsiveContainer, Cell } from "recharts"
 import { Loader2, AlertCircle, Maximize2, X, Download } from "lucide-react"
@@ -352,7 +352,10 @@ const PerformanceCard = ({ asOfDate, filters = [], className }: PerformanceCardP
       >
         <DialogHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl">Performance Review</DialogTitle>
+            <div>
+              <DialogTitle className="text-xl">Performance Review</DialogTitle>
+              <DialogDescription>Expanded view of desk and region performance metrics</DialogDescription>
+            </div>
             <div className="flex items-center gap-2">
               <Button 
                 variant="ghost" 

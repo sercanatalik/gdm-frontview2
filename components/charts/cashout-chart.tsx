@@ -22,6 +22,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -153,6 +154,7 @@ export function CashoutChart({ className }: CashoutChartProps) {
                 <DialogContent className="sm:max-w-[425px]">
                   <DialogHeader>
                     <DialogTitle>Chart Settings</DialogTitle>
+                    <DialogDescription>Configure chart display options</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-6 py-4">
                     <div className="space-y-2">

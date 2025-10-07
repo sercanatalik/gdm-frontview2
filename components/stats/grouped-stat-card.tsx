@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useGroupedStatsData, type GroupedStatMeasure, formatters } from "@/lib/query/stats"
 import { cn } from "@/lib/utils"
 import { Loader2, AlertCircle, Expand, Download } from "lucide-react"
@@ -250,6 +250,7 @@ function GroupedStatCard({ measure, groupBy, relativeDt, asOfDate, className, fi
     <DialogContent className="max-w-[98vw] w-[98vw] h-[90vh] max-h-[90vh] overflow-y-auto sm:max-w-[60vw]">
       <DialogHeader>
         <DialogTitle>By {groupBy} - Expanded View</DialogTitle>
+        <DialogDescription>Detailed breakdown with interactive chart and data list</DialogDescription>
         <button
           onClick={downloadAsPNG}
           className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-10 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"

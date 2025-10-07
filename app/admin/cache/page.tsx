@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AlertCircle, Copy, Database, Edit3, Eye, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -550,6 +550,7 @@ export default function CacheAdminPage() {
         <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Cache Entry</DialogTitle>
+            <DialogDescription>Create a new cache entry with key, value, and TTL</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -605,6 +606,7 @@ export default function CacheAdminPage() {
         <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Cache Entry: {selectedKey?.key}</DialogTitle>
+            <DialogDescription>Update the value and TTL for this cache entry</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -649,6 +651,7 @@ export default function CacheAdminPage() {
         <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>View Cache Entry</DialogTitle>
+            <DialogDescription>View the details of this cache entry</DialogDescription>
           </DialogHeader>
           {selectedKey && (
             <div className="space-y-4">
