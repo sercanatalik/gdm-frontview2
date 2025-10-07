@@ -4,27 +4,43 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Copy, Code, Database, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { DynamicChart } from './dynamic-chart';
+import { generateChartConfig } from '@/lib/ai/actions';
+import { Config } from '@/lib/ai/types';
 
 interface DynamicChartsProps {
   query: string;
   data: any[];
   timestamp: number;
+  question: string;
 }
 
-export function DynamicCharts({ query, data, timestamp }: DynamicChartsProps) {
+export function DynamicCharts({ query, data, timestamp, question }: DynamicChartsProps) {
   const [showQuery, setShowQuery] = useState(false);
   const [showData, setShowData] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [chartConfig, setChartConfig] = useState<Config | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulate chart loading/processing
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [data, query]);
+    const loadChartConfig = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const generation = await generateChartConfig(data, question);
+        setChartConfig(generation.config);
+      } catch (err) {
+        console.error('Failed to generate chart config:', err);
+        setError('Failed to generate chart configuration');
+        toast.error('Failed to generate chart');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadChartConfig();
+  }, [data, question]);
 
   const handleCopy = async () => {
     const content = JSON.stringify({ query, data }, null, 2);
@@ -114,18 +130,32 @@ export function DynamicCharts({ query, data, timestamp }: DynamicChartsProps) {
               </div>
             </div>
           </div>
+        ) : error ? (
+          <div className="flex items-center justify-center h-64 bg-muted/20 rounded-lg border-2 border-dashed">
+            <div className="text-center">
+              <div className="text-sm font-medium text-destructive mb-1">
+                {error}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Unable to generate chart visualization
+              </div>
+            </div>
+          </div>
+        ) : chartConfig && data.length > 0 ? (
+          <DynamicChart chartData={data} chartConfig={chartConfig} />
         ) : (
           <div className="flex items-center justify-center h-64 bg-muted/20 rounded-lg border-2 border-dashed">
             <div className="text-center">
               <div className="text-sm font-medium text-muted-foreground mb-1">
-                Chart will render here
+                No data available
               </div>
               <div className="text-xs text-muted-foreground">
-                Dynamic visualization based on query results
+                Unable to generate chart visualization
               </div>
             </div>
           </div>
-        )}</div>
+        )}
+      </div>
 
       {/* Raw Data - Collapsible */}
       {showData && (

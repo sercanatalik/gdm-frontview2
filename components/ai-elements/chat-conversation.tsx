@@ -76,82 +76,80 @@ export function ChatConversation({ messages, error, onToolOutput }: ChatConversa
     <div className="flex h-full flex-col">
       <Conversation>
         <ConversationContent>
-          {messages.length === 0 ? (
-            <div className="flex h-full items-center justify-center text-muted-foreground">
-              Start a conversation...
-            </div>
-          ) : (
-            messages.map((message) => (
-              <Message from={message.role} key={message.id}>
-                <MessageContent>
-                  {message.parts?.map((part, index) => {
+        {messages.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-muted-foreground">
+            Start a conversation...
+          </div>
+        ) : (
+          messages.map((message) => (
+            <Message from={message.role} key={message.id}>
+              <MessageContent>
+                {message.parts?.map((part, index) => {
+                  // Handle text parts
+                  if (part.type === 'text') {
+                    return (
+                      <Response key={index}>
+                        {part.text}
+                      </Response>
+                    );
+                  }
 
-                    // Handle text parts
-                    if (part.type === 'text') {
-                      return (
-                        <Response key={index}>
-                          {part.text}
-                        </Response>
-                      );
-                    }
-
-                    // Handle dynamic tool calls
-                    if (part.type === 'dynamic-tool') {
-
-                      return (
-                        <Tool key={index} defaultOpen={false}>
-                          <ToolHeader
-                            type={part.type}
-                            title={part.toolName}
-                            state={part.state}
+                  // Handle dynamic tool calls
+                  if (part.type === 'dynamic-tool') {
+                    return (
+                      <Tool key={index} defaultOpen={false}>
+                        <ToolHeader
+                          type={part.type}
+                          title={part.toolName}
+                          state={part.state}
+                        />
+                        <ToolContent>
+                          <ToolInput input={part.input} />
+                          <ToolOutput
+                            output={part.output}
+                            errorText={part.errorText}
                           />
-                          <ToolContent>
-                            <ToolInput input={part.input} />
-                            <ToolOutput
-                              output={part.output}
-                              errorText={part.errorText}
-                            />
-                          </ToolContent>
-                        </Tool>
-                      );
-                    }
+                        </ToolContent>
+                      </Tool>
+                    );
+                  }
 
-                    // Handle tool calls - check if part has the required tool properties
-                    if (part.type.includes('tool') && 'input' in part) {
-                      // Extract tool name from type (e.g., 'tool-execute_query' -> 'execute_query')
-                      const toolName = part.type
-                      const state = 'state' in part ? part.state : 'output-available';
-                      const output = 'output' in part ? part.output : undefined;
+                  // Handle tool calls - check if part has the required tool properties
+                  if (part.type.includes('tool') && 'input' in part) {
+                    // Extract tool name from type (e.g., 'tool-execute_query' -> 'execute_query')
+                    const toolName = part.type;
+                    const state = 'state' in part ? part.state : 'output-available';
+                    const output = 'output' in part ? part.output : undefined;
 
-                      return (
-                        <Tool key={index} defaultOpen={false}>
-                          <ToolHeader
-                            type={part.type}
-                            title={toolName}
-                            state={state}
+                    return (
+                      <Tool key={index} defaultOpen={false}>
+                        <ToolHeader
+                          type={part.type}
+                          title={toolName}
+                          state={state}
+                        />
+                        <ToolContent>
+                          <ToolInput input={part.input} />
+                          <ToolOutput
+                            output={output}
+                            errorText={'errorText' in part ? part.errorText : undefined}
                           />
-                          <ToolContent>
-                            <ToolInput input={part.input} />
-                            <ToolOutput
-                              output={output}
-                              errorText={'errorText' in part ? part.errorText : undefined}
-                            />
-                          </ToolContent>
-                        </Tool>
-                      );
-                    }
+                        </ToolContent>
+                      </Tool>
+                    );
+                  }
 
-                    return null;
-                  })}
-                </MessageContent>
-              </Message>
-            ))
-          )}
-          {error && (
-            <div className="rounded-md bg-destructive/10 p-4 text-sm text-destructive">
-              Error: {error.message}
-            </div>
-          )}
+                  return null;
+                })}
+              </MessageContent>
+            </Message>
+          ))
+        )}
+        {error && (
+          <div className="rounded-md bg-destructive/10 p-4 text-sm text-destructive">
+            Error: {error.message}
+          </div>
+        )}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
