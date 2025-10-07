@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ai-sdk-tools/cache": "^0.6.1",
     "@ai-sdk-tools/devtools": "^0.6.1",
     "@ai-sdk/anthropic": "^2.0.23",
     "@ai-sdk/langchain": "^1.0.60",
