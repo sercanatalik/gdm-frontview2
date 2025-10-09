@@ -1,10 +1,13 @@
 'use client';
 
 import ChatArea from './components/chat-area';
-import { Sparkles, Send } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { SuggestedQueries } from '../ai/suggested-queries';
+import { Sparkles, Search, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useRef } from 'react';
 import { nanoid } from 'nanoid';
 
 export default function GdmMcpPage() {
@@ -12,6 +15,7 @@ export default function GdmMcpPage() {
     { key: string; value: string; name: string; avatar: string }[]
   >([]);
   const [inputValue, setInputValue] = useState('');
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const handleSend = () => {
     if (!inputValue.trim()) return;
@@ -44,55 +48,147 @@ export default function GdmMcpPage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter') {
       e.preventDefault();
       handleSend();
     }
   };
 
+  const handleSuggestionClick = (suggestion: string) => {
+    setInputValue(suggestion);
+
+    // Automatically send the message
+    const userMessage = {
+      key: nanoid(),
+      value: suggestion,
+      name: 'User',
+      avatar: 'https://github.com/shadcn.png',
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+
+    // Simulate AI response
+    setTimeout(() => {
+      const aiMessage = {
+        key: nanoid(),
+        value: 'Processing your query about ' + suggestion,
+        name: 'AI Assistant',
+        avatar: 'https://github.com/openai.png',
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+      setInputValue('');
+    }, 500);
+  };
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   return (
-    <>
-      <div className="flex h-screen flex-col">
-        {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b bg-background px-6 py-3">
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold">GDM AI Playground</h1>
-            <div className="flex items-center gap-1 bg-primary/10 px-2 py-0.5 text-primary">
-              <Sparkles className="h-3 w-3" />
-              <span className="text-xs font-medium">AI Markets</span>
-            </div>
+    <div className="flex flex-col p-0" style={{ height: 'calc(100vh - 90px)' }}>
+      {/* Header */}
+      <div className="mb-4 flex shrink-0 items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h2 className="text-3xl font-bold tracking-tight">GDM AI Playground</h2>
+          <div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-primary">
+            <Sparkles className="h-3.5 w-3.5" />
+            <span className="text-xs font-medium">AI Markets</span>
           </div>
         </div>
+        {messages.length > 0 && (
+          <Button variant="outline" size="sm" onClick={handleClear}>
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Reset
+          </Button>
+        )}
+      </div>
 
-        {/* Main Content */}
-        <div className="flex min-h-0 flex-1">
-          <div className="flex w-1/2 flex-col border-r">
-            <div className="flex-1 overflow-hidden">
-              <ChatArea messages={messages} />
-            </div>
+      {/* Scrollable Content Area */}
+      <div className="flex-1 space-y-3 overflow-y-auto">
+        {/* Top Row - 2 Cards */}
+        <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+          {/* Left Card - Chat */}
+          <Card className="flex flex-col">
+            <CardHeader>
+              <CardTitle>AI Chat</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1">
+              <div className="flex flex-col" >
+                <div className="flex-1 overflow-y-auto">
+                  <ChatArea messages={messages} />
+                  <div ref={chatEndRef} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-            <div className="flex shrink-0 items-center gap-2 border-t bg-card p-4 shadow-lg">
+          {/* Right Card - Market Analysis */}
+           <Card className="flex flex-col">
+            <CardHeader>
+              <CardTitle>Market Analysis</CardTitle>
+            </CardHeader>
+            <CardContent>
+             <div className="flex flex-col" >
+                <div className="flex-1 overflow-y-auto">
+                  <p className="text-sm text-muted-foreground">Chart visualization area</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Suggested Queries - Centered above input */}
+      {messages.length === 0 && (
+        <div className="flex flex-1 items-end justify-center pb-4">
+          <div className="w-full max-w-4xl px-6">
+            <AnimatePresence mode="wait">
+              <SuggestedQueries handleSuggestionClick={handleSuggestionClick} />
+            </AnimatePresence>
+          </div>
+        </div>
+      )}
+
+      {/* Fixed Input Section at Bottom */}
+      <div className="shrink-0 border-t bg-background pt-4">
+        <div className="mx-auto w-full max-w-4xl px-6 space-y-3">
+          {/* Input Area */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Ask about financing exposure or pnl..."
-                className="h-11 flex-1 border-2"
+                placeholder="Ask about startup unicorns..."
+                className="h-12 pl-12 pr-4 text-base"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
               />
-              <Button size="default" variant="default" className="h-11 px-5" onClick={handleSend}>
-                <Send className="mr-1.5 h-4 w-4" />
-                Send
-              </Button>
-              <Button size="default" variant="ghost" className="h-11" onClick={handleClear}>
-                Clear
-              </Button>
             </div>
+         
+            <Button
+              size="lg"
+              className="h-12 px-8"
+              onClick={handleSend}
+              disabled={!inputValue.trim()}
+            >
+              Send
+            </Button>
+               {messages.length > 0 && (
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-12 px-6"
+                onClick={handleClear}
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Reset
+              </Button>
+            )}
           </div>
-          <div className="flex w-1/2 flex-col p-4 overflow-auto">
-            {/* Right column content goes here */}
-          </div>
+
         </div>
       </div>
-    </>
+    </div>
   );
 }
