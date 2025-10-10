@@ -8,41 +8,35 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
-import { nanoid } from 'nanoid';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
 
 export default function GdmMcpPage() {
-  const [messages, setMessages] = useState<
-    { key: string; value: string; name: string; avatar: string }[]
-  >([]);
+  const {
+    messages,
+    sendMessage,
+    error,
+    stop,
+    setMessages,
+  } = useChat({
+    transport: new DefaultChatTransport({ api: 'api/ai/financing' }),
+    onError: (error) => {
+      console.error('Chat error:', error);
+    },
+  });
+
   const [inputValue, setInputValue] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const handleSend = () => {
     if (!inputValue.trim()) return;
 
-    const userMessage = {
-      key: nanoid(),
-      value: inputValue,
-      name: 'User',
-      avatar: 'https://github.com/shadcn.png',
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+    sendMessage({ text: inputValue });
     setInputValue('');
-
-    // Simulate AI response
-    setTimeout(() => {
-      const aiMessage = {
-        key: nanoid(),
-        value: 'Processing your query about ' + inputValue,
-        name: 'AI Assistant',
-        avatar: 'https://github.com/openai.png',
-      };
-      setMessages((prev) => [...prev, aiMessage]);
-    }, 500);
   };
 
   const handleClear = () => {
+    stop();
     setMessages([]);
     setInputValue('');
   };
@@ -55,29 +49,7 @@ export default function GdmMcpPage() {
   };
 
   const handleSuggestionClick = (suggestion: string) => {
-    setInputValue(suggestion);
-
-    // Automatically send the message
-    const userMessage = {
-      key: nanoid(),
-      value: suggestion,
-      name: 'User',
-      avatar: 'https://github.com/shadcn.png',
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-
-    // Simulate AI response
-    setTimeout(() => {
-      const aiMessage = {
-        key: nanoid(),
-        value: 'Processing your query about ' + suggestion,
-        name: 'AI Assistant',
-        avatar: 'https://github.com/openai.png',
-      };
-      setMessages((prev) => [...prev, aiMessage]);
-      setInputValue('');
-    }, 500);
+    sendMessage({ text: suggestion });
   };
 
   // Auto-scroll to bottom when new messages arrive
@@ -114,9 +86,9 @@ export default function GdmMcpPage() {
               <CardTitle>AI Chat</CardTitle>
             </CardHeader>
             <CardContent className="flex-1">
-              <div className="flex flex-col" >
+              <div className="flex flex-col">
                 <div className="flex-1 overflow-y-auto">
-                  <ChatArea messages={messages} />
+                  <ChatArea messages={messages} error={error} />
                   <div ref={chatEndRef} />
                 </div>
               </div>
@@ -124,12 +96,12 @@ export default function GdmMcpPage() {
           </Card>
 
           {/* Right Card - Market Analysis */}
-           <Card className="flex flex-col">
+          <Card className="flex flex-col">
             <CardHeader>
               <CardTitle>Market Analysis</CardTitle>
             </CardHeader>
             <CardContent>
-             <div className="flex flex-col" >
+              <div className="flex flex-col">
                 <div className="flex-1 overflow-y-auto">
                   <p className="text-sm text-muted-foreground">Chart visualization area</p>
                 </div>
@@ -165,7 +137,7 @@ export default function GdmMcpPage() {
                 onKeyDown={handleKeyDown}
               />
             </div>
-         
+
             <Button
               size="lg"
               className="h-12 px-8"
@@ -174,7 +146,7 @@ export default function GdmMcpPage() {
             >
               Send
             </Button>
-               {messages.length > 0 && (
+            {messages.length > 0 && (
               <Button
                 variant="outline"
                 size="lg"
@@ -186,7 +158,6 @@ export default function GdmMcpPage() {
               </Button>
             )}
           </div>
-
         </div>
       </div>
     </div>

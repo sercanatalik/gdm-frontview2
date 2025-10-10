@@ -150,6 +150,7 @@ export function ChatConversation({ messages, error, onToolOutput }: ChatConversa
 
                   return null;
                 })}
+                
               </MessageContent>
             </Message>
           ))
