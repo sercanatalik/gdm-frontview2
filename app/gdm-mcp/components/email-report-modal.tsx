@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useStore } from '@tanstack/react-store';
 import { financingMessagesStore } from '@/lib/store/financing-messages';
 import MDEditor from '@uiw/react-md-editor';
@@ -21,44 +21,24 @@ interface EmailReportModalProps {
 
 export function EmailReportModal({ open, onOpenChange }: EmailReportModalProps) {
   const messages = useStore(financingMessagesStore, (state) => state.messages);
+  const financingReport = messages['FinancingReport']?.message || '';
 
-  const [formData, setFormData] = useState({
-    to: '',
-    subject: 'AI Analysis Report',
-    body: '',
-  });
+  // Form state
+  const [formData, setFormData] = useState({ to: '', subject: 'AI Analysis Report' });
+  const [editorValue, setEditorValue] = useState(financingReport);
+  const [originalValue, setOriginalValue] = useState(financingReport);
 
+  // UI state
+  const [activeTab, setActiveTab] = useState('edit');
+  const [isSummarized, setIsSummarized] = useState(false);
+  const [htmlValue, setHtmlValue] = useState('');
+
+  // Loading states
   const [isSending, setIsSending] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isGeneratingSubject, setIsGeneratingSubject] = useState(false);
-  const [activeTab, setActiveTab] = useState('edit');
 
-  // Get FinancingReport from store
-  const financingReportData = messages['FinancingReport'];
-  const financingReport = financingReportData?.message || '';
-  const imagePaths = financingReportData?.imagePath || [];
-  const [editorValue, setEditorValue] = useState<string>(financingReport);
-  const [originalValue, setOriginalValue] = useState<string>(financingReport);
-  const [isSummarized, setIsSummarized] = useState(false);
-  const [htmlValue, setHtmlValue] = useState<string>('');
-
-  // Update HTML when editorValue changes
-  useEffect(() => {
-    const updateHtml = async () => {
-      try {
-        const emailHtml = await render(
-          <Email subject={formData.subject} content={editorValue} />
-        );
-        setHtmlValue(emailHtml);
-      } catch (error) {
-        console.error('Error rendering email HTML:', error);
-      }
-    };
-
-    updateHtml();
-  }, [editorValue, formData.subject]);
-
-  // Update editor value when financingReport changes
+  // Update editor when financing report changes
   useEffect(() => {
     if (financingReport) {
       setEditorValue(financingReport);
@@ -67,112 +47,89 @@ export function EmailReportModal({ open, onOpenChange }: EmailReportModalProps) 
     }
   }, [financingReport]);
 
-  // Convert messages object to array for rendering
-  const messageEntries = Object.entries(messages);
-
-  // Format messages for email body
-  const formatMessages = () => {
-    if (messageEntries.length === 0) return 'No messages to include in the report.';
-
-    return messageEntries
-      .map(([id, msgData], index) => {
-        const imageList = msgData.imagePath.length > 0
-          ? `Images:\n${msgData.imagePath.map(path => `- ${path}`).join('\n')}`
-          : 'No images';
-        return `--- Message ${index + 1} (ID: ${id}) ---\n\n${msgData.message}\n\n${imageList}\n\n`;
-      })
-      .join('\n');
-  };
-
-  // Update body with formatted messages and generate subject when modal opens
+  // Render HTML email preview
   useEffect(() => {
-    const generateSubject = async () => {
-      if (open && financingReport) {
-        setFormData((prev) => ({
-          ...prev,
-          body: formatMessages(),
-        }));
+    const renderEmail = async () => {
+      try {
+        const html = await render(<Email subject={formData.subject} content={editorValue} />);
+        setHtmlValue(html);
+      } catch (error) {
+        console.error('Error rendering email:', error);
+      }
+    };
+    renderEmail();
+  }, [editorValue, formData.subject]);
 
-        // Generate subject line from the report content
-        setIsGeneratingSubject(true);
-        try {
-          const { subject } = await generateSubjectForEmail(financingReport);
-          setFormData((prev) => ({
-            ...prev,
-            subject: subject,
-          }));
-        } catch (error) {
-          console.error('Error generating subject:', error);
-          // Keep default subject on error
-        } finally {
-          setIsGeneratingSubject(false);
-        }
+  // Generate subject when modal opens
+  useEffect(() => {
+    if (!open || !financingReport) return;
+
+    const generateSubject = async () => {
+      setIsGeneratingSubject(true);
+      try {
+        const { subject } = await generateSubjectForEmail(financingReport);
+        setFormData(prev => ({ ...prev, subject }));
+      } catch (error) {
+        console.error('Error generating subject:', error);
+      } finally {
+        setIsGeneratingSubject(false);
       }
     };
 
     generateSubject();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, financingReport]);
 
-  const handleSummarize = async () => {
+  // Handlers
+  const handleSummarize = useCallback(async () => {
     if (!editorValue) return;
-
     setIsSummarizing(true);
-
     try {
       const { summary } = await generateSummariseText(editorValue);
       setEditorValue(summary);
       setIsSummarized(true);
     } catch (error) {
-      console.error('Error summarizing content:', error);
+      console.error('Error summarizing:', error);
       alert('Failed to summarize content. Please try again.');
     } finally {
       setIsSummarizing(false);
     }
-  };
+  }, [editorValue]);
 
-  const handleRevert = () => {
+  const handleRevert = useCallback(() => {
     setEditorValue(originalValue);
     setIsSummarized(false);
-  };
+  }, [originalValue]);
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     setIsSending(true);
-
     try {
-      // TODO: Implement actual email sending logic here
-      // For now, just simulate sending
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      console.log('Sending email:', formData);
+      // TODO: Implement email sending
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('Sending email:', { ...formData, content: editorValue });
       alert('Email sent successfully!');
       onOpenChange(false);
-
-      // Reset form
-      setFormData({
-        to: '',
-        subject: 'AI Analysis Report',
-        body: '',
-      });
     } catch (error) {
       console.error('Error sending email:', error);
       alert('Failed to send email. Please try again.');
     } finally {
       setIsSending(false);
     }
+  }, [formData, editorValue, onOpenChange]);
+
+  const updateFormField = (field: keyof typeof formData) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({ ...prev, [field]: e.target.value }));
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full !max-w-[98vw] max-h-[95vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Email  Report</DialogTitle>
-          <DialogDescription>
-            Send the AI generated summary via email
-          </DialogDescription>
+          <DialogTitle>Email Report</DialogTitle>
+          <DialogDescription>Send the AI generated summary via email</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4 flex-1 overflow-y-auto">
+          {/* Email To */}
           <div className="space-y-2">
             <Label htmlFor="to">To</Label>
             <Input
@@ -180,24 +137,26 @@ export function EmailReportModal({ open, onOpenChange }: EmailReportModalProps) 
               type="email"
               placeholder="recipient@example.com"
               value={formData.to}
-              onChange={(e) => setFormData({ ...formData, to: e.target.value })}
+              onChange={updateFormField('to')}
             />
           </div>
 
+          {/* Email Subject */}
           <div className="space-y-2">
             <Label htmlFor="subject">Subject</Label>
             <Input
               id="subject"
               value={formData.subject}
-              onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+              onChange={updateFormField('subject')}
               placeholder={isGeneratingSubject ? "Generating subject..." : "Enter email subject"}
               disabled={isGeneratingSubject}
             />
           </div>
 
+          {/* Content Editor & Preview */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="body">Financing Report</Label>
+              <Label>Financing Report</Label>
               <div className="flex gap-2">
                 {isSummarized && (
                   <Button
@@ -270,24 +229,14 @@ export function EmailReportModal({ open, onOpenChange }: EmailReportModalProps) 
               </TabsContent>
             </Tabs>
           </div>
-
-          <div className="text-sm text-muted-foreground">
-            {messageEntries.length} message{messageEntries.length !== 1 ? 's' : ''} included in this report
-          </div>
         </div>
 
+        {/* Actions */}
         <div className="flex justify-end gap-2">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSending}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSending}>
             Cancel
           </Button>
-          <Button
-            onClick={handleSend}
-            disabled={!formData.to || isSending}
-          >
+          <Button onClick={handleSend} disabled={!formData.to || isSending}>
             {isSending ? 'Sending...' : 'Send Email'}
           </Button>
         </div>
