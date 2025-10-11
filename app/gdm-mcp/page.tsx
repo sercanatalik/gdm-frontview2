@@ -102,7 +102,7 @@ export default function GdmMcpPage() {
   // Handle tool output from chat conversation
 
   return (
-    <div className="flex flex-col p-0" style={{ height: 'calc(100vh - 10px)' }}>
+    <div className="flex flex-col p-0" style={{ height: 'calc(100vh - 90px)' }}>
       {/* Header */}
       <div className="mb-4 flex shrink-0 items-center justify-between">
         <div className="flex items-center gap-3">
