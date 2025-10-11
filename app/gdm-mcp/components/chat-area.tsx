@@ -89,7 +89,9 @@ const ChatArea = ({ messages, error, onToolOutput }: ChatAreaProps) => {
   }, [messages, onToolOutput]);
 
   return (
+   
     <Conversation className="flex-1" aria-label="Chat conversation">
+   
       <ConversationContent>
         {uniqueMessages.length === 0 ? (
           <ConversationEmptyState
@@ -98,6 +100,7 @@ const ChatArea = ({ messages, error, onToolOutput }: ChatAreaProps) => {
             description="Messages will appear here as the conversation progresses."
           />
         ) : (
+          
           uniqueMessages.map((message) => (
             <Message from={message.role} key={message.id}>
               <MessageContent>
@@ -173,6 +176,7 @@ const ChatArea = ({ messages, error, onToolOutput }: ChatAreaProps) => {
       </ConversationContent>
       <ConversationScrollButton />
     </Conversation>
+    
   );
 };
 

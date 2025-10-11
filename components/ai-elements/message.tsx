@@ -24,17 +24,17 @@ export const Message = ({ className, from, ...props }: MessageProps) => (
 );
 
 const messageContentVariants = cva(
-  "is-user:dark flex flex-col gap-1 overflow-hidden rounded-lg text-xs",
+  "is-user:dark flex flex-col gap-1 overflow-hidden text-sm leading-5 shadow-sm transition-colors",
   {
     variants: {
       variant: {
         contained: [
-          "max-w-[80%] px-3 py-2",
+          "max-w-[95%] px-3 py-2",
           "group-[.is-user]:bg-primary group-[.is-user]:text-primary-foreground",
           "group-[.is-assistant]:bg-secondary group-[.is-assistant]:text-foreground",
         ],
         flat: [
-          "group-[.is-user]:max-w-[80%] group-[.is-user]:bg-secondary group-[.is-user]:px-3 group-[.is-user]:py-2 group-[.is-user]:text-foreground",
+          "group-[.is-user]:max-w-[95%] group-[.is-user]:bg-secondary group-[.is-user]:px-3 group-[.is-user]:py-2 group-[.is-user]:text-foreground",
           "group-[.is-assistant]:text-foreground",
         ],
       },
@@ -73,8 +73,8 @@ export const MessageAvatar = ({
   className,
   ...props
 }: MessageAvatarProps) => (
-  <Avatar className={cn("size-6 ring-1 ring-border", className)} {...props}>
-    <AvatarImage alt="" className="mt-0 mb-0" src={src} />
+  <Avatar className={cn("size-7 ring-1 ring-border", className)} {...props}>
+    <AvatarImage alt="" className="mt-0 mb-2" src={src} />
     <AvatarFallback className="text-xs">{name?.slice(0, 2) || "ME"}</AvatarFallback>
   </Avatar>
 );
