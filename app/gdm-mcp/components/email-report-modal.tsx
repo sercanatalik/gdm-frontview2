@@ -8,8 +8,11 @@ import { useState, useEffect } from 'react';
 import { useStore } from '@tanstack/react-store';
 import { financingMessagesStore } from '@/lib/store/financing-messages';
 import MDEditor from '@uiw/react-md-editor';
-import { Sparkles, Undo2 } from 'lucide-react';
+import { Sparkles, Undo2, Eye, FileText } from 'lucide-react';
 import { generateSummariseText, generateSubjectForEmail } from '@/lib/ai/actions';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { render } from "@react-email/components";
+import { Email } from "@/components/emails/financing-email";
 
 interface EmailReportModalProps {
   open: boolean;
@@ -28,6 +31,7 @@ export function EmailReportModal({ open, onOpenChange }: EmailReportModalProps) 
   const [isSending, setIsSending] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isGeneratingSubject, setIsGeneratingSubject] = useState(false);
+  const [activeTab, setActiveTab] = useState('edit');
 
   // Get FinancingReport from store
   const financingReportData = messages['FinancingReport'];
@@ -36,6 +40,23 @@ export function EmailReportModal({ open, onOpenChange }: EmailReportModalProps) 
   const [editorValue, setEditorValue] = useState<string>(financingReport);
   const [originalValue, setOriginalValue] = useState<string>(financingReport);
   const [isSummarized, setIsSummarized] = useState(false);
+  const [htmlValue, setHtmlValue] = useState<string>('');
+
+  // Update HTML when editorValue changes
+  useEffect(() => {
+    const updateHtml = async () => {
+      try {
+        const emailHtml = await render(
+          <Email subject={formData.subject} content={editorValue} />
+        );
+        setHtmlValue(emailHtml);
+      } catch (error) {
+        console.error('Error rendering email HTML:', error);
+      }
+    };
+
+    updateHtml();
+  }, [editorValue, formData.subject]);
 
   // Update editor value when financingReport changes
   useEffect(() => {
@@ -201,20 +222,53 @@ export function EmailReportModal({ open, onOpenChange }: EmailReportModalProps) 
                 </Button>
               </div>
             </div>
-            <div className="border rounded-lg overflow-hidden">
-              {financingReport ? (
-                <MDEditor
-                  value={editorValue}
-                  onChange={(val) => setEditorValue(val || '')}
-                  height={700}
-                  preview="preview"
-                />
-              ) : (
-                <div className="p-4 text-muted-foreground">
-                  No financing report available.
+
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="edit">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Edit
+                </TabsTrigger>
+                <TabsTrigger value="preview">
+                  <Eye className="mr-2 h-4 w-4" />
+                  Preview Email
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="edit" className="mt-2">
+                <div className="border rounded-lg overflow-hidden">
+                  {financingReport ? (
+                    <MDEditor
+                      value={editorValue}
+                      onChange={(val) => setEditorValue(val || '')}
+                      height={700}
+                      preview="preview"
+                    />
+                  ) : (
+                    <div className="p-4 text-muted-foreground">
+                      No financing report available.
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </TabsContent>
+
+              <TabsContent value="preview" className="mt-2">
+                <div className="border rounded-lg overflow-hidden bg-white">
+                  {htmlValue ? (
+                    <iframe
+                      srcDoc={htmlValue}
+                      className="w-full min-h-[700px] border-0"
+                      title="Email Preview"
+                      sandbox="allow-same-origin"
+                    />
+                  ) : (
+                    <div className="p-6 min-h-[700px] flex items-center justify-center">
+                      <div className="text-muted-foreground">Generating preview...</div>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
           <div className="text-sm text-muted-foreground">
