@@ -1,7 +1,7 @@
 'use client';
 
 import ChatArea from './components/chat-area';
-import { SuggestedQueries } from '../ai/suggested-queries';
+import { SuggestedQueries } from './components/suggested-queries';
 import { Sparkles, Search, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +10,8 @@ import { AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-
+import { toolOutputsActions } from '@/lib/store/tool-outputs';
+import { AICharts } from "@/components/ai-elements/ai-charts";
 export default function GdmMcpPage() {
   const {
     messages,
@@ -39,6 +40,7 @@ export default function GdmMcpPage() {
     stop();
     setMessages([]);
     setInputValue('');
+    toolOutputsActions.clearOutputs();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -50,6 +52,18 @@ export default function GdmMcpPage() {
 
   const handleSuggestionClick = (suggestion: string) => {
     sendMessage({ text: suggestion });
+  };
+
+  // Handle tool output from chat conversation
+  const handleToolOutput = (toolOutput: {
+    toolName: string;
+    output: unknown;
+    input: unknown;
+    state?: string;
+  }) => {
+    // Add to store - it will handle deduplication
+    toolOutputsActions.addOutput(toolOutput);
+    
   };
 
   // Auto-scroll to bottom when new messages arrive
@@ -88,7 +102,7 @@ export default function GdmMcpPage() {
             <CardContent className="flex-1">
               <div className="flex flex-col">
                 <div className="flex-1 overflow-y-auto">
-                  <ChatArea messages={messages} error={error} />
+                  <ChatArea messages={messages} error={error} onToolOutput={handleToolOutput} />
                   <div ref={chatEndRef} />
                 </div>
               </div>
@@ -102,9 +116,7 @@ export default function GdmMcpPage() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-col">
-                <div className="flex-1 overflow-y-auto">
-                  <p className="text-sm text-muted-foreground">Chart visualization area</p>
-                </div>
+                <AICharts />
               </div>
             </CardContent>
           </Card>

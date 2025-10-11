@@ -57,7 +57,7 @@ export function ChatConversation({ messages, error, onToolOutput }: ChatConversa
           onToolOutput({
             toolName: part.toolName,
             output: part.output,
-            input: 'input' in part ? part.input : part.toolInput || undefined,
+            input: 'input' in part ? part.input : undefined,
             state: part.state,
           });
           processedToolsRef.current.add(toolKey);

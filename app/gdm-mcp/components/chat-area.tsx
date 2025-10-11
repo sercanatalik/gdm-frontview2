@@ -158,7 +158,7 @@ const ChatArea = ({ messages, error, onToolOutput }: ChatAreaProps) => {
                   return null;
                 })}
               </MessageContent>
-              <MessageAvatar
+              <MessageAvatar className='mt-1 size-8'
                 name={message.role === 'user' ? 'User' : 'AI Assistant'}
                 src={message.role === 'user' ? 'https://github.com/shadcn.png' : 'https://github.com/openai.png'}
               />
