@@ -2,7 +2,7 @@
 
 import ChatArea from './components/chat-area';
 import { SuggestedQueries } from './components/suggested-queries';
-import { Sparkles, Search, RotateCcw } from 'lucide-react';
+import { Sparkles, Search, RotateCcw, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,8 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { toolOutputsActions } from '@/lib/store/tool-outputs';
 import { AICharts } from "@/components/ai-elements/ai-charts";
+import { messagesActions } from '@/lib/store/ai-messages';
+import { EmailReportModal } from './components/email-report-modal';
 export default function GdmMcpPage() {
   const {
     messages,
@@ -24,9 +26,30 @@ export default function GdmMcpPage() {
     onError: (error) => {
       console.error('Chat error:', error);
     },
+    onFinish: (message) => {
+      console.log('Chat finished:', message.messages);
+
+      // Get the last message from the messages array
+      const lastMessage = message.messages[message.messages.length - 1];
+      if (lastMessage?.parts) {
+        const finalMessage = lastMessage.parts[lastMessage.parts.length - 1];
+
+        if ('state' in finalMessage && finalMessage.state === 'done') {
+          // Handle the final message part
+          console.log('Final message part:', finalMessage.text);
+
+          // Add to ai-messages store
+          messagesActions.addMessage({
+            text: finalMessage.text,
+            state: finalMessage.state,
+          });
+        }
+      }
+    },
   });
 
   const [inputValue, setInputValue] = useState('');
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const handleSend = () => {
@@ -41,6 +64,7 @@ export default function GdmMcpPage() {
     setMessages([]);
     setInputValue('');
     toolOutputsActions.clearOutputs();
+    messagesActions.clearMessages();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -71,8 +95,14 @@ export default function GdmMcpPage() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+    useEffect(() => {
+    toolOutputsActions.clearOutputs();
+    messagesActions.clearMessages();
+  }, []);
+  // Handle tool output from chat conversation
+
   return (
-    <div className="flex flex-col p-0" style={{ height: 'calc(100vh - 90px)' }}>
+    <div className="flex flex-col p-0" style={{ height: 'calc(100vh - 10px)' }}>
       {/* Header */}
       <div className="mb-4 flex shrink-0 items-center justify-between">
         <div className="flex items-center gap-3">
@@ -83,10 +113,17 @@ export default function GdmMcpPage() {
           </div>
         </div>
         {messages.length > 0 && (
-          <Button variant="outline" size="sm" onClick={handleClear}>
+
+          <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setEmailModalOpen(true)}>
+            <Mail className="mr-2 h-4 w-4" />
+            Email Report
+          </Button>
+           <Button variant="outline" size="sm" onClick={handleClear}>
             <RotateCcw className="mr-2 h-4 w-4" />
             Reset
           </Button>
+          </div>
         )}
       </div>
 
@@ -162,6 +199,9 @@ export default function GdmMcpPage() {
           </div>
         </div>
       </div>
+
+      {/* Email Report Modal */}
+      <EmailReportModal open={emailModalOpen} onOpenChange={setEmailModalOpen} />
     </div>
   );
 }

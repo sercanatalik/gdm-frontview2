@@ -42,6 +42,9 @@ export async function POST(req: Request) {
 
     const toolSet = await httpClient.tools();
 
+   
+
+
     const result = streamText({
       model: wrappedModel,
       system: SYSTEM_PROMPT,
