@@ -38,7 +38,7 @@ export async function generateChartConfigService(
       model: anthropic("claude-3-5-sonnet-20241022"),
       system: 'You are a data visualization expert. Use pie charts for distributions and proportions, bar charts for comparisons, line charts for trends over time, and multi-line charts for multiple groups over time. Use concise keys and ensure clarity.',
       prompt: `Given the following data from a SQL query result, generate the chart config that best visualises the data and answers the users query.
-For multiple groups use multi-lines.
+For multiple groups use multi-lines.U se pie charts for distributions and proportions, bar charts for comparisons, line charts for trends over time, and multi-line charts for multiple groups over time.
 
 Here is an example complete config:
 export const chartConfig = {
