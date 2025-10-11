@@ -26,6 +26,7 @@ import { Label } from "recharts";
 import { transformDataForMultiLineChart } from "@/lib/ai/rechart-format";
 import html2canvas from "html2canvas-pro";
 import { savePNGToPublic } from "@/lib/ai/actions";
+import { financingMessagesActions, financingMessagesStore } from "@/lib/store/financing-messages";
 
 function toTitleCase(str: string): string {
   if (!str) return "";
@@ -94,9 +95,18 @@ export function DynamicChart({
 
         const result = await savePNGToPublic(base64Data, filename);
 
-        
         if (result.success) {
           console.log(`Chart auto-saved to /public${result.path}`);
+
+          // Update the financing messages store with the new image path
+          const currentMessage = financingMessagesStore.state.financingMessage;
+          if (currentMessage) {
+            financingMessagesActions.updateMessage(
+              currentMessage.message,
+              [...currentMessage.imagePath, filename]
+            );
+          }
+
           setHasAutoSaved(true);
         }
       } catch (error) {

@@ -8,21 +8,22 @@ import {
   Markdown, Html ,
   Img,
   Link,
-  Preview,
+  Preview,Heading,
   Section,
   Text,
 } from '@react-email/components';
 
 const baseUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : '';
+  ? `https://${process.env.VERCEL_URL}/gdm-frontview`
+  : '/gdm-frontview';
 
 interface EmailProps {
   subject?: string;
   content?: string;
+  imagePaths?: string[];
 }
 
-export const Email = ({subject = "Financing Report", content = ""}: EmailProps) => {
+export const Email = ({subject = "Financing Report", content = "", imagePaths = []}: EmailProps) => {
   return (
     <Html>
     <Head />
@@ -39,8 +40,23 @@ export const Email = ({subject = "Financing Report", content = ""}: EmailProps) 
         }}
         markdownContainerStyles={{
           padding: "10px",
-          border: "solid 1px black",
+          border: "0px",
         }}>{content || "No content available"}</Markdown>
+        <Heading as="h4">AI Generated Charts</Heading>;
+
+           {imagePaths.length > 0 && (
+             <Section style={{ marginTop: '20px' }}>
+               {imagePaths.map((imagePath, index) => (
+                 <Img
+                   key={index}
+                   src={baseUrl + `/tmp/${imagePath}`}
+                   alt={`Chart ${index + 1}`}
+                   style={imageStyle}
+                 />
+               ))}
+             </Section>
+           )}
+
            <Hr style={hr} />
                     <Text style={footer}>
                       AI generated content by&nbsp;
@@ -84,6 +100,15 @@ const footer = {
   color: '#8898aa',
   fontSize: '10px',
   lineHeight: '16px',
+};
+
+const imageStyle = {
+  width: '100%',
+  maxWidth: '600px',
+  height: 'auto',
+  margin: '10px 0',
+  border: '1px solid #e6ebf1',
+  borderRadius: '4px',
 };
 
 

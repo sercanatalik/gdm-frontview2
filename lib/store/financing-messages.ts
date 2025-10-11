@@ -6,50 +6,27 @@ interface FinancingMessage {
 }
 
 interface MessagesState {
-  messages: Record<string, FinancingMessage>
+  financingMessage: FinancingMessage | null
 }
 
 // Create the store
 export const financingMessagesStore = new Store<MessagesState>({
-  messages: {},
+  financingMessage: null,
 })
 
 // Actions
 export const financingMessagesActions = {
-  addMessage: (id: string, message: string, imagePath: string[]) => {
-    financingMessagesStore.setState((state) => ({
-      messages: {
-        ...state.messages,
-        [id]: { message, imagePath },
-      },
-    }))
-  },
-
-  clearMessages: () => {
-    financingMessagesStore.setState({ messages: {} })
-  },
-
-  removeMessage: (id: string) => {
-    financingMessagesStore.setState((state) => {
-      const { [id]: _, ...rest } = state.messages
-      return { messages: rest }
+  updateMessage: (message: string, imagePath: string[]) => {
+    financingMessagesStore.setState({
+      financingMessage: { message, imagePath },
     })
   },
 
-  updateMessage: (id: string, message: string, imagePath: string[]) => {
-    financingMessagesStore.setState((state) => ({
-      messages: {
-        ...state.messages,
-        [id]: { message, imagePath },
-      },
-    }))
+  clearMessage: () => {
+    financingMessagesStore.setState({ financingMessage: null })
   },
 
-  getMessage: (id: string) => {
-    return financingMessagesStore.state.messages[id]
-  },
-
-  getAllMessages: () => {
-    return financingMessagesStore.state.messages
+  getMessage: () => {
+    return financingMessagesStore.state.financingMessage
   },
 }

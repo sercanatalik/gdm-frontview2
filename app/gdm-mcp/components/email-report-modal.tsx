@@ -20,8 +20,10 @@ interface EmailReportModalProps {
 }
 
 export function EmailReportModal({ open, onOpenChange }: EmailReportModalProps) {
-  const messages = useStore(financingMessagesStore, (state) => state.messages);
-  const financingReport = messages['FinancingReport']?.message || '';
+  const financingMessage = useStore(financingMessagesStore, (state) => state.financingMessage);
+  const financingReport = financingMessage?.message || '';
+  const financingImages = financingMessage?.imagePath || [];
+
 
   // Form state
   const [formData, setFormData] = useState({ to: '', subject: 'AI Analysis Report' });
@@ -51,14 +53,20 @@ export function EmailReportModal({ open, onOpenChange }: EmailReportModalProps) 
   useEffect(() => {
     const renderEmail = async () => {
       try {
-        const html = await render(<Email subject={formData.subject} content={editorValue} />);
+        const html = await render(
+          <Email
+            subject={formData.subject}
+            content={editorValue}
+            imagePaths={financingImages}
+          />
+        );
         setHtmlValue(html);
       } catch (error) {
         console.error('Error rendering email:', error);
       }
     };
     renderEmail();
-  }, [editorValue, formData.subject]);
+  }, [editorValue, formData.subject, financingImages]);
 
   // Generate subject when modal opens
   useEffect(() => {
@@ -195,17 +203,47 @@ export function EmailReportModal({ open, onOpenChange }: EmailReportModalProps) 
               </TabsList>
 
               <TabsContent value="edit" className="mt-2">
-                <div className="border rounded-lg overflow-hidden">
-                  {financingReport ? (
-                    <MDEditor
-                      value={editorValue}
-                      onChange={(val) => setEditorValue(val || '')}
-                      height={700}
-                      preview="preview"
-                    />
-                  ) : (
-                    <div className="p-4 text-muted-foreground">
-                      No financing report available.
+                <div className="space-y-4">
+                  <div className="border rounded-lg overflow-hidden">
+                    {financingReport ? (
+                      <MDEditor
+                        value={editorValue}
+                        onChange={(val) => setEditorValue(val || '')}
+                        height={700}
+                        preview="preview"
+                      />
+                    ) : (
+                      <div className="p-4 text-muted-foreground">
+                        No financing report available.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Display images */}
+                  {financingImages.length > 0 && (
+                    <div className="border rounded-lg p-4 bg-white">
+                      <Label className="mb-2 block">Attached Charts ({financingImages.length})</Label>
+                      <div className="grid grid-cols-2 gap-4">
+                        {financingImages.map((imagePath, index) => {
+                          const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+                          const fullImageUrl = `${baseUrl}/gdm-frontview/tmp/${imagePath}`;
+
+                          return (
+                            <div key={index} className="border rounded p-2">
+                              <img
+                                src={fullImageUrl}
+                                alt={`Chart ${index + 1}`}
+                                className="w-full h-auto rounded"
+                                onError={(e) => {
+                                  console.error('Failed to load image:', fullImageUrl);
+                                  e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23ddd" width="400" height="300"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3EImage not found%3C/text%3E%3C/svg%3E';
+                                }}
+                              />
+                              <p className="text-xs text-muted-foreground mt-2 truncate">{imagePath}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
