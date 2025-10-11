@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState, useEffect } from 'react';
 import { useStore } from '@tanstack/react-store';
-import { messagesStore } from '@/lib/store/ai-messages';
+import { financingMessagesStore } from '@/lib/store/financing-messages';
 import MDEditor from '@uiw/react-md-editor';
 import { Sparkles, Undo2 } from 'lucide-react';
 import { generateSummariseText, generateSubjectForEmail } from '@/lib/ai/actions';
@@ -17,7 +17,7 @@ interface EmailReportModalProps {
 }
 
 export function EmailReportModal({ open, onOpenChange }: EmailReportModalProps) {
-  const messages = useStore(messagesStore, (state) => state.messages);
+  const messages = useStore(financingMessagesStore, (state) => state.messages);
 
   const [formData, setFormData] = useState({
     to: '',
@@ -30,7 +30,9 @@ export function EmailReportModal({ open, onOpenChange }: EmailReportModalProps) 
   const [isGeneratingSubject, setIsGeneratingSubject] = useState(false);
 
   // Get FinancingReport from store
-  const financingReport = messages['FinancingReport'] || '';
+  const financingReportData = messages['FinancingReport'];
+  const financingReport = financingReportData?.message || '';
+  const imagePaths = financingReportData?.imagePath || [];
   const [editorValue, setEditorValue] = useState<string>(financingReport);
   const [originalValue, setOriginalValue] = useState<string>(financingReport);
   const [isSummarized, setIsSummarized] = useState(false);
@@ -52,8 +54,11 @@ export function EmailReportModal({ open, onOpenChange }: EmailReportModalProps) 
     if (messageEntries.length === 0) return 'No messages to include in the report.';
 
     return messageEntries
-      .map(([id, text], index) => {
-        return `--- Message ${index + 1} (ID: ${id}) ---\n\n${text}\n\n`;
+      .map(([id, msgData], index) => {
+        const imageList = msgData.imagePath.length > 0
+          ? `Images:\n${msgData.imagePath.map(path => `- ${path}`).join('\n')}`
+          : 'No images';
+        return `--- Message ${index + 1} (ID: ${id}) ---\n\n${msgData.message}\n\n${imageList}\n\n`;
       })
       .join('\n');
   };

@@ -12,7 +12,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { toolOutputsActions } from '@/lib/store/tool-outputs';
 import { AICharts } from "@/components/ai-elements/ai-charts";
-import { messagesActions } from '@/lib/store/ai-messages';
+import { financingMessagesActions } from '@/lib/store/financing-messages';
 import { EmailReportModal } from './components/email-report-modal';
 export default function GdmMcpPage() {
   const {
@@ -38,8 +38,8 @@ export default function GdmMcpPage() {
           // Handle the final message part
           console.log('Final message part:', finalMessage.text);
 
-          // Add to ai-messages store
-          messagesActions.addMessage('FinancingReport', finalMessage.text);
+          // Add to financing-messages store with message and imagePath array
+          financingMessagesActions.addMessage('FinancingReport', finalMessage.text, []);
 
           // You can also perform other actions here, like logging or analytics
         }
@@ -63,7 +63,7 @@ export default function GdmMcpPage() {
     setMessages([]);
     setInputValue('');
     toolOutputsActions.clearOutputs();
-    messagesActions.clearMessages();
+    financingMessagesActions.clearMessages();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -96,7 +96,7 @@ export default function GdmMcpPage() {
 
     useEffect(() => {
     toolOutputsActions.clearOutputs();
-    messagesActions.clearMessages();
+    financingMessagesActions.clearMessages();
   }, []);
   // Handle tool output from chat conversation
 

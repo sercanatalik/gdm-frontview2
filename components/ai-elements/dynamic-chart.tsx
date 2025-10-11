@@ -94,6 +94,7 @@ export function DynamicChart({
 
         const result = await savePNGToPublic(base64Data, filename);
 
+        
         if (result.success) {
           console.log(`Chart auto-saved to /public${result.path}`);
           setHasAutoSaved(true);
