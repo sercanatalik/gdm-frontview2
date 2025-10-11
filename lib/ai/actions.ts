@@ -3,6 +3,8 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateObject, generateText } from "ai";
 import { Config, configSchema, Result } from "./types";
+import fs from "fs";
+import path from "path";
 
 
 /**
@@ -152,5 +154,49 @@ ${text}`,
   } catch (error: any) {
     console.error("Email subject generation error:", error.message);
     throw new Error("Failed to generate email subject");
+  }
+}
+
+
+/**
+ * Server action: Save PNG file to /public/tmp folder
+ * @param base64Data - Base64 encoded PNG data
+ * @param filename - Filename for the PNG file
+ * @returns Object containing the saved file path
+ */
+export async function savePNGToPublic(
+  base64Data: string,
+  filename: string
+): Promise<{ success: boolean; path?: string; error?: string }> {
+  "use server";
+
+  try {
+    // Remove the data URL prefix if present
+    const base64Image = base64Data.replace(/^data:image\/\w+;base64,/, "");
+    const buffer = Buffer.from(base64Image, "base64");
+
+    // Ensure the filename is safe
+    const safeFilename = filename.replace(/[^a-z0-9_\-\.]/gi, '_');
+
+    // Ensure the tmp directory exists
+    const tmpDir = path.join(process.cwd(), "public", "tmp");
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir, { recursive: true });
+    }
+
+    // Save to public/tmp folder
+    const publicPath = path.join(tmpDir, safeFilename);
+    fs.writeFileSync(publicPath, buffer);
+
+    return {
+      success: true,
+      path: `/tmp/${safeFilename}`
+    };
+  } catch (error: any) {
+    console.error("Error saving PNG:", error.message);
+    return {
+      success: false,
+      error: error.message
+    };
   }
 }

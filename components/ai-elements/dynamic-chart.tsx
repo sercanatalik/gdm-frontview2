@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Bar,
   BarChart,
@@ -24,6 +24,11 @@ import {
 import { Config, Result } from "@/lib/ai/types";
 import { Label } from "recharts";
 import { transformDataForMultiLineChart } from "@/lib/ai/rechart-format";
+import html2canvas from "html2canvas-pro";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import { toast } from "sonner";
+import { savePNGToPublic } from "@/lib/ai/actions";
 
 function toTitleCase(str: string): string {
   if (!str) return "";
@@ -67,6 +72,79 @@ export function DynamicChart({
   chartData: Result[];
   chartConfig: Config;
 }) {
+  const chartRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [hasAutoSaved, setHasAutoSaved] = useState(false);
+
+  // Auto-save when chart generation is complete
+  useEffect(() => {
+    const autoSave = async () => {
+      if (!chartRef.current || hasAutoSaved || !chartData || chartData.length === 0) return;
+
+      // Wait a bit for the chart to fully render
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      try {
+        const canvas = await html2canvas(chartRef.current, {
+          backgroundColor: "#ffffff",
+          scale: 2,
+          logging: false,
+        });
+
+        // Generate random 6 character filename
+        const randomStr = Math.random().toString(36).substring(2, 8);
+        const filename = `${randomStr}.png`;
+        const base64Data = canvas.toDataURL("image/png");
+
+        const result = await savePNGToPublic(base64Data, filename);
+
+        if (result.success) {
+          console.log(`Chart auto-saved to /public${result.path}`);
+          setHasAutoSaved(true);
+        }
+      } catch (error) {
+        console.error("Error auto-saving chart:", error);
+      }
+    };
+
+    autoSave();
+  }, [chartData, chartConfig, hasAutoSaved]);
+
+  const exportToPNG = async () => {
+    if (!chartRef.current) return;
+
+    setIsExporting(true);
+    try {
+      const canvas = await html2canvas(chartRef.current, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        logging: false,
+      });
+
+      // Generate random 6 character filename
+      const randomStr = Math.random().toString(36).substring(2, 8);
+      const filename = `${randomStr}.png`;
+
+      // Convert canvas to base64
+      const base64Data = canvas.toDataURL("image/png");
+
+      // Save to /public/tmp folder using server action
+      const result = await savePNGToPublic(base64Data, filename);
+
+      if (result.success) {
+        toast.success(`Chart saved to /public${result.path}`);
+      } else {
+        toast.error(`Failed to save chart: ${result.error}`);
+      }
+
+      setIsExporting(false);
+    } catch (error) {
+      console.error("Error exporting chart:", error);
+      toast.error("Failed to export chart");
+      setIsExporting(false);
+    }
+  };
+
   const renderChart = () => {
     if (!chartData || !chartConfig) return <div>No chart data</div>;
     const parsedChartData = chartData.map((item) => {
@@ -244,27 +322,41 @@ export function DynamicChart({
 
   return (
     <div className="w-full flex flex-col justify-center items-center">
-      <h2 className="text-md font-bold mb-1">{chartConfig.title}</h2>
-      {chartConfig && chartData.length > 0 && (
-        <ChartContainer
-          config={chartConfig.yKeys.reduce(
-            (acc, key, index) => {
-              acc[key] = {
-                label: key,
-                color: colors[index % colors.length],
-              };
-              return acc;
-            },
-            {} as Record<string, { label: string; color: string }>,
-          )}
-          className="h-[520px] w-full"
+      <div className="w-full flex justify-between items-center mb-1">
+        <h2 className="text-md font-bold">{chartConfig.title}</h2>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={exportToPNG}
+          disabled={isExporting}
+          className="ml-auto"
         >
-          {renderChart()}
-        </ChartContainer>
-      )}
-      <div className="w-full">
-        <p className="mt-4 text-sm">{chartConfig.description}</p>
-        <p className="mt-4 text-sm">{chartConfig.takeaway}</p>
+          <Download className="h-4 w-4 mr-2" />
+          {isExporting ? "Exporting..." : "Export PNG"}
+        </Button>
+      </div>
+      <div ref={chartRef} className="w-full">
+        {chartConfig && chartData.length > 0 && (
+          <ChartContainer
+            config={chartConfig.yKeys.reduce(
+              (acc, key, index) => {
+                acc[key] = {
+                  label: key,
+                  color: colors[index % colors.length],
+                };
+                return acc;
+              },
+              {} as Record<string, { label: string; color: string }>,
+            )}
+            className="h-[520px] w-full"
+          >
+            {renderChart()}
+          </ChartContainer>
+        )}
+        <div className="w-full">
+          <p className="mt-4 text-sm">{chartConfig.description}</p>
+          <p className="mt-4 text-sm">{chartConfig.takeaway}</p>
+        </div>
       </div>
     </div>
   );
