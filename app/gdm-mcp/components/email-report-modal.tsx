@@ -4,11 +4,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { useState, useEffect } from 'react';
 import { useStore } from '@tanstack/react-store';
 import { messagesStore } from '@/lib/store/ai-messages';
-import { Response } from '@/components/ai-elements/response';
+import MDEditor from '@uiw/react-md-editor';
+import { Sparkles, Undo2 } from 'lucide-react';
+import { generateSummariseText, generateSubjectForEmail } from '@/lib/ai/actions';
 
 interface EmailReportModalProps {
   open: boolean;
@@ -25,28 +26,89 @@ export function EmailReportModal({ open, onOpenChange }: EmailReportModalProps) 
   });
 
   const [isSending, setIsSending] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isGeneratingSubject, setIsGeneratingSubject] = useState(false);
+
+  // Get FinancingReport from store
+  const financingReport = messages['FinancingReport'] || '';
+  const [editorValue, setEditorValue] = useState<string>(financingReport);
+  const [originalValue, setOriginalValue] = useState<string>(financingReport);
+  const [isSummarized, setIsSummarized] = useState(false);
+
+  // Update editor value when financingReport changes
+  useEffect(() => {
+    if (financingReport) {
+      setEditorValue(financingReport);
+      setOriginalValue(financingReport);
+      setIsSummarized(false);
+    }
+  }, [financingReport]);
+
+  // Convert messages object to array for rendering
+  const messageEntries = Object.entries(messages);
 
   // Format messages for email body
   const formatMessages = () => {
-    if (messages.length === 0) return 'No messages to include in the report.';
+    if (messageEntries.length === 0) return 'No messages to include in the report.';
 
-    return messages
-      .map((msg, index) => {
-        const date = new Date(msg.timestamp).toLocaleString();
-        return `--- Message ${index + 1} (${date}) ---\n\n${msg.text}\n\n`;
+    return messageEntries
+      .map(([id, text], index) => {
+        return `--- Message ${index + 1} (ID: ${id}) ---\n\n${text}\n\n`;
       })
       .join('\n');
   };
 
-  // Update body with formatted messages when modal opens or messages change
+  // Update body with formatted messages and generate subject when modal opens
   useEffect(() => {
-    if (open) {
-      setFormData((prev) => ({
-        ...prev,
-        body: formatMessages(),
-      }));
+    const generateSubject = async () => {
+      if (open && financingReport) {
+        setFormData((prev) => ({
+          ...prev,
+          body: formatMessages(),
+        }));
+
+        // Generate subject line from the report content
+        setIsGeneratingSubject(true);
+        try {
+          const { subject } = await generateSubjectForEmail(financingReport);
+          setFormData((prev) => ({
+            ...prev,
+            subject: subject,
+          }));
+        } catch (error) {
+          console.error('Error generating subject:', error);
+          // Keep default subject on error
+        } finally {
+          setIsGeneratingSubject(false);
+        }
+      }
+    };
+
+    generateSubject();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, financingReport]);
+
+  const handleSummarize = async () => {
+    if (!editorValue) return;
+
+    setIsSummarizing(true);
+
+    try {
+      const { summary } = await generateSummariseText(editorValue);
+      setEditorValue(summary);
+      setIsSummarized(true);
+    } catch (error) {
+      console.error('Error summarizing content:', error);
+      alert('Failed to summarize content. Please try again.');
+    } finally {
+      setIsSummarizing(false);
     }
-  }, [open, messages]);
+  };
+
+  const handleRevert = () => {
+    setEditorValue(originalValue);
+    setIsSummarized(false);
+  };
 
   const handleSend = async () => {
     setIsSending(true);
@@ -76,11 +138,11 @@ export function EmailReportModal({ open, onOpenChange }: EmailReportModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-[95vw] max-h-[150vh] overflow-hidden flex flex-col">
+      <DialogContent className="w-full !max-w-[98vw] max-h-[95vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Email Analysis Report</DialogTitle>
+          <DialogTitle>Email  Report</DialogTitle>
           <DialogDescription>
-            Send the AI analysis results via email
+            Send the AI generated summary via email
           </DialogDescription>
         </DialogHeader>
 
@@ -102,31 +164,56 @@ export function EmailReportModal({ open, onOpenChange }: EmailReportModalProps) 
               id="subject"
               value={formData.subject}
               onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+              placeholder={isGeneratingSubject ? "Generating subject..." : "Enter email subject"}
+              disabled={isGeneratingSubject}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="body">Message Preview</Label>
-            <div className="border rounded-lg p-2 bg-muted/30 min-h-[500px] max-h-[700px] overflow-y-auto">
-              {messages.length > 0 ? (
-                messages.map((msg, index) => (
-                  <div key={msg.id} className="mb-6 pb-6 border-b last:border-b-0">
-                    <div className="text-xs text-muted-foreground mb-2">
-                      Message {index + 1} • {new Date(msg.timestamp).toLocaleString()}
-                    </div>
-                   
-                      {msg.text}
-                   
-                  </div>
-                ))
+            <div className="flex items-center justify-between">
+              <Label htmlFor="body">Financing Report</Label>
+              <div className="flex gap-2">
+                {isSummarized && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRevert}
+                    className="border-gray-500 text-gray-500 hover:bg-gray-500 hover:text-white"
+                  >
+                    <Undo2 className="mr-2 h-4 w-4" />
+                    Revert
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSummarize}
+                  disabled={!editorValue || isSummarizing || isSummarized}
+                  className="border-red-500 text-red-400 hover:bg-orange-500 hover:text-white"
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  {isSummarizing ? 'Summarizing...' : 'Summarize'}
+                </Button>
+              </div>
+            </div>
+            <div className="border rounded-lg overflow-hidden">
+              {financingReport ? (
+                <MDEditor
+                  value={editorValue}
+                  onChange={(val) => setEditorValue(val || '')}
+                  height={700}
+                  preview="preview"
+                />
               ) : (
-                <p className="text-muted-foreground">No messages to include in the report.</p>
+                <div className="p-4 text-muted-foreground">
+                  No financing report available.
+                </div>
               )}
             </div>
           </div>
 
           <div className="text-sm text-muted-foreground">
-            {messages.length} message{messages.length !== 1 ? 's' : ''} included in this report
+            {messageEntries.length} message{messageEntries.length !== 1 ? 's' : ''} included in this report
           </div>
         </div>
 

@@ -1,50 +1,50 @@
 import { Store } from '@tanstack/react-store'
 
-export interface MessageObject {
-  id: string
-  text: string
-  state: string
-  timestamp: number
-}
-
 interface MessagesState {
-  messages: MessageObject[]
+  messages: Record<string, string>
 }
 
 // Create the store
 export const messagesStore = new Store<MessagesState>({
-  messages: [],
+  messages: {},
 })
 
 // Actions
 export const messagesActions = {
-  addMessage: (message: Omit<MessageObject, 'timestamp' | 'id'>) => {
-    const newMessage: MessageObject = {
-      ...message,
-      timestamp: Date.now(),
-      id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-    }
-
+  addMessage: (id: string, text: string) => {
     messagesStore.setState((state) => ({
-      messages: [...state.messages, newMessage],
+      messages: {
+        ...state.messages,
+        [id]: text,
+      },
     }))
   },
 
   clearMessages: () => {
-    messagesStore.setState({ messages: [] })
+    messagesStore.setState({ messages: {} })
   },
 
   removeMessage: (id: string) => {
+    messagesStore.setState((state) => {
+      const { [id]: _, ...rest } = state.messages
+      return { messages: rest }
+    })
+  },
+
+  updateMessage: (id: string, text: string) => {
     messagesStore.setState((state) => ({
-      messages: state.messages.filter((message) => message.id !== id),
+      messages: {
+        ...state.messages,
+        [id]: text,
+      },
     }))
   },
 
-  updateMessage: (id: string, updates: Partial<MessageObject>) => {
-    messagesStore.setState((state) => ({
-      messages: state.messages.map((message) =>
-        message.id === id ? { ...message, ...updates } : message
-      ),
-    }))
+  getMessage: (id: string) => {
+    return messagesStore.state.messages[id]
+  },
+
+  getAllMessages: () => {
+    return messagesStore.state.messages
   },
 }

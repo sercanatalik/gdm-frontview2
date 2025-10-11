@@ -1,7 +1,7 @@
 "use server";
 
 import { anthropic } from "@ai-sdk/anthropic";
-import { generateObject } from "ai";
+import { generateObject, generateText } from "ai";
 import { Config, configSchema, Result } from "./types";
 
 
@@ -70,5 +70,87 @@ ${JSON.stringify(results, null, 2)}`,
   } catch (error: any) {
     console.error("Chart config generation error:", error.message);
     throw new Error("Failed to generate chart configuration");
+  }
+}
+
+
+/**
+ * Server action: Generate text summary
+ * @param text - Text to summarize
+ * @returns Object containing the summary
+ */
+export async function generateSummariseText(
+  text: string
+): Promise<{ summary: string }> {
+  "use server";
+  return generateSummariseTextService(text);
+}
+
+
+/**
+ * Service function: Generate text summary
+ * @param text - Text to summarize
+ * @returns Object containing the summary
+ * @throws Error if summarization fails
+ */
+export async function generateSummariseTextService(
+  text: string
+): Promise<{ summary: string }> {
+  try {
+    const { text: summary } = await generateText({
+      model: anthropic("claude-3-5-sonnet-20241022"),
+      system: 'You are a text summarization expert. Provide concise, professional summaries while preserving key information and context. Format your summary in markdown.',
+      prompt: `Please provide a concise summary of the following content. Focus on the key points and main findings. Keep the summary clear and professional, suitable for an email report.
+
+Content to summarize:
+${text}
+
+Please format your summary in markdown.`,
+    });
+
+    return { summary };
+  } catch (error: any) {
+    console.error("Text summarization error:", error.message);
+    throw new Error("Failed to generate text summary");
+  }
+}
+
+
+/**
+ * Server action: Generate email subject line
+ * @param text - Text content to generate subject from
+ * @returns Object containing the subject line
+ */
+export async function generateSubjectForEmail(
+  text: string
+): Promise<{ subject: string }> {
+  "use server";
+  return generateSubjectForEmailService(text);
+}
+
+
+/**
+ * Service function: Generate email subject line
+ * @param text - Text content to generate subject from
+ * @returns Object containing the subject line
+ * @throws Error if subject generation fails
+ */
+export async function generateSubjectForEmailService(
+  text: string
+): Promise<{ subject: string }> {
+  try {
+    const { text: subject } = await generateText({
+      model: anthropic("claude-3-5-sonnet-20241022"),
+      system: 'You are an email subject line expert. Generate concise, professional, and compelling subject lines that accurately reflect the email content. Keep subject lines under 60 characters.',
+      prompt: `Generate a professional email subject line for the following content. The subject line should be concise, clear, and capture the main topic or purpose. Do not use quotes or special formatting - just return the plain subject line text.
+
+Content:
+${text}`,
+    });
+
+    return { subject: subject.trim() };
+  } catch (error: any) {
+    console.error("Email subject generation error:", error.message);
+    throw new Error("Failed to generate email subject");
   }
 }

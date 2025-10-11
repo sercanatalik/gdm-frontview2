@@ -55,6 +55,7 @@
     "@tanstack/react-store": "^0.7.3",
     "@types/file-saver": "^2.0.7",
     "@uiw/react-json-view": "^2.0.0-alpha.33",
+    "@uiw/react-md-editor": "^4.0.8",
     "ag-grid-community": "^34.2.0",
     "ag-grid-enterprise": "^34.2.0",
     "ag-grid-react": "^34.2.0",

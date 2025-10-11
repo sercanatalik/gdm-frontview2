@@ -39,13 +39,12 @@ export default function GdmMcpPage() {
           console.log('Final message part:', finalMessage.text);
 
           // Add to ai-messages store
-          messagesActions.addMessage({
-            text: finalMessage.text,
-            state: finalMessage.state,
-          });
+          messagesActions.addMessage('FinancingReport', finalMessage.text);
+
+          // You can also perform other actions here, like logging or analytics
         }
       }
-    },
+    }
   });
 
   const [inputValue, setInputValue] = useState('');
