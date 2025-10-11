@@ -50,14 +50,14 @@ export const formatCurrency = (value: number): string => {
   }
 };
 const colors = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-  "hsl(var(--chart-6))",
-  "hsl(var(--chart-7))",
-  "hsl(var(--chart-8))",
+  "hsl(0, 0%, 20%)",   // Dark
+  "hsl(0, 0%, 30%)",
+  "hsl(0, 0%, 40%)",
+  "hsl(0, 0%, 50%)",
+  "hsl(0, 0%, 60%)",
+  "hsl(0, 0%, 70%)",
+  "hsl(0, 0%, 80%)",
+  "hsl(0, 0%, 90%)",   // Light
 ];
 
 export function DynamicChart({
