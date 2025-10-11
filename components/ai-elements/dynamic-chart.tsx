@@ -25,9 +25,6 @@ import { Config, Result } from "@/lib/ai/types";
 import { Label } from "recharts";
 import { transformDataForMultiLineChart } from "@/lib/ai/rechart-format";
 import html2canvas from "html2canvas-pro";
-import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
-import { toast } from "sonner";
 import { savePNGToPublic } from "@/lib/ai/actions";
 
 function toTitleCase(str: string): string {
@@ -73,10 +70,9 @@ export function DynamicChart({
   chartConfig: Config;
 }) {
   const chartRef = useRef<HTMLDivElement>(null);
-  const [isExporting, setIsExporting] = useState(false);
   const [hasAutoSaved, setHasAutoSaved] = useState(false);
 
-  // Auto-save when chart generation is complete
+  // Auto-save to /public/tmp when chart generation is complete
   useEffect(() => {
     const autoSave = async () => {
       if (!chartRef.current || hasAutoSaved || !chartData || chartData.length === 0) return;
@@ -109,41 +105,6 @@ export function DynamicChart({
 
     autoSave();
   }, [chartData, chartConfig, hasAutoSaved]);
-
-  const exportToPNG = async () => {
-    if (!chartRef.current) return;
-
-    setIsExporting(true);
-    try {
-      const canvas = await html2canvas(chartRef.current, {
-        backgroundColor: "#ffffff",
-        scale: 2,
-        logging: false,
-      });
-
-      // Generate random 6 character filename
-      const randomStr = Math.random().toString(36).substring(2, 8);
-      const filename = `${randomStr}.png`;
-
-      // Convert canvas to base64
-      const base64Data = canvas.toDataURL("image/png");
-
-      // Save to /public/tmp folder using server action
-      const result = await savePNGToPublic(base64Data, filename);
-
-      if (result.success) {
-        toast.success(`Chart saved to /public${result.path}`);
-      } else {
-        toast.error(`Failed to save chart: ${result.error}`);
-      }
-
-      setIsExporting(false);
-    } catch (error) {
-      console.error("Error exporting chart:", error);
-      toast.error("Failed to export chart");
-      setIsExporting(false);
-    }
-  };
 
   const renderChart = () => {
     if (!chartData || !chartConfig) return <div>No chart data</div>;
@@ -322,19 +283,7 @@ export function DynamicChart({
 
   return (
     <div className="w-full flex flex-col justify-center items-center">
-      <div className="w-full flex justify-between items-center mb-1">
-        <h2 className="text-md font-bold">{chartConfig.title}</h2>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={exportToPNG}
-          disabled={isExporting}
-          className="ml-auto"
-        >
-          <Download className="h-4 w-4 mr-2" />
-          {isExporting ? "Exporting..." : "Export PNG"}
-        </Button>
-      </div>
+      <h2 className="text-md font-bold mb-1">{chartConfig.title}</h2>
       <div ref={chartRef} className="w-full">
         {chartConfig && chartData.length > 0 && (
           <ChartContainer

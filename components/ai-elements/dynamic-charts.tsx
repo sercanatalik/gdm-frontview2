@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Copy, Code, Database, Check, Loader2 } from 'lucide-react';
+import { Copy, Code, Database, Check, Loader2, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { DynamicChart } from './dynamic-chart';
 import { generateChartConfig } from '@/lib/ai/actions';
 import { Config } from '@/lib/ai/types';
+import html2canvas from 'html2canvas-pro';
 
 interface DynamicChartsProps {
   query: string;
@@ -22,6 +23,8 @@ export function DynamicCharts({ query, data, timestamp, question }: DynamicChart
   const [isLoading, setIsLoading] = useState(true);
   const [chartConfig, setChartConfig] = useState<Config | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const chartAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadChartConfig = async () => {
@@ -52,6 +55,52 @@ export function DynamicCharts({ query, data, timestamp, question }: DynamicChart
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       toast.error('Failed to copy');
+    }
+  };
+
+  const handleExportPNG = async () => {
+    if (!chartAreaRef.current) {
+      toast.error('Chart not ready for export');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const canvas = await html2canvas(chartAreaRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+      });
+
+      // Convert canvas to blob and download
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          toast.error('Failed to generate image');
+          setIsExporting(false);
+          return;
+        }
+
+        // Generate random 6 character filename
+        const randomStr = Math.random().toString(36).substring(2, 8);
+        const filename = `chart_${randomStr}.png`;
+
+        // Download the file
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        toast.success('Chart downloaded');
+        setIsExporting(false);
+      });
+    } catch (error) {
+      console.error('Error exporting chart:', error);
+      toast.error('Failed to export chart');
+      setIsExporting(false);
     }
   };
 
@@ -101,6 +150,16 @@ export function DynamicCharts({ query, data, timestamp, question }: DynamicChart
             )}
           </Button>
 
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2"
+            onClick={handleExportPNG}
+            disabled={isExporting || isLoading || !!error}
+          >
+            <Download className="h-3.5 w-3.5" />
+          </Button>
+
           <div className="text-xs text-muted-foreground ml-2">
             {new Date(timestamp).toLocaleTimeString()}
           </div>
@@ -118,7 +177,7 @@ export function DynamicCharts({ query, data, timestamp, question }: DynamicChart
       )}
 
       {/* Chart Area */}
-      <div className="p-4">
+      <div className="p-4" ref={chartAreaRef}>
         {isLoading ? (
           <div className="flex items-center justify-center h-64 bg-muted/20 rounded-lg border-2 border-dashed">
             <div className="text-center">
