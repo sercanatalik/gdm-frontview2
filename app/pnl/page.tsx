@@ -8,6 +8,7 @@ import { RiskFilter } from "@/components/filters/risk-filter";
 import { pnlFilterConfig } from "@/components/filters/pnl-filter.config";
 import { useStore } from "@tanstack/react-store";
 import { filtersStore } from "@/lib/store/filters";
+import { PerformanceCard } from "@/components/performance";
 
 const LAZY_LOAD_DELAY = 1500;
 
@@ -91,7 +92,7 @@ export default function PnLPage() {
       </div>
 
       <div className="space-y-6">
-        {/* Add your content here */}
+        <PerformanceCard asOfDate={asOfDate ?? undefined} filters={filters} />
 
         <div ref={lazyTriggerRef} className="h-10" />
 
@@ -108,7 +109,15 @@ export default function PnLPage() {
 
         {showLazyContent && (
           <div className="space-y-6 animate-in fade-in-50 slide-in-from-bottom-4 duration-700">
-            {/* Add your lazy-loaded content here */}
+            <div className="rounded-lg border border-border bg-card p-6">
+              <h4 className="mb-3 text-base font-medium">Performance Insights</h4>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>• Comprehensive performance analytics across all desks</p>
+                <p>• Regional breakdown with detailed metrics</p>
+                <p>• P&L distribution by desk and region</p>
+                <p>• Real-time updates with filter synchronization</p>
+              </div>
+            </div>
           </div>
         )}
       </div>

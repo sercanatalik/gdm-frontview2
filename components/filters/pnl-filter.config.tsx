@@ -111,7 +111,7 @@ export const pnlFilterConfig = {
   ],
 
   // Default table name
-  tableName: "f_exposure",
+  tableName: "pnl_eod",
 }
 
 // Export individual parts for flexibility
