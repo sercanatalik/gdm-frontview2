@@ -13,14 +13,16 @@ import { PerformanceTable } from "./performance-table"
 import { PerformanceCharts } from "./performance-charts"
 import { defaultDesks, defaultPnlByDesk, defaultPnlByRegion } from "./constants"
 import type { Filter } from "@/lib/store/filters"
+import type { PerformanceTableColumn } from "./types"
 
 type PerformanceCardProps = {
   asOfDate?: string
   filters?: Filter[]
   className?: string
+  columns?: PerformanceTableColumn[]
 }
 
-export const PerformanceCard = ({ asOfDate, filters = [], className }: PerformanceCardProps) => {
+export const PerformanceCard = ({ asOfDate, filters = [], className, columns }: PerformanceCardProps) => {
   const { data, isLoading, error } = usePerformanceData(asOfDate, filters)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -85,7 +87,7 @@ export const PerformanceCard = ({ asOfDate, filters = [], className }: Performan
 
   const renderContent = (isModal: boolean = false) => (
     <div className={cn("grid grid-cols-1 gap-8", isModal ? "" : "xl:grid-cols-[minmax(0,1fr)_420px]")}>
-      <PerformanceTable desks={desks} showTitle={!isModal} />
+      <PerformanceTable desks={desks} showTitle={!isModal} columns={columns} />
       <PerformanceCharts pnlByDesk={pnlByDesk} pnlByRegion={pnlByRegion} isModal={isModal} />
     </div>
   )

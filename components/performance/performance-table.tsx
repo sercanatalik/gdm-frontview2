@@ -10,14 +10,143 @@ import {
 import { cn } from "@/lib/utils"
 import { AopBar } from "./aop-bar"
 import { fmtPct, fmtCurrency } from "./utils"
-import type { Desk, TradingLocationRow } from "./types"
+import type { Desk, TradingLocationRow, PerformanceTableColumn } from "./types"
+
+export const defaultPerformanceColumns: PerformanceTableColumn[] = [
+  {
+    key: "name",
+    label: "HMS Desk / Trading Location",
+    headerClassName: "w-[260px] min-w-[200px] text-slate-600",
+    deskCell: {
+      render: (desk) => (
+        <div className="flex items-start gap-3">
+          <span aria-hidden className="mt-1 size-3 rounded-full" style={{ backgroundColor: desk.color }} />
+          <span className="text-[15px] font-medium text-slate-900">{desk.name}</span>
+        </div>
+      ),
+    },
+    locationCell: {
+      render: (location) => (
+        <div className="pl-9 text-sm text-slate-600">{location.name}</div>
+      ),
+    },
+  },
+  {
+    key: "mtd",
+    label: "MTD",
+    headerClassName: "text-slate-600 text-right",
+    deskCell: {
+      className: (desk) => cn(
+        "text-[15px] text-right tabular-nums",
+        desk.mtd >= 0 ? "text-green-700" : "text-red-700"
+      ),
+      render: (desk) => fmtCurrency(desk.mtd),
+    },
+    locationCell: {
+      className: (location) => cn(
+        "text-sm text-right tabular-nums",
+        location.mtd >= 0 ? "text-green-600" : "text-red-600"
+      ),
+      render: (location) => fmtCurrency(location.mtd),
+    },
+  },
+  {
+    key: "mtdPlan",
+    label: "MTD Plan",
+    headerClassName: "text-slate-600 text-right",
+    deskCell: {
+      className: "text-[15px] text-slate-700 text-right tabular-nums",
+      render: (desk) => fmtCurrency(desk.mtdPlan),
+    },
+    locationCell: {
+      className: "text-sm text-slate-600 text-right tabular-nums",
+      render: (location) => fmtCurrency(location.mtdPlan),
+    },
+  },
+  {
+    key: "ytd",
+    label: "YTD",
+    headerClassName: "text-slate-600 text-right",
+    deskCell: {
+      className: (desk) => cn(
+        "text-[15px] text-right tabular-nums font-medium",
+        desk.ytd >= 0 ? "text-green-700" : "text-red-700"
+      ),
+      render: (desk) => fmtCurrency(desk.ytd),
+    },
+    locationCell: {
+      className: (location) => cn(
+        "text-sm text-right tabular-nums",
+        location.ytd >= 0 ? "text-green-600" : "text-red-600"
+      ),
+      render: (location) => fmtCurrency(location.ytd),
+    },
+  },
+  {
+    key: "ytdPlan",
+    label: "YTD Plan",
+    headerClassName: "text-slate-600 text-right",
+    deskCell: {
+      className: "text-[15px] text-slate-700 text-right tabular-nums",
+      render: (desk) => fmtCurrency(desk.ytdPlan),
+    },
+    locationCell: {
+      className: "text-sm text-slate-600 text-right tabular-nums",
+      render: (location) => fmtCurrency(location.ytdPlan),
+    },
+  },
+  {
+    key: "ytdAnnualized",
+    label: "YTD Annualized",
+    headerClassName: "text-slate-600 text-right",
+    deskCell: {
+      className: "text-[15px] text-slate-700 text-right tabular-nums",
+      render: (desk) => fmtCurrency(desk.ytdAnnualized),
+    },
+    locationCell: {
+      className: "text-sm text-slate-600 text-right tabular-nums",
+      render: (location) => fmtCurrency(location.ytdAnnualized),
+    },
+  },
+  {
+    key: "rwa",
+    label: "vs Plan %",
+    headerClassName: "text-slate-600 text-right",
+    deskCell: {
+      className: (desk) => cn(
+        "text-[15px] text-right tabular-nums font-medium",
+        desk.rwa >= 100 ? "text-green-700" : desk.rwa >= 90 ? "text-amber-700" : "text-red-700"
+      ),
+      render: (desk) => fmtPct(desk.rwa),
+    },
+    locationCell: {
+      className: (location) => cn(
+        "text-sm text-right tabular-nums",
+        location.rwa >= 100 ? "text-green-600" : location.rwa >= 90 ? "text-amber-600" : "text-red-600"
+      ),
+      render: (location) => fmtPct(location.rwa),
+    },
+  },
+  {
+    key: "aop",
+    label: "AOP %",
+    headerClassName: "w-[280px] text-slate-600",
+    deskCell: {
+      render: (desk) => <AopBar value={desk.aop} />,
+    },
+    locationCell: {
+      render: (location) => <AopBar value={location.aop} className="!gap-2" />,
+    },
+  },
+]
 
 type PerformanceTableProps = {
   desks: Desk[]
   showTitle?: boolean
+  columns?: PerformanceTableColumn[]
 }
 
-export function PerformanceTable({ desks, showTitle = true }: PerformanceTableProps) {
+export function PerformanceTable({ desks, showTitle = true, columns = defaultPerformanceColumns }: PerformanceTableProps) {
   return (
     <div className="overflow-x-auto">
       {showTitle && (
@@ -28,81 +157,46 @@ export function PerformanceTable({ desks, showTitle = true }: PerformanceTablePr
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[260px] min-w-[200px] text-slate-600">HMS Desk / Trading Location</TableHead>
-            <TableHead className="text-slate-600 text-right">MTD</TableHead>
-            <TableHead className="text-slate-600 text-right">MTD Plan</TableHead>
-            <TableHead className="text-slate-600 text-right">YTD</TableHead>
-            <TableHead className="text-slate-600 text-right">YTD Plan</TableHead>
-            <TableHead className="text-slate-600 text-right">YTD Annualized</TableHead>
-            <TableHead className="text-slate-600 text-right">vs Plan %</TableHead>
-            <TableHead className="w-[280px] text-slate-600">AOP %</TableHead>
+            {columns.map((column) => (
+              <TableHead key={column.key} className={column.headerClassName}>
+                {column.label}
+              </TableHead>
+            ))}
           </TableRow>
         </TableHeader>
         <TableBody>
           {desks.map((d: Desk, di: number) => (
             <Fragment key={d.key}>
               <TableRow className={cn(di % 2 === 1 ? "bg-slate-50/40" : "")}>
-                <TableCell>
-                  <div className="flex items-start gap-3">
-                    <span aria-hidden className="mt-1 size-3 rounded-full" style={{ backgroundColor: d.color }} />
-                    <span className="text-[15px] font-medium text-slate-900">{d.name}</span>
-                  </div>
-                </TableCell>
-                <TableCell className={cn(
-                  "text-[15px] text-right tabular-nums",
-                  d.mtd >= 0 ? "text-green-700" : "text-red-700"
-                )}>{fmtCurrency(d.mtd)}</TableCell>
-                <TableCell className="text-[15px] text-slate-700 text-right tabular-nums">
-                  {fmtCurrency(d.mtdPlan)}
-                </TableCell>
-                <TableCell className={cn(
-                  "text-[15px] text-right tabular-nums font-medium",
-                  d.ytd >= 0 ? "text-green-700" : "text-red-700"
-                )}>{fmtCurrency(d.ytd)}</TableCell>
-                <TableCell className="text-[15px] text-slate-700 text-right tabular-nums">
-                  {fmtCurrency(d.ytdPlan)}
-                </TableCell>
-                <TableCell className="text-[15px] text-slate-700 text-right tabular-nums">
-                  {fmtCurrency(d.ytdAnnualized)}
-                </TableCell>
-                <TableCell className={cn(
-                  "text-[15px] text-right tabular-nums font-medium",
-                  d.rwa >= 100 ? "text-green-700" : d.rwa >= 90 ? "text-amber-700" : "text-red-700"
-                )}>{fmtPct(d.rwa)}</TableCell>
-                <TableCell>
-                  <AopBar value={d.aop} />
-                </TableCell>
+                {columns.map((column) => {
+                  const { deskCell } = column
+                  const deskCellClass = typeof deskCell.className === "function" ? deskCell.className(d) : deskCell.className
+                  return (
+                    <TableCell key={column.key} className={cn(deskCellClass)}>
+                      {deskCell.render(d)}
+                    </TableCell>
+                  )
+                })}
               </TableRow>
 
               {d.tradingLocations.map((loc: TradingLocationRow) => (
                 <TableRow key={loc.name} className={cn(di % 2 === 1 ? "bg-slate-50/40" : "")}>
-                  <TableCell>
-                    <div className="pl-9 text-sm text-slate-600">{loc.name}</div>
-                  </TableCell>
-                  <TableCell className={cn(
-                    "text-sm text-right tabular-nums",
-                    loc.mtd >= 0 ? "text-green-600" : "text-red-600"
-                  )}>{fmtCurrency(loc.mtd)}</TableCell>
-                  <TableCell className="text-sm text-slate-600 text-right tabular-nums">
-                    {fmtCurrency(loc.mtdPlan)}
-                  </TableCell>
-                  <TableCell className={cn(
-                    "text-sm text-right tabular-nums",
-                    loc.ytd >= 0 ? "text-green-600" : "text-red-600"
-                  )}>{fmtCurrency(loc.ytd)}</TableCell>
-                  <TableCell className="text-sm text-slate-600 text-right tabular-nums">
-                    {fmtCurrency(loc.ytdPlan)}
-                  </TableCell>
-                  <TableCell className="text-sm text-slate-600 text-right tabular-nums">
-                    {fmtCurrency(loc.ytdAnnualized)}
-                  </TableCell>
-                  <TableCell className={cn(
-                    "text-sm text-right tabular-nums",
-                    loc.rwa >= 100 ? "text-green-600" : loc.rwa >= 90 ? "text-amber-600" : "text-red-600"
-                  )}>{fmtPct(loc.rwa)}</TableCell>
-                  <TableCell>
-                    <AopBar value={loc.aop} className="!gap-2" />
-                  </TableCell>
+                  {columns.map((column) => {
+                    if (!column.locationCell) {
+                      return <TableCell key={column.key} />
+                    }
+
+                    const { locationCell } = column
+                    const locationCellClass = typeof locationCell.className === "function"
+                      ? locationCell.className(loc)
+                      : locationCell.className
+
+                    return (
+                      <TableCell key={column.key} className={cn(locationCellClass)}>
+                        {locationCell.render(loc)}
+                      </TableCell>
+                    )
+                  })}
                 </TableRow>
               ))}
             </Fragment>

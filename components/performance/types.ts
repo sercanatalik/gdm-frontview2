@@ -1,3 +1,5 @@
+import type { ReactNode } from "react"
+
 export type TradingLocationRow = {
   name: string
   mtd: number
@@ -21,6 +23,19 @@ export type Desk = {
   rwa: number
   aop: number
   tradingLocations: TradingLocationRow[]
+}
+
+export type PerformanceTableCell<Row> = {
+  className?: string | ((row: Row) => string | undefined)
+  render: (row: Row) => ReactNode
+}
+
+export type PerformanceTableColumn = {
+  key: string
+  label: string
+  headerClassName?: string
+  deskCell: PerformanceTableCell<Desk>
+  locationCell?: PerformanceTableCell<TradingLocationRow>
 }
 
 export type PnlData = {
