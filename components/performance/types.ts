@@ -1,18 +1,26 @@
-export type RegionRow = {
-  name: "EMEA" | "Americas" | "APAC"
-  rwa: number
+export type TradingLocationRow = {
+  name: string
+  mtd: number
+  mtdPlan: number
   ytd: number
+  ytdPlan: number
+  ytdAnnualized: number
+  rwa: number
   aop: number
 }
 
 export type Desk = {
-  key: "equity" | "cash" | "index" | "commodity"
+  key: string
   name: string
   color: string
-  rwa: number
+  mtd: number
+  mtdPlan: number
   ytd: number
+  ytdPlan: number
+  ytdAnnualized: number
+  rwa: number
   aop: number
-  regions: RegionRow[]
+  tradingLocations: TradingLocationRow[]
 }
 
 export type PnlData = {

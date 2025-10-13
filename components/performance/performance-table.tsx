@@ -9,8 +9,8 @@ import {
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 import { AopBar } from "./aop-bar"
-import { fmtPct } from "./utils"
-import type { Desk, RegionRow } from "./types"
+import { fmtPct, fmtCurrency } from "./utils"
+import type { Desk, TradingLocationRow } from "./types"
 
 type PerformanceTableProps = {
   desks: Desk[]
@@ -28,10 +28,14 @@ export function PerformanceTable({ desks, showTitle = true }: PerformanceTablePr
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[360px] min-w-[260px] text-slate-600">Desk / Region</TableHead>
-            <TableHead className="text-slate-600 text-right">YTD vs Plan %</TableHead>
-            <TableHead className="text-slate-600 text-right">YTD vs PY %</TableHead>
-            <TableHead className="w-[340px] text-slate-600">AOP Achievement %</TableHead>
+            <TableHead className="w-[260px] min-w-[200px] text-slate-600">HMS Desk / Trading Location</TableHead>
+            <TableHead className="text-slate-600 text-right">MTD</TableHead>
+            <TableHead className="text-slate-600 text-right">MTD Plan</TableHead>
+            <TableHead className="text-slate-600 text-right">YTD</TableHead>
+            <TableHead className="text-slate-600 text-right">YTD Plan</TableHead>
+            <TableHead className="text-slate-600 text-right">YTD Annualized</TableHead>
+            <TableHead className="text-slate-600 text-right">vs Plan %</TableHead>
+            <TableHead className="w-[280px] text-slate-600">AOP %</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -45,33 +49,59 @@ export function PerformanceTable({ desks, showTitle = true }: PerformanceTablePr
                   </div>
                 </TableCell>
                 <TableCell className={cn(
+                  "text-[15px] text-right tabular-nums",
+                  d.mtd >= 0 ? "text-green-700" : "text-red-700"
+                )}>{fmtCurrency(d.mtd)}</TableCell>
+                <TableCell className="text-[15px] text-slate-700 text-right tabular-nums">
+                  {fmtCurrency(d.mtdPlan)}
+                </TableCell>
+                <TableCell className={cn(
+                  "text-[15px] text-right tabular-nums font-medium",
+                  d.ytd >= 0 ? "text-green-700" : "text-red-700"
+                )}>{fmtCurrency(d.ytd)}</TableCell>
+                <TableCell className="text-[15px] text-slate-700 text-right tabular-nums">
+                  {fmtCurrency(d.ytdPlan)}
+                </TableCell>
+                <TableCell className="text-[15px] text-slate-700 text-right tabular-nums">
+                  {fmtCurrency(d.ytdAnnualized)}
+                </TableCell>
+                <TableCell className={cn(
                   "text-[15px] text-right tabular-nums font-medium",
                   d.rwa >= 100 ? "text-green-700" : d.rwa >= 90 ? "text-amber-700" : "text-red-700"
                 )}>{fmtPct(d.rwa)}</TableCell>
-                <TableCell className={cn(
-                  "text-[15px] text-right tabular-nums font-medium",
-                  d.ytd >= 100 ? "text-green-700" : d.ytd >= 90 ? "text-amber-700" : "text-red-700"
-                )}>{fmtPct(d.ytd)}</TableCell>
                 <TableCell>
                   <AopBar value={d.aop} />
                 </TableCell>
               </TableRow>
 
-              {d.regions.map((r: RegionRow) => (
-                <TableRow key={r.name} className={cn(di % 2 === 1 ? "bg-slate-50/40" : "")}>
+              {d.tradingLocations.map((loc: TradingLocationRow) => (
+                <TableRow key={loc.name} className={cn(di % 2 === 1 ? "bg-slate-50/40" : "")}>
                   <TableCell>
-                    <div className="pl-9 text-sm text-slate-600">{r.name}</div>
+                    <div className="pl-9 text-sm text-slate-600">{loc.name}</div>
                   </TableCell>
                   <TableCell className={cn(
                     "text-sm text-right tabular-nums",
-                    r.rwa >= 100 ? "text-green-600" : r.rwa >= 90 ? "text-amber-600" : "text-red-600"
-                  )}>{fmtPct(r.rwa)}</TableCell>
+                    loc.mtd >= 0 ? "text-green-600" : "text-red-600"
+                  )}>{fmtCurrency(loc.mtd)}</TableCell>
+                  <TableCell className="text-sm text-slate-600 text-right tabular-nums">
+                    {fmtCurrency(loc.mtdPlan)}
+                  </TableCell>
                   <TableCell className={cn(
                     "text-sm text-right tabular-nums",
-                    r.ytd >= 100 ? "text-green-600" : r.ytd >= 90 ? "text-amber-600" : "text-red-600"
-                  )}>{fmtPct(r.ytd)}</TableCell>
+                    loc.ytd >= 0 ? "text-green-600" : "text-red-600"
+                  )}>{fmtCurrency(loc.ytd)}</TableCell>
+                  <TableCell className="text-sm text-slate-600 text-right tabular-nums">
+                    {fmtCurrency(loc.ytdPlan)}
+                  </TableCell>
+                  <TableCell className="text-sm text-slate-600 text-right tabular-nums">
+                    {fmtCurrency(loc.ytdAnnualized)}
+                  </TableCell>
+                  <TableCell className={cn(
+                    "text-sm text-right tabular-nums",
+                    loc.rwa >= 100 ? "text-green-600" : loc.rwa >= 90 ? "text-amber-600" : "text-red-600"
+                  )}>{fmtPct(loc.rwa)}</TableCell>
                   <TableCell>
-                    <AopBar value={r.aop} className="!gap-2" />
+                    <AopBar value={loc.aop} className="!gap-2" />
                   </TableCell>
                 </TableRow>
               ))}

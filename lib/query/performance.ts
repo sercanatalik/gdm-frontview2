@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import type { PerformanceData, Desk, PnlData, RegionRow } from "@/components/performance/types"
+import type { PerformanceData, Desk, PnlData, TradingLocationRow } from "@/components/performance/types"
 import type { Filter } from "@/lib/store/filters"
 
 interface PnlEodRow {
@@ -61,23 +61,28 @@ const REGION_COLORS: Record<string, string> = {
 /**
  * Transforms raw PnL EOD data into performance metrics for visualization
  *
- * Data Model (pnl_eod):
+ * Data Fields Used:
+ * - mtd: Month-to-date P&L
+ * - mtdPlan: Month-to-date plan target
  * - ytd: Year-to-date P&L
  * - ytdPlan: Year-to-date plan target
+ * - ytdAnnualized: Year-to-date annualized projection
  * - fyPlan: Full year plan target
  * - pyActual: Prior year actual (for YoY comparison)
- * - mtd: Month-to-date P&L
- * - daily: Daily P&L
  *
- * Calculated Metrics:
- * - RWA %: (YTD / YTD Plan) * 100 - Performance vs current plan
- * - YTD vs PY %: (YTD / Prior Year Actual) * 100 - Year-over-year growth
- * - AOP Achievement %: (YTD / FY Plan) * 100 - Progress toward annual target
+ * Display Columns:
+ * - MTD: Actual month-to-date performance (in millions)
+ * - MTD Plan: Month-to-date target (in millions)
+ * - YTD: Actual year-to-date performance (in millions)
+ * - YTD Plan: Year-to-date target (in millions)
+ * - YTD Annualized: Projected annual performance based on YTD (in millions)
+ * - vs Plan %: (YTD / YTD Plan) * 100 - Performance vs current plan
+ * - AOP %: (YTD / FY Plan) * 100 - Progress toward annual target
  *
  * Aggregation Strategy:
- * - Groups by desk (hmsDesk/desk/deskV1)
- * - Sub-groups by region (region/bsRegion)
- * - Uses SUM aggregation (not average) for all monetary values
+ * - Groups by hmsDesk (primary desk designation)
+ * - Sub-groups by tradingLocation (geographic trading location)
+ * - Uses SUM aggregation for all monetary values
  * - Filters out "Other" and "Unknown" categories
  * - Shows top 10 desks by AOP achievement
  * - Shows top 8 desks in P&L charts
@@ -87,75 +92,88 @@ function transformPnlDataToPerformance(data: PnlEodRow[]): PerformanceData {
     return { desks: [], pnlByDesk: [], pnlByRegion: [] }
   }
 
-  // Group data by desk and region - use SUM for aggregation, not average
+  // Group data by hmsDesk and tradingLocation - use SUM for aggregation
   const deskMap = new Map<string, {
+    mtdSum: number
+    mtdPlanSum: number
     ytdSum: number
     ytdPlanSum: number
+    ytdAnnualizedSum: number
     fyPlanSum: number
-    mtdSum: number
-    dailySum: number
     pyActualSum: number
-    regions: Map<string, {
+    tradingLocations: Map<string, {
+      mtdSum: number
+      mtdPlanSum: number
       ytdSum: number
       ytdPlanSum: number
+      ytdAnnualizedSum: number
       fyPlanSum: number
-      mtdSum: number
     }>
   }>()
 
   const regionPnlMap = new Map<string, number>()
   const deskPnlMap = new Map<string, number>()
 
-  // Process each row - aggregate by desk
+  // Process each row - aggregate by hmsDesk and tradingLocation
   data.forEach(row => {
-    const desk = row.hmsDesk || row.desk || row.deskV1 || "Other"
-    const region = row.region || row.bsRegion || "Other"
+    const desk = row.hmsDesk || "Other"
+    const tradingLocation = row.tradingLocation || "Unknown"
 
+    const mtd = row.mtd || 0
+    const mtdPlan = row.mtdPlan || 0
     const ytd = row.ytd || 0
     const ytdPlan = row.ytdPlan || 0
+    const ytdAnnualized = row.ytdAnnualized || 0
     const fyPlan = row.fyPlan || 0
-    const mtd = row.mtd || 0
-    const daily = row.daily || 0
     const pyActual = row.pyActual || 0
 
-    // Aggregate by desk
+    // Aggregate by hmsDesk
     if (!deskMap.has(desk)) {
       deskMap.set(desk, {
+        mtdSum: 0,
+        mtdPlanSum: 0,
         ytdSum: 0,
         ytdPlanSum: 0,
+        ytdAnnualizedSum: 0,
         fyPlanSum: 0,
-        mtdSum: 0,
-        dailySum: 0,
         pyActualSum: 0,
-        regions: new Map()
+        tradingLocations: new Map()
       })
     }
 
     const deskData = deskMap.get(desk)!
+    deskData.mtdSum += mtd
+    deskData.mtdPlanSum += mtdPlan
     deskData.ytdSum += ytd
     deskData.ytdPlanSum += ytdPlan
+    deskData.ytdAnnualizedSum += ytdAnnualized
     deskData.fyPlanSum += fyPlan
-    deskData.mtdSum += mtd
-    deskData.dailySum += daily
     deskData.pyActualSum += pyActual
 
-    // Aggregate by region within desk
-    if (!deskData.regions.has(region)) {
-      deskData.regions.set(region, {
+    // Aggregate by tradingLocation within desk
+    if (!deskData.tradingLocations.has(tradingLocation)) {
+      deskData.tradingLocations.set(tradingLocation, {
+        mtdSum: 0,
+        mtdPlanSum: 0,
         ytdSum: 0,
         ytdPlanSum: 0,
-        fyPlanSum: 0,
-        mtdSum: 0
+        ytdAnnualizedSum: 0,
+        fyPlanSum: 0
       })
     }
-    const regionData = deskData.regions.get(region)!
-    regionData.ytdSum += ytd
-    regionData.ytdPlanSum += ytdPlan
-    regionData.fyPlanSum += fyPlan
-    regionData.mtdSum += mtd
+    const locationData = deskData.tradingLocations.get(tradingLocation)!
+    locationData.mtdSum += mtd
+    locationData.mtdPlanSum += mtdPlan
+    locationData.ytdSum += ytd
+    locationData.ytdPlanSum += ytdPlan
+    locationData.ytdAnnualizedSum += ytdAnnualized
+    locationData.fyPlanSum += fyPlan
 
     // Aggregate for P&L charts
     deskPnlMap.set(desk, (deskPnlMap.get(desk) || 0) + ytd)
+
+    // For region chart, use region or bsRegion
+    const region = row.region || row.bsRegion || "Other"
     regionPnlMap.set(region, (regionPnlMap.get(region) || 0) + ytd)
   })
 
@@ -169,41 +187,43 @@ function transformPnlDataToPerformance(data: PnlEodRow[]): PerformanceData {
   // Transform to Desk format with proper calculations
   const desks: Desk[] = Array.from(deskMap.entries())
     .map(([deskName, data], index) => {
-      const { ytdSum, ytdPlanSum, fyPlanSum, pyActualSum } = data
+      const { mtdSum, mtdPlanSum, ytdSum, ytdPlanSum, ytdAnnualizedSum, fyPlanSum, pyActualSum } = data
 
       // Calculate metrics as percentages
       // RWA = (YTD / YTD Plan) * 100
       const rwa = ytdPlanSum !== 0 ? (ytdSum / ytdPlanSum) * 100 : 0
 
-      // YTD % vs Prior Year
+      // YTD % vs Prior Year (kept for backward compatibility in column)
       const ytdPct = pyActualSum !== 0 ? (ytdSum / pyActualSum) * 100 : 0
 
       // AOP = (YTD / FY Plan) * 100 - represents progress toward annual target
       const aop = fyPlanSum !== 0 ? (ytdSum / fyPlanSum) * 100 : 0
 
-      // Process regions - filter out "Other" and low-value regions
-      const regions: RegionRow[] = Array.from(data.regions.entries())
-        .filter(([regionName]) => regionName !== "Other" && regionName !== "Unknown")
-        .map(([regionName, regionData]) => {
-          const { ytdSum: rYtd, ytdPlanSum: rYtdPlan, fyPlanSum: rFyPlan } = regionData
+      // Process trading locations - filter out "Unknown"
+      const tradingLocations: TradingLocationRow[] = Array.from(data.tradingLocations.entries())
+        .filter(([locationName]) => locationName !== "Unknown")
+        .map(([locationName, locationData]) => {
+          const {
+            mtdSum: lMtd,
+            mtdPlanSum: lMtdPlan,
+            ytdSum: lYtd,
+            ytdPlanSum: lYtdPlan,
+            ytdAnnualizedSum: lYtdAnnualized,
+            fyPlanSum: lFyPlan
+          } = locationData
 
           return {
-            name: regionName as "EMEA" | "Americas" | "APAC",
-            rwa: rYtdPlan !== 0 ? (rYtd / rYtdPlan) * 100 : 0,
-            ytd: rYtd,
-            aop: rFyPlan !== 0 ? (rYtd / rFyPlan) * 100 : 0
+            name: locationName,
+            mtd: lMtd,
+            mtdPlan: lMtdPlan,
+            ytd: lYtd,
+            ytdPlan: lYtdPlan,
+            ytdAnnualized: lYtdAnnualized,
+            rwa: lYtdPlan !== 0 ? (lYtd / lYtdPlan) * 100 : 0,
+            aop: lFyPlan !== 0 ? (lYtd / lFyPlan) * 100 : 0
           }
         })
-        .sort((a, b) => {
-          // Sort by region order, then by YTD
-          const order = ["EMEA", "Americas", "APAC"]
-          const aOrder = order.indexOf(a.name)
-          const bOrder = order.indexOf(b.name)
-          if (aOrder !== -1 && bOrder !== -1) {
-            return aOrder - bOrder
-          }
-          return b.ytd - a.ytd
-        })
+        .sort((a, b) => b.ytd - a.ytd) // Sort by YTD descending
 
       // Create a key from desk name
       const key = deskName
@@ -212,13 +232,17 @@ function transformPnlDataToPerformance(data: PnlEodRow[]): PerformanceData {
         .substring(0, 20)
 
       return {
-        key: key as "equity" | "cash" | "index" | "commodity",
+        key,
         name: deskName,
         color: DESK_COLORS[deskName] || colorPalette[index % colorPalette.length],
+        mtd: mtdSum,
+        mtdPlan: mtdPlanSum,
+        ytd: ytdSum,
+        ytdPlan: ytdPlanSum,
+        ytdAnnualized: ytdAnnualizedSum,
         rwa,
-        ytd: ytdPct,
         aop,
-        regions
+        tradingLocations
       }
     })
     .filter(desk => desk.name !== "Other" && desk.name !== "Unknown") // Filter out "Other" desks

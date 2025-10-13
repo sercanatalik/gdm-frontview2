@@ -44,8 +44,9 @@ export const pnlFilterConfig = {
   // Filter types mapping to database columns
   filterTypes: {
     "hmsDesk": "hmsDesk",
-    "hmsSL1": "hmsSL1", 
-    "hmsPortfolio": "hmsPortfolio",
+    "subRegion": "subRegion", 
+    "tradingLocation": "tradingLocation",
+    "hmsSL1": "hmsSL1",
 
    
   },
@@ -72,7 +73,7 @@ export const pnlFilterConfig = {
     // Filter type icons
     "hmsDesk": <Building className="size-4 text-blue-500" />,
     "hmsSL1": <BarChart3 className="size-4 text-purple-500" />,
-    "hmsPortfolio": <PieChart className="size-4 text-green-500" />,
+    "tradingLocation": <PieChart className="size-4 text-green-500" />,
 
 
   },
