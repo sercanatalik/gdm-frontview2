@@ -1,4 +1,4 @@
-import { Fragment } from "react"
+import type { JSX } from "react"
 import {
   Table,
   TableBody,
@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils"
 import { AopBar } from "./aop-bar"
 import { fmtPct, fmtCurrency } from "./utils"
 import type { PerformanceNode, PerformanceTableColumn } from "./types"
+import { filtersStore, filtersActions } from "@/lib/store/filters"
+import { nanoid } from "nanoid"
 
 const baseMetricClass = (row: PerformanceNode, levelClasses: { parent: string; child: string }) =>
   row.level === 0 ? levelClasses.parent : levelClasses.child
@@ -168,17 +170,23 @@ type PerformanceTableProps = {
   showTitle?: boolean
 }
 
-function renderTableRows(
-  rows: PerformanceNode[],
-  columns: PerformanceTableColumn<PerformanceNode>[],
-  striped: boolean
-) {
-  return rows.map((row) => (
-    <Fragment key={row.key}>
+function buildRowElements(
+  row: PerformanceNode,
+  columns: PerformanceTableColumn<PerformanceNode>[] ,
+  striped: boolean,
+  onRowClick?: (row: PerformanceNode) => void
+): JSX.Element[] {
+  const rowHasFilters = !row.isSummary && (!!row.filters?.length || !!row.parentFilters?.length)
+
+  const elements: JSX.Element[] = [
+    (
       <TableRow
+        key={row.key}
+        onClick={rowHasFilters ? () => onRowClick?.(row) : undefined}
         className={cn(
           striped && !row.isSummary ? "bg-slate-50/40" : "",
-          row.isSummary ? "border-t-4 border-double border-t-slate-300 bg-slate-100" : ""
+          row.isSummary ? "border-t-4 border-double border-t-slate-300 bg-slate-100" : "",
+          rowHasFilters ? "cursor-pointer" : ""
         )}
       >
         {columns.map((column) => {
@@ -193,14 +201,54 @@ function renderTableRows(
           )
         })}
       </TableRow>
-      {row.children && row.children.length > 0
-        ? renderTableRows(row.children, columns, striped)
-        : null}
-    </Fragment>
-  ))
+    )
+  ]
+
+  if (row.children && row.children.length > 0) {
+    row.children.forEach((child) => {
+      elements.push(...buildRowElements(child, columns, striped, onRowClick))
+    })
+  }
+
+  return elements
 }
 
 export function PerformanceTable({ rows, columns, showTitle = true }: PerformanceTableProps) {
+  const handleRowClick = (row: PerformanceNode) => {
+    const filtersToApply = row.level === 0
+      ? row.filters ?? []
+      : row.parentFilters ?? row.filters ?? []
+
+    if (row.isSummary || filtersToApply.length === 0) {
+      return
+    }
+
+    const existingFilters = filtersStore.state.filters
+    const appliedKeys = new Set(
+      existingFilters.flatMap((filter) => filter.value.map((value) => `${filter.type}:${value}`))
+    )
+
+    filtersToApply.forEach(({ type, value }) => {
+      const key = `${type}:${value}`
+
+      if (appliedKeys.has(key)) {
+        return
+      }
+
+      filtersActions.addFilter({
+        id: nanoid(),
+        type,
+        operator: "is",
+        value: [value],
+        field: type,
+      })
+
+      appliedKeys.add(key)
+    })
+  }
+
+  const tableRows = rows.flatMap((row, index) => buildRowElements(row, columns, index % 2 === 1, handleRowClick))
+
   return (
     <div className="overflow-x-auto">
       {showTitle && (
@@ -219,7 +267,7 @@ export function PerformanceTable({ rows, columns, showTitle = true }: Performanc
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((row, index) => renderTableRows([row], columns, index % 2 === 1))}
+          {tableRows}
         </TableBody>
       </Table>
     </div>

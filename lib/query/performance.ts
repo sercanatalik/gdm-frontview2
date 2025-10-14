@@ -298,8 +298,8 @@ function transformPnlDataToPerformance(data: PnlEodRow[]): PerformanceData {
   const deskColorCache = new Map<string, string>()
   const deskNodes: PerformanceNode[] = Array.from(deskBuckets.entries())
     .filter(([name]) => name !== "Other" && name !== "Unknown")
-    .map(([name, bucket]) =>
-      bucketToNode(
+    .map(([name, bucket]) => {
+      const node = bucketToNode(
         slugify(name),
         bucket,
         0,
@@ -312,7 +312,21 @@ function transformPnlDataToPerformance(data: PnlEodRow[]): PerformanceData {
           childSort: (a, b) => b.ytd - a.ytd,
         }
       )
-    )
+
+      node.filters = [{ type: "hmsDesk", value: name }]
+
+      if (node.children) {
+        node.children = node.children.map((child) => ({
+          ...child,
+          parentFilters: [
+            { type: "hmsDesk", value: name },
+            { type: "tradingLocation", value: child.name },
+          ],
+        }))
+      }
+
+      return node
+    })
     .sort((a, b) => Math.abs(b.aop) - Math.abs(a.aop))
     .slice(0, 10)
 
@@ -331,8 +345,8 @@ function transformPnlDataToPerformance(data: PnlEodRow[]): PerformanceData {
   const regionColorCache = new Map<string, string>()
   const regionNodes: PerformanceNode[] = Array.from(regionBuckets.entries())
     .filter(([name]) => name !== "Other" && name !== "Unknown")
-    .map(([name, bucket]) =>
-      bucketToNode(
+    .map(([name, bucket]) => {
+      const node = bucketToNode(
         slugify(name),
         bucket,
         0,
@@ -347,7 +361,21 @@ function transformPnlDataToPerformance(data: PnlEodRow[]): PerformanceData {
           childColorCache: deskColorCache,
         }
       )
-    )
+
+      node.filters = [{ type: "region", value: name }]
+
+      if (node.children) {
+        node.children = node.children.map((child) => ({
+          ...child,
+          parentFilters: [
+            { type: "region", value: name },
+            { type: "hmsDesk", value: child.name },
+          ],
+        }))
+      }
+
+      return node
+    })
     .sort((a, b) => Math.abs(b.ytd) - Math.abs(a.ytd))
 
   const regionChart: PnlData[] = Array.from(regionBuckets.entries())
@@ -364,8 +392,8 @@ function transformPnlDataToPerformance(data: PnlEodRow[]): PerformanceData {
   const businessLineColorCache = new Map<string, string>()
   const businessLineNodes: PerformanceNode[] = Array.from(businessLineBuckets.entries())
     .filter(([name]) => name !== "Other" && name !== "Unknown")
-    .map(([name, bucket]) =>
-      bucketToNode(
+    .map(([name, bucket]) => {
+      const node = bucketToNode(
         slugify(name),
         bucket,
         0,
@@ -380,7 +408,21 @@ function transformPnlDataToPerformance(data: PnlEodRow[]): PerformanceData {
           childColorCache: deskColorCache,
         }
       )
-    )
+
+      node.filters = [{ type: "businessLine", value: name }]
+
+      if (node.children) {
+        node.children = node.children.map((child) => ({
+          ...child,
+          parentFilters: [
+            { type: "businessLine", value: name },
+            { type: "hmsDesk", value: child.name },
+          ],
+        }))
+      }
+
+      return node
+    })
     .sort((a, b) => Math.abs(b.ytd) - Math.abs(a.ytd))
 
   const businessLineChart: PnlData[] = Array.from(businessLineBuckets.entries())

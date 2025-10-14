@@ -4,6 +4,8 @@ export type PerformanceNode = {
   key: string
   name: string
   color?: string
+  filters?: { type: string; value: string }[]
+  parentFilters?: { type: string; value: string }[]
   mtd: number
   mtdPlan: number
   ytd: number
