@@ -43,10 +43,14 @@ export const FilterOperators = {
 export const pnlFilterConfig = {
   // Filter types mapping to database columns
   filterTypes: {
+
     "hmsDesk": "hmsDesk",
     "subRegion": "subRegion", 
     "tradingLocation": "tradingLocation",
     "hmsSL1": "hmsSL1",
+    "region": "region",
+    "portfolioOwnerName": "portfolioOwnerName",
+    "businessLine": "businessLine",
 
    
   },
@@ -74,6 +78,11 @@ export const pnlFilterConfig = {
     "hmsDesk": <Building className="size-4 text-blue-500" />,
     "hmsSL1": <BarChart3 className="size-4 text-purple-500" />,
     "tradingLocation": <PieChart className="size-4 text-green-500" />,
+    "region": <MapPin className="size-4 text-orange-500" />,
+    "subRegion": <MapPin className="size-4 text-orange-500" />,
+    "portfolioOwnerName": <User className="size-4 text-yellow-500" />,
+    "businessLine": <Target className="size-4 text-red-500" />,
+
 
 
   },
@@ -90,10 +99,30 @@ export const pnlFilterConfig = {
       type: "select",
       field: "hmsSL1",
     },
-    "hmsPortfolio": {
+    "region": {
       operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
       type: "select",
-      field: "hmsPortfolio",
+      field: "region",
+    },
+    "subRegion": {
+      operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
+      type: "select",
+      field: "subRegion",
+    },
+    "tradingLocation": {
+      operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
+      type: "select",
+      field: "tradingLocation",
+    },
+    "portfolioOwnerName": {
+      operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
+      type: "select",
+      field: "portfolioOwnerName",
+    },
+    "businessLine": {
+      operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
+      type: "select",
+      field: "businessLine",
     },
   },
 

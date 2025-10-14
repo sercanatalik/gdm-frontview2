@@ -7,7 +7,7 @@ import { AsOfDateSelect } from "@/components/filters/as-of-date-select";
 import { RiskFilter } from "@/components/filters/risk-filter";
 import { pnlFilterConfig } from "@/components/filters/pnl-filter.config";
 import { useStore } from "@tanstack/react-store";
-import { filtersStore } from "@/lib/store/filters";
+import { filtersStore, filtersActions } from "@/lib/store/filters";
 import { PerformanceCard } from "@/components/performance";
 
 const LAZY_LOAD_DELAY = 1500;
@@ -15,6 +15,29 @@ const LAZY_LOAD_DELAY = 1500;
 export default function PnLPage() {
   const filters = useStore(filtersStore, (state) => state.filters);
   const asOfDate = useStore(filtersStore, (state) => state.asOfDate);
+  const hasInitializedDefaultFilter = useRef(false);
+
+  useEffect(() => {
+    if (hasInitializedDefaultFilter.current) {
+      return;
+    }
+
+    const hasBusinessLineFilter = filters.some(
+      (filter) => filter.field === "businessLine" || filter.type === "businessLine"
+    );
+
+    if (!hasBusinessLineFilter) {
+      filtersActions.addFilter({
+        id: "default-businessLine",
+        type: "businessLine",
+        operator: "is",
+        value: ["Global Markets"],
+        field: "businessLine",
+      });
+    }
+
+    hasInitializedDefaultFilter.current = true;
+  }, [filters]);
 
   const [showLazyContent, setShowLazyContent] = useState(false);
   const [isLoadingLazy, setIsLoadingLazy] = useState(false);

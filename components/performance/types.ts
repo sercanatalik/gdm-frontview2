@@ -1,20 +1,9 @@
 import type { ReactNode } from "react"
 
-export type TradingLocationRow = {
-  name: string
-  mtd: number
-  mtdPlan: number
-  ytd: number
-  ytdPlan: number
-  ytdAnnualized: number
-  rwa: number
-  aop: number
-}
-
-export type Desk = {
+export type PerformanceNode = {
   key: string
   name: string
-  color: string
+  color?: string
   mtd: number
   mtdPlan: number
   ytd: number
@@ -22,7 +11,9 @@ export type Desk = {
   ytdAnnualized: number
   rwa: number
   aop: number
-  tradingLocations: TradingLocationRow[]
+  level: number
+  children?: PerformanceNode[]
+  isSummary?: boolean
 }
 
 export type PerformanceTableCell<Row> = {
@@ -30,12 +21,11 @@ export type PerformanceTableCell<Row> = {
   render: (row: Row) => ReactNode
 }
 
-export type PerformanceTableColumn = {
+export type PerformanceTableColumn<Row = PerformanceNode> = {
   key: string
   label: string
   headerClassName?: string
-  deskCell: PerformanceTableCell<Desk>
-  locationCell?: PerformanceTableCell<TradingLocationRow>
+  cell: PerformanceTableCell<Row>
 }
 
 export type PnlData = {
@@ -45,8 +35,15 @@ export type PnlData = {
   color: string
 }
 
+export type PerformanceGroupingKey = "desk" | "region" | "businessLine"
+
+export type PerformanceGroupData = {
+  label: string
+  rows: PerformanceNode[]
+  chartTitle: string
+  chartData: PnlData[]
+}
+
 export type PerformanceData = {
-  desks: Desk[]
-  pnlByDesk: PnlData[]
-  pnlByRegion: PnlData[]
+  groupings: Record<PerformanceGroupingKey, PerformanceGroupData>
 }

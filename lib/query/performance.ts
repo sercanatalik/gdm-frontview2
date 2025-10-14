@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import type { PerformanceData, Desk, PnlData, TradingLocationRow } from "@/components/performance/types"
+import type { PerformanceData, PerformanceNode, PnlData, PerformanceGroupingKey } from "@/components/performance/types"
 import type { Filter } from "@/lib/store/filters"
 
 interface PnlEodRow {
@@ -58,6 +58,130 @@ const REGION_COLORS: Record<string, string> = {
   "APAC": "#94a3b8",
 }
 
+const DEFAULT_COLOR_PALETTE = [
+  "#2f3945", "#4b5563", "#5b6471", "#9aa3ae",
+  "#64748b", "#475569", "#334155", "#1e293b",
+  "#0f172a", "#374151", "#6b7280", "#94a3b8"
+]
+
+const DEFAULT_GROUP_LABELS: Record<PerformanceGroupingKey, string> = {
+  desk: "Desk",
+  region: "Region",
+  businessLine: "Business Line",
+}
+
+const DEFAULT_CHART_TITLES: Record<PerformanceGroupingKey, string> = {
+  desk: "P&L by Desk",
+  region: "P&L by Region",
+  businessLine: "P&L by Business Line",
+}
+
+type AggregateBucket = {
+  name: string
+  color?: string
+  mtd: number
+  mtdPlan: number
+  ytd: number
+  ytdPlan: number
+  ytdAnnualized: number
+  fyPlan: number
+  children: Map<string, AggregateBucket>
+}
+
+const createBucket = (name: string, color?: string): AggregateBucket => ({
+  name,
+  color,
+  mtd: 0,
+  mtdPlan: 0,
+  ytd: 0,
+  ytdPlan: 0,
+  ytdAnnualized: 0,
+  fyPlan: 0,
+  children: new Map(),
+})
+
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "")
+    .substring(0, 32)
+
+const resolveColor = (
+  name: string,
+  palette: string[],
+  paletteIndexRef: { value: number },
+  mapping: Record<string, string>,
+  cache: Map<string, string>
+) => {
+  if (cache.has(name)) {
+    return cache.get(name)!
+  }
+  const color = mapping[name] || palette[paletteIndexRef.value++ % palette.length]
+  cache.set(name, color)
+  return color
+}
+
+const bucketToNode = (
+  keyPrefix: string,
+  bucket: AggregateBucket,
+  level: number,
+  palette: string[],
+  paletteIndexRef: { value: number },
+  colorMap: Record<string, string>,
+  colorCache: Map<string, string>,
+  options?: {
+    childFilter?: (name: string) => boolean
+    childSort?: (a: PerformanceNode, b: PerformanceNode) => number
+    childLevel?: number
+    childPalette?: string[]
+    childColorMap?: Record<string, string>
+    childColorCache?: Map<string, string>
+  }
+): PerformanceNode => {
+  const color = bucket.color ?? resolveColor(bucket.name, palette, paletteIndexRef, colorMap, colorCache)
+  const node: PerformanceNode = {
+    key: keyPrefix,
+    name: bucket.name,
+    color,
+    level,
+    mtd: bucket.mtd,
+    mtdPlan: bucket.mtdPlan,
+    ytd: bucket.ytd,
+    ytdPlan: bucket.ytdPlan,
+    ytdAnnualized: bucket.ytdAnnualized,
+    rwa: bucket.ytdPlan !== 0 ? (bucket.ytd / bucket.ytdPlan) * 100 : 0,
+    aop: bucket.fyPlan !== 0 ? (bucket.ytd / bucket.fyPlan) * 100 : 0,
+    children: undefined,
+  }
+
+  if (bucket.children.size > 0) {
+    const childPalette = options?.childPalette ?? palette
+    const childColorMap = options?.childColorMap ?? colorMap
+    const childColorCache = options?.childColorCache ?? colorCache
+    const childLevel = options?.childLevel ?? level + 1
+    const childPaletteIndex = { value: paletteIndexRef.value }
+
+    const children = Array.from(bucket.children.entries())
+      .filter(([name]) => (options?.childFilter ? options.childFilter(name) : true))
+      .map(([name, childBucket]) =>
+        bucketToNode(
+          `${keyPrefix}_${slugify(name)}`,
+          childBucket,
+          childLevel,
+          childPalette,
+          childPaletteIndex,
+          childColorMap,
+          childColorCache
+        )
+      )
+    node.children = options?.childSort ? children.sort(options.childSort) : children
+  }
+
+  return node
+}
+
 /**
  * Transforms raw PnL EOD data into performance metrics for visualization
  *
@@ -89,35 +213,24 @@ const REGION_COLORS: Record<string, string> = {
  */
 function transformPnlDataToPerformance(data: PnlEodRow[]): PerformanceData {
   if (!data || data.length === 0) {
-    return { desks: [], pnlByDesk: [], pnlByRegion: [] }
+    return {
+      groupings: {
+        desk: { label: DEFAULT_GROUP_LABELS.desk, rows: [], chartTitle: DEFAULT_CHART_TITLES.desk, chartData: [] },
+        region: { label: DEFAULT_GROUP_LABELS.region, rows: [], chartTitle: DEFAULT_CHART_TITLES.region, chartData: [] },
+        businessLine: { label: DEFAULT_GROUP_LABELS.businessLine, rows: [], chartTitle: DEFAULT_CHART_TITLES.businessLine, chartData: [] },
+      },
+    }
   }
 
-  // Group data by hmsDesk and tradingLocation - use SUM for aggregation
-  const deskMap = new Map<string, {
-    mtdSum: number
-    mtdPlanSum: number
-    ytdSum: number
-    ytdPlanSum: number
-    ytdAnnualizedSum: number
-    fyPlanSum: number
-    pyActualSum: number
-    tradingLocations: Map<string, {
-      mtdSum: number
-      mtdPlanSum: number
-      ytdSum: number
-      ytdPlanSum: number
-      ytdAnnualizedSum: number
-      fyPlanSum: number
-    }>
-  }>()
+  const deskBuckets = new Map<string, AggregateBucket>()
+  const regionBuckets = new Map<string, AggregateBucket>()
+  const businessLineBuckets = new Map<string, AggregateBucket>()
 
-  const regionPnlMap = new Map<string, number>()
-  const deskPnlMap = new Map<string, number>()
-
-  // Process each row - aggregate by hmsDesk and tradingLocation
-  data.forEach(row => {
-    const desk = row.hmsDesk || "Other"
-    const tradingLocation = row.tradingLocation || "Unknown"
+  data.forEach((row) => {
+    const deskName = row.hmsDesk?.trim() || "Other"
+    const regionName = row.region?.trim() || row.bsRegion?.trim() || "Other"
+    const tradingLocation = row.tradingLocation?.trim() || "Unknown"
+    const businessLineName = row.businessLine?.trim() || "Other"
 
     const mtd = row.mtd || 0
     const mtdPlan = row.mtdPlan || 0
@@ -125,159 +238,182 @@ function transformPnlDataToPerformance(data: PnlEodRow[]): PerformanceData {
     const ytdPlan = row.ytdPlan || 0
     const ytdAnnualized = row.ytdAnnualized || 0
     const fyPlan = row.fyPlan || 0
-    const pyActual = row.pyActual || 0
 
-    // Aggregate by hmsDesk
-    if (!deskMap.has(desk)) {
-      deskMap.set(desk, {
-        mtdSum: 0,
-        mtdPlanSum: 0,
-        ytdSum: 0,
-        ytdPlanSum: 0,
-        ytdAnnualizedSum: 0,
-        fyPlanSum: 0,
-        pyActualSum: 0,
-        tradingLocations: new Map()
-      })
-    }
+    const deskBucket = deskBuckets.get(deskName) ?? createBucket(deskName, DESK_COLORS[deskName])
+    deskBucket.mtd += mtd
+    deskBucket.mtdPlan += mtdPlan
+    deskBucket.ytd += ytd
+    deskBucket.ytdPlan += ytdPlan
+    deskBucket.ytdAnnualized += ytdAnnualized
+    deskBucket.fyPlan += fyPlan
 
-    const deskData = deskMap.get(desk)!
-    deskData.mtdSum += mtd
-    deskData.mtdPlanSum += mtdPlan
-    deskData.ytdSum += ytd
-    deskData.ytdPlanSum += ytdPlan
-    deskData.ytdAnnualizedSum += ytdAnnualized
-    deskData.fyPlanSum += fyPlan
-    deskData.pyActualSum += pyActual
+    const deskChildBucket = deskBucket.children.get(tradingLocation) ?? createBucket(tradingLocation)
+    deskChildBucket.mtd += mtd
+    deskChildBucket.mtdPlan += mtdPlan
+    deskChildBucket.ytd += ytd
+    deskChildBucket.ytdPlan += ytdPlan
+    deskChildBucket.ytdAnnualized += ytdAnnualized
+    deskChildBucket.fyPlan += fyPlan
+    deskBucket.children.set(tradingLocation, deskChildBucket)
+    deskBuckets.set(deskName, deskBucket)
 
-    // Aggregate by tradingLocation within desk
-    if (!deskData.tradingLocations.has(tradingLocation)) {
-      deskData.tradingLocations.set(tradingLocation, {
-        mtdSum: 0,
-        mtdPlanSum: 0,
-        ytdSum: 0,
-        ytdPlanSum: 0,
-        ytdAnnualizedSum: 0,
-        fyPlanSum: 0
-      })
-    }
-    const locationData = deskData.tradingLocations.get(tradingLocation)!
-    locationData.mtdSum += mtd
-    locationData.mtdPlanSum += mtdPlan
-    locationData.ytdSum += ytd
-    locationData.ytdPlanSum += ytdPlan
-    locationData.ytdAnnualizedSum += ytdAnnualized
-    locationData.fyPlanSum += fyPlan
+    const regionBucket = regionBuckets.get(regionName) ?? createBucket(regionName, REGION_COLORS[regionName])
+    regionBucket.mtd += mtd
+    regionBucket.mtdPlan += mtdPlan
+    regionBucket.ytd += ytd
+    regionBucket.ytdPlan += ytdPlan
+    regionBucket.ytdAnnualized += ytdAnnualized
+    regionBucket.fyPlan += fyPlan
 
-    // Aggregate for P&L charts
-    deskPnlMap.set(desk, (deskPnlMap.get(desk) || 0) + ytd)
+    const regionChildBucket = regionBucket.children.get(deskName) ?? createBucket(deskName, DESK_COLORS[deskName])
+    regionChildBucket.mtd += mtd
+    regionChildBucket.mtdPlan += mtdPlan
+    regionChildBucket.ytd += ytd
+    regionChildBucket.ytdPlan += ytdPlan
+    regionChildBucket.ytdAnnualized += ytdAnnualized
+    regionChildBucket.fyPlan += fyPlan
+    regionBucket.children.set(deskName, regionChildBucket)
+    regionBuckets.set(regionName, regionBucket)
 
-    // For region chart, use region or bsRegion
-    const region = row.region || row.bsRegion || "Other"
-    regionPnlMap.set(region, (regionPnlMap.get(region) || 0) + ytd)
+    const businessLineBucket = businessLineBuckets.get(businessLineName) ?? createBucket(businessLineName)
+    businessLineBucket.mtd += mtd
+    businessLineBucket.mtdPlan += mtdPlan
+    businessLineBucket.ytd += ytd
+    businessLineBucket.ytdPlan += ytdPlan
+    businessLineBucket.ytdAnnualized += ytdAnnualized
+    businessLineBucket.fyPlan += fyPlan
+
+    const businessLineChildBucket = businessLineBucket.children.get(deskName) ?? createBucket(deskName, DESK_COLORS[deskName])
+    businessLineChildBucket.mtd += mtd
+    businessLineChildBucket.mtdPlan += mtdPlan
+    businessLineChildBucket.ytd += ytd
+    businessLineChildBucket.ytdPlan += ytdPlan
+    businessLineChildBucket.ytdAnnualized += ytdAnnualized
+    businessLineChildBucket.fyPlan += fyPlan
+    businessLineBucket.children.set(deskName, businessLineChildBucket)
+    businessLineBuckets.set(businessLineName, businessLineBucket)
   })
 
-  // Generate color palette dynamically
-  const colorPalette = [
-    "#2f3945", "#4b5563", "#5b6471", "#9aa3ae",
-    "#64748b", "#475569", "#334155", "#1e293b",
-    "#0f172a", "#374151", "#6b7280", "#94a3b8"
-  ]
+  const deskPaletteIndex = { value: 0 }
+  const deskColorCache = new Map<string, string>()
+  const deskNodes: PerformanceNode[] = Array.from(deskBuckets.entries())
+    .filter(([name]) => name !== "Other" && name !== "Unknown")
+    .map(([name, bucket]) =>
+      bucketToNode(
+        slugify(name),
+        bucket,
+        0,
+        DEFAULT_COLOR_PALETTE,
+        deskPaletteIndex,
+        DESK_COLORS,
+        deskColorCache,
+        {
+          childFilter: (childName) => childName !== "Unknown",
+          childSort: (a, b) => b.ytd - a.ytd,
+        }
+      )
+    )
+    .sort((a, b) => Math.abs(b.aop) - Math.abs(a.aop))
+    .slice(0, 10)
 
-  // Transform to Desk format with proper calculations
-  const desks: Desk[] = Array.from(deskMap.entries())
-    .map(([deskName, data], index) => {
-      const { mtdSum, mtdPlanSum, ytdSum, ytdPlanSum, ytdAnnualizedSum, fyPlanSum, pyActualSum } = data
-
-      // Calculate metrics as percentages
-      // RWA = (YTD / YTD Plan) * 100
-      const rwa = ytdPlanSum !== 0 ? (ytdSum / ytdPlanSum) * 100 : 0
-
-      // YTD % vs Prior Year (kept for backward compatibility in column)
-      const ytdPct = pyActualSum !== 0 ? (ytdSum / pyActualSum) * 100 : 0
-
-      // AOP = (YTD / FY Plan) * 100 - represents progress toward annual target
-      const aop = fyPlanSum !== 0 ? (ytdSum / fyPlanSum) * 100 : 0
-
-      // Process trading locations - filter out "Unknown"
-      const tradingLocations: TradingLocationRow[] = Array.from(data.tradingLocations.entries())
-        .filter(([locationName]) => locationName !== "Unknown")
-        .map(([locationName, locationData]) => {
-          const {
-            mtdSum: lMtd,
-            mtdPlanSum: lMtdPlan,
-            ytdSum: lYtd,
-            ytdPlanSum: lYtdPlan,
-            ytdAnnualizedSum: lYtdAnnualized,
-            fyPlanSum: lFyPlan
-          } = locationData
-
-          return {
-            name: locationName,
-            mtd: lMtd,
-            mtdPlan: lMtdPlan,
-            ytd: lYtd,
-            ytdPlan: lYtdPlan,
-            ytdAnnualized: lYtdAnnualized,
-            rwa: lYtdPlan !== 0 ? (lYtd / lYtdPlan) * 100 : 0,
-            aop: lFyPlan !== 0 ? (lYtd / lFyPlan) * 100 : 0
-          }
-        })
-        .sort((a, b) => b.ytd - a.ytd) // Sort by YTD descending
-
-      // Create a key from desk name
-      const key = deskName
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, "_")
-        .substring(0, 20)
-
-      return {
-        key,
-        name: deskName,
-        color: DESK_COLORS[deskName] || colorPalette[index % colorPalette.length],
-        mtd: mtdSum,
-        mtdPlan: mtdPlanSum,
-        ytd: ytdSum,
-        ytdPlan: ytdPlanSum,
-        ytdAnnualized: ytdAnnualizedSum,
-        rwa,
-        aop,
-        tradingLocations
-      }
-    })
-    .filter(desk => desk.name !== "Other" && desk.name !== "Unknown") // Filter out "Other" desks
-    .sort((a, b) => {
-      // Sort by absolute AOP value (higher % of plan = better)
-      return Math.abs(b.aop) - Math.abs(a.aop)
-    })
-    .slice(0, 10) // Limit to top 10 desks
-
-  // Transform P&L data for charts - convert to millions
-  const pnlByDesk: PnlData[] = Array.from(deskPnlMap.entries())
-    .filter(([desk]) => desk !== "Other" && desk !== "Unknown")
-    .map(([desk, value], index) => ({
-      key: desk.toLowerCase().replace(/[^a-z0-9]/g, "_"),
-      name: desk,
-      value: value / 1000000, // Convert to millions
-      color: DESK_COLORS[desk] || colorPalette[index % colorPalette.length]
+  const deskChart: PnlData[] = Array.from(deskBuckets.entries())
+    .filter(([name]) => name !== "Other" && name !== "Unknown")
+    .map(([name, bucket]) => ({
+      key: slugify(name),
+      name,
+      value: bucket.ytd / 1_000_000,
+      color: deskColorCache.get(name) ?? resolveColor(name, DEFAULT_COLOR_PALETTE, deskPaletteIndex, DESK_COLORS, deskColorCache),
     }))
-    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value)) // Sort by absolute value
-    .slice(0, 8) // Top 8 for better visualization
+    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+    .slice(0, 8)
 
-  const pnlByRegion: PnlData[] = Array.from(regionPnlMap.entries())
-    .filter(([region]) => region !== "Other" && region !== "Unknown")
-    .map(([region, value]) => ({
-      key: region.toLowerCase().replace(/[^a-z0-9]/g, "_"),
-      name: region,
-      value: value / 1000000, // Convert to millions
-      color: REGION_COLORS[region] || "#64748b"
+  const regionPaletteIndex = { value: 0 }
+  const regionColorCache = new Map<string, string>()
+  const regionNodes: PerformanceNode[] = Array.from(regionBuckets.entries())
+    .filter(([name]) => name !== "Other" && name !== "Unknown")
+    .map(([name, bucket]) =>
+      bucketToNode(
+        slugify(name),
+        bucket,
+        0,
+        DEFAULT_COLOR_PALETTE,
+        regionPaletteIndex,
+        REGION_COLORS,
+        regionColorCache,
+        {
+          childFilter: (childName) => childName !== "Other" && childName !== "Unknown",
+          childSort: (a, b) => Math.abs(b.ytd) - Math.abs(a.ytd),
+          childColorMap: DESK_COLORS,
+          childColorCache: deskColorCache,
+        }
+      )
+    )
+    .sort((a, b) => Math.abs(b.ytd) - Math.abs(a.ytd))
+
+  const regionChart: PnlData[] = Array.from(regionBuckets.entries())
+    .filter(([name]) => name !== "Other" && name !== "Unknown")
+    .map(([name, bucket]) => ({
+      key: slugify(name),
+      name,
+      value: bucket.ytd / 1_000_000,
+      color: regionColorCache.get(name) ?? resolveColor(name, DEFAULT_COLOR_PALETTE, regionPaletteIndex, REGION_COLORS, regionColorCache),
     }))
-    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value)) // Sort by absolute value
+    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+
+  const businessLinePaletteIndex = { value: 0 }
+  const businessLineColorCache = new Map<string, string>()
+  const businessLineNodes: PerformanceNode[] = Array.from(businessLineBuckets.entries())
+    .filter(([name]) => name !== "Other" && name !== "Unknown")
+    .map(([name, bucket]) =>
+      bucketToNode(
+        slugify(name),
+        bucket,
+        0,
+        DEFAULT_COLOR_PALETTE,
+        businessLinePaletteIndex,
+        {},
+        businessLineColorCache,
+        {
+          childFilter: (childName) => childName !== "Other" && childName !== "Unknown",
+          childSort: (a, b) => Math.abs(b.ytd) - Math.abs(a.ytd),
+          childColorMap: DESK_COLORS,
+          childColorCache: deskColorCache,
+        }
+      )
+    )
+    .sort((a, b) => Math.abs(b.ytd) - Math.abs(a.ytd))
+
+  const businessLineChart: PnlData[] = Array.from(businessLineBuckets.entries())
+    .filter(([name]) => name !== "Other" && name !== "Unknown")
+    .map(([name, bucket]) => ({
+      key: slugify(name),
+      name,
+      value: bucket.ytd / 1_000_000,
+      color: businessLineColorCache.get(name) ?? resolveColor(name, DEFAULT_COLOR_PALETTE, businessLinePaletteIndex, {}, businessLineColorCache),
+    }))
+    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
 
   return {
-    desks,
-    pnlByDesk,
-    pnlByRegion
+    groupings: {
+      desk: {
+        label: DEFAULT_GROUP_LABELS.desk,
+        rows: deskNodes,
+        chartTitle: DEFAULT_CHART_TITLES.desk,
+        chartData: deskChart,
+      },
+      region: {
+        label: DEFAULT_GROUP_LABELS.region,
+        rows: regionNodes,
+        chartTitle: DEFAULT_CHART_TITLES.region,
+        chartData: regionChart,
+      },
+      businessLine: {
+        label: DEFAULT_GROUP_LABELS.businessLine,
+        rows: businessLineNodes,
+        chartTitle: DEFAULT_CHART_TITLES.businessLine,
+        chartData: businessLineChart,
+      },
+    },
   }
 }
 

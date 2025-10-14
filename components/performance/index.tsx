@@ -9,29 +9,43 @@ import { Loader2, AlertCircle, Maximize2, X, Download } from "lucide-react"
 import { usePerformanceData } from "@/lib/query/performance"
 import html2canvas from 'html2canvas-pro'
 import * as FileSaver from "file-saver"
-import { PerformanceTable } from "./performance-table"
+import { PerformanceTable, createDefaultPerformanceColumns } from "./performance-table"
 import { PerformanceCharts } from "./performance-charts"
-import { defaultDesks, defaultPnlByDesk, defaultPnlByRegion } from "./constants"
 import type { Filter } from "@/lib/store/filters"
-import type { PerformanceTableColumn } from "./types"
+import type { PerformanceTableColumn, PerformanceGroupingKey, PerformanceNode, PerformanceGroupData } from "./types"
 
 type PerformanceCardProps = {
   asOfDate?: string
   filters?: Filter[]
   className?: string
-  columns?: PerformanceTableColumn[]
+  columns?: PerformanceTableColumn<PerformanceNode>[]
+  groupingBy?: PerformanceGroupingKey[]
 }
 
-export const PerformanceCard = ({ asOfDate, filters = [], className, columns }: PerformanceCardProps) => {
+const DEFAULT_GROUPING_ORDER: PerformanceGroupingKey[] = ["desk", "region"]
+
+const GROUPING_METADATA: Record<PerformanceGroupingKey, { primaryLabel: string; secondaryLabel: string }> = {
+
+  businessLine: {
+    primaryLabel: "Business Line",
+    secondaryLabel: "Desk",
+  },
+
+  desk: {
+    primaryLabel: "HMS Desk",
+    secondaryLabel: "Trading Location",
+  },
+  region: {
+    primaryLabel: "Region",
+    secondaryLabel: "Desk",
+  },
+}
+
+export const PerformanceCard = ({ asOfDate, filters = [], className, columns, groupingBy }: PerformanceCardProps) => {
   const { data, isLoading, error } = usePerformanceData(asOfDate, filters)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
-
-  // Use fetched data or fallback to defaults
-  const desks = data?.desks ?? defaultDesks
-  const pnlByDesk = data?.pnlByDesk ?? defaultPnlByDesk
-  const pnlByRegion = data?.pnlByRegion ?? defaultPnlByRegion
 
   const handleExportPNG = useCallback(async () => {
     const targetRef = isModalOpen ? modalRef : cardRef
@@ -85,10 +99,63 @@ export const PerformanceCard = ({ asOfDate, filters = [], className, columns }: 
     )
   }
 
+  const groupingOrder = (groupingBy && groupingBy.length === 2
+    ? groupingBy
+    : DEFAULT_GROUPING_ORDER) as PerformanceGroupingKey[]
+
+  const resolvedGroupings = groupingOrder
+    .map((key, index) => {
+      const fallbackKey = DEFAULT_GROUPING_ORDER[index] ?? DEFAULT_GROUPING_ORDER[0]
+      const normalizedKey = GROUPING_METADATA[key] ? key : fallbackKey
+      const source = data?.groupings?.[normalizedKey]
+      return source ? { key: normalizedKey, data: source } : null
+    })
+    .filter((group): group is { key: PerformanceGroupingKey; data: PerformanceGroupData } => group !== null)
+
+  const tableGrouping = resolvedGroupings[0]
+
+  if (!tableGrouping || tableGrouping.data.rows.length === 0) {
+    return (
+      <Card className={cn("rounded-2xl border border-slate-200 shadow-sm", className)}>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="flex items-center space-x-2 text-destructive">
+              <AlertCircle className="size-4" />
+              <span className="text-sm">No performance data available. Please adjust your filters.</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const tableColumns = columns ?? createDefaultPerformanceColumns(
+    GROUPING_METADATA[tableGrouping.key].primaryLabel,
+    GROUPING_METADATA[tableGrouping.key].secondaryLabel
+  )
+
+  const chartConfigs = resolvedGroupings
+    .map(({ data }) => ({ title: data.chartTitle, data: data.chartData }))
+    .filter((chart) => chart.data.length > 0)
+
+  const businessLineTotals = data?.groupings?.businessLine?.rows ?? []
+  const summaryRows = tableGrouping.key !== "businessLine"
+    ? businessLineTotals.map((row) => ({
+        ...row,
+        key: `businessLine_total_${row.key}`,
+        name: `${row.name} Total`,
+        level: 0,
+        children: undefined,
+        isSummary: true,
+      }))
+    : []
+
+  const tableRows = [...tableGrouping.data.rows, ...summaryRows]
+
   const renderContent = (isModal: boolean = false) => (
     <div className={cn("grid grid-cols-1 gap-8", isModal ? "" : "xl:grid-cols-[minmax(0,1fr)_420px]")}>
-      <PerformanceTable desks={desks} showTitle={!isModal} columns={columns} />
-      <PerformanceCharts pnlByDesk={pnlByDesk} pnlByRegion={pnlByRegion} isModal={isModal} />
+      <PerformanceTable rows={tableRows} columns={tableColumns} showTitle={!isModal} />
+      <PerformanceCharts charts={chartConfigs} isModal={isModal} />
     </div>
   )
 
