@@ -37,7 +37,7 @@ export type PnlData = {
   color: string
 }
 
-export type PerformanceGroupingKey = "desk" | "region" | "businessLine"
+export type PerformanceGroupingKey = "desk" | "region" | "businessLine" | "hmsSL1" | "portfolioOwnerName"
 
 export type PerformanceGroupData = {
   label: string

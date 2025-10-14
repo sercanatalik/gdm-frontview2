@@ -39,6 +39,14 @@ const GROUPING_METADATA: Record<PerformanceGroupingKey, { primaryLabel: string; 
     primaryLabel: "Region",
     secondaryLabel: "Desk",
   },
+  hmsSL1: {
+    primaryLabel: "HMS SL1",
+    secondaryLabel: "Portfolio Owner",
+  },
+  portfolioOwnerName: {
+    primaryLabel: "Portfolio Owner",
+    secondaryLabel: "Desk",
+  },
 }
 
 export const PerformanceCard = ({ asOfDate, filters = [], className, columns, groupingBy }: PerformanceCardProps) => {
@@ -134,7 +142,21 @@ export const PerformanceCard = ({ asOfDate, filters = [], className, columns, gr
     GROUPING_METADATA[tableGrouping.key].secondaryLabel
   )
 
-  const chartConfigs = resolvedGroupings
+  const chartEntries = [...resolvedGroupings]
+  const additionalChartKeys: PerformanceGroupingKey[] = ["hmsSL1", "portfolioOwnerName"]
+
+  additionalChartKeys.forEach((key) => {
+    if (chartEntries.some((entry) => entry.key === key)) {
+      return
+    }
+
+    const grouping = data?.groupings?.[key]
+    if (grouping && grouping.chartData.length > 0) {
+      chartEntries.push({ key, data: grouping })
+    }
+  })
+
+  const chartConfigs = chartEntries
     .map(({ data }) => ({ title: data.chartTitle, data: data.chartData }))
     .filter((chart) => chart.data.length > 0)
 

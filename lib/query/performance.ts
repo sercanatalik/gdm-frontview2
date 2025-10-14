@@ -68,12 +68,16 @@ const DEFAULT_GROUP_LABELS: Record<PerformanceGroupingKey, string> = {
   desk: "Desk",
   region: "Region",
   businessLine: "Business Line",
+  hmsSL1: "HMS SL1",
+  portfolioOwnerName: "Portfolio Owner",
 }
 
 const DEFAULT_CHART_TITLES: Record<PerformanceGroupingKey, string> = {
   desk: "P&L by Desk",
   region: "P&L by Region",
   businessLine: "P&L by Business Line",
+  hmsSL1: "P&L by HMS SL1",
+  portfolioOwnerName: "P&L by Portfolio Owner",
 }
 
 type AggregateBucket = {
@@ -225,12 +229,16 @@ function transformPnlDataToPerformance(data: PnlEodRow[]): PerformanceData {
   const deskBuckets = new Map<string, AggregateBucket>()
   const regionBuckets = new Map<string, AggregateBucket>()
   const businessLineBuckets = new Map<string, AggregateBucket>()
+  const hmsSl1Buckets = new Map<string, AggregateBucket>()
+  const portfolioOwnerBuckets = new Map<string, AggregateBucket>()
 
   data.forEach((row) => {
     const deskName = row.hmsDesk?.trim() || "Other"
     const regionName = row.region?.trim() || row.bsRegion?.trim() || "Other"
     const tradingLocation = row.tradingLocation?.trim() || "Unknown"
     const businessLineName = row.businessLine?.trim() || "Other"
+    const hmsSl1Name = row.hmsSL1?.trim() || "Other"
+    const portfolioOwnerName = row.portfolioOwnerName?.trim() || "Other"
 
     const mtd = row.mtd || 0
     const mtdPlan = row.mtdPlan || 0
@@ -292,6 +300,24 @@ function transformPnlDataToPerformance(data: PnlEodRow[]): PerformanceData {
     businessLineChildBucket.fyPlan += fyPlan
     businessLineBucket.children.set(deskName, businessLineChildBucket)
     businessLineBuckets.set(businessLineName, businessLineBucket)
+
+    const hmsSl1Bucket = hmsSl1Buckets.get(hmsSl1Name) ?? createBucket(hmsSl1Name)
+    hmsSl1Bucket.mtd += mtd
+    hmsSl1Bucket.mtdPlan += mtdPlan
+    hmsSl1Bucket.ytd += ytd
+    hmsSl1Bucket.ytdPlan += ytdPlan
+    hmsSl1Bucket.ytdAnnualized += ytdAnnualized
+    hmsSl1Bucket.fyPlan += fyPlan
+    hmsSl1Buckets.set(hmsSl1Name, hmsSl1Bucket)
+
+    const portfolioOwnerBucket = portfolioOwnerBuckets.get(portfolioOwnerName) ?? createBucket(portfolioOwnerName)
+    portfolioOwnerBucket.mtd += mtd
+    portfolioOwnerBucket.mtdPlan += mtdPlan
+    portfolioOwnerBucket.ytd += ytd
+    portfolioOwnerBucket.ytdPlan += ytdPlan
+    portfolioOwnerBucket.ytdAnnualized += ytdAnnualized
+    portfolioOwnerBucket.fyPlan += fyPlan
+    portfolioOwnerBuckets.set(portfolioOwnerName, portfolioOwnerBucket)
   })
 
   const deskPaletteIndex = { value: 0 }
@@ -425,6 +451,40 @@ function transformPnlDataToPerformance(data: PnlEodRow[]): PerformanceData {
     })
     .sort((a, b) => Math.abs(b.ytd) - Math.abs(a.ytd))
 
+  const hmsSl1PaletteIndex = { value: 0 }
+  const hmsSl1ColorCache = new Map<string, string>()
+  const hmsSl1Nodes: PerformanceNode[] = Array.from(hmsSl1Buckets.entries())
+    .filter(([name]) => name !== "Other" && name !== "Unknown")
+    .map(([name, bucket]) =>
+      bucketToNode(
+        slugify(name),
+        bucket,
+        0,
+        DEFAULT_COLOR_PALETTE,
+        hmsSl1PaletteIndex,
+        {},
+        hmsSl1ColorCache
+      )
+    )
+    .sort((a, b) => Math.abs(b.ytd) - Math.abs(a.ytd))
+
+  const portfolioOwnerPaletteIndex = { value: 0 }
+  const portfolioOwnerColorCache = new Map<string, string>()
+  const portfolioOwnerNodes: PerformanceNode[] = Array.from(portfolioOwnerBuckets.entries())
+    .filter(([name]) => name !== "Other" && name !== "Unknown")
+    .map(([name, bucket]) =>
+      bucketToNode(
+        slugify(name),
+        bucket,
+        0,
+        DEFAULT_COLOR_PALETTE,
+        portfolioOwnerPaletteIndex,
+        {},
+        portfolioOwnerColorCache
+      )
+    )
+    .sort((a, b) => Math.abs(b.ytd) - Math.abs(a.ytd))
+
   const businessLineChart: PnlData[] = Array.from(businessLineBuckets.entries())
     .filter(([name]) => name !== "Other" && name !== "Unknown")
     .map(([name, bucket]) => ({
@@ -434,6 +494,26 @@ function transformPnlDataToPerformance(data: PnlEodRow[]): PerformanceData {
       color: businessLineColorCache.get(name) ?? resolveColor(name, DEFAULT_COLOR_PALETTE, businessLinePaletteIndex, {}, businessLineColorCache),
     }))
     .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+
+  const hmsSl1Chart: PnlData[] = hmsSl1Nodes
+    .map((node) => ({
+      key: node.key,
+      name: node.name,
+      value: node.ytd / 1_000_000,
+      color: node.color ?? DEFAULT_COLOR_PALETTE[0],
+    }))
+    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+    .slice(0, 8)
+
+  const portfolioOwnerChart: PnlData[] = portfolioOwnerNodes
+    .map((node) => ({
+      key: node.key,
+      name: node.name,
+      value: node.ytd / 1_000_000,
+      color: node.color ?? DEFAULT_COLOR_PALETTE[0],
+    }))
+    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+    .slice(0, 8)
 
   return {
     groupings: {
@@ -454,6 +534,18 @@ function transformPnlDataToPerformance(data: PnlEodRow[]): PerformanceData {
         rows: businessLineNodes,
         chartTitle: DEFAULT_CHART_TITLES.businessLine,
         chartData: businessLineChart,
+      },
+      hmsSL1: {
+        label: DEFAULT_GROUP_LABELS.hmsSL1,
+        rows: hmsSl1Nodes,
+        chartTitle: DEFAULT_CHART_TITLES.hmsSL1,
+        chartData: hmsSl1Chart,
+      },
+      portfolioOwnerName: {
+        label: DEFAULT_GROUP_LABELS.portfolioOwnerName,
+        rows: portfolioOwnerNodes,
+        chartTitle: DEFAULT_CHART_TITLES.portfolioOwnerName,
+        chartData: portfolioOwnerChart,
       },
     },
   }
@@ -484,8 +576,19 @@ async function fetchPerformanceData(asOfDate?: string, filters: Filter[] = []): 
 }
 
 export function usePerformanceData(asOfDate?: string, filters: Filter[] = []) {
+  const queryFiltersKey = filters
+    .map((filter) => ({
+      id: filter.id,
+      type: filter.type,
+      operator: filter.operator,
+      value: [...filter.value],
+      field: filter.field,
+    }))
+    .sort((a, b) => (a.type + a.value.join("|"))
+      .localeCompare(b.type + b.value.join("|")))
+
   return useQuery({
-    queryKey: ["performance", asOfDate, filters],
+    queryKey: ["performance", asOfDate ?? null, queryFiltersKey],
     queryFn: () => fetchPerformanceData(asOfDate, filters),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
