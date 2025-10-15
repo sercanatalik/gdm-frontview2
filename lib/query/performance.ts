@@ -1,67 +1,43 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import type { PerformanceData, PerformanceNode, PnlData, PerformanceGroupingKey } from "@/components/performance/types"
 import type { Filter } from "@/lib/store/filters"
+import type { GroupedStatData, GroupedStatMeasure } from "./stats"
+import type {
+  PerformanceData,
+  PerformanceGroupData,
+  PerformanceGroupingKey,
+  PerformanceNode,
+  PnlData,
+} from "@/components/performance/types"
 
-interface PnlEodRow {
-  id: string
-  asOfDate: string
-  assetClass?: string | null
-  bsRegion?: string | null
-  bsSubRegion?: string | null
-  businessLine?: string | null
-  daily?: number | null
-  dailyPlan?: number | null
-  day: number
-  desk?: string | null
-  hmsDesk?: string | null
-  deskV1?: string | null
-  financing?: string | null
-  fyPlan?: number | null
-  mtd?: number | null
-  mtdPlan?: number | null
-  name?: string | null
-  pnlDate: string
-  portfolioOwnerName?: string | null
-  prevYear?: number | null
-  pyActual?: number | null
-  region?: string | null
-  rtn?: string | null
-  hmsSL1?: string | null
-  hmsSL2?: string | null
-  hmsSL3?: string | null
-  subDesk?: string | null
-  subdeskDetails?: string | null
-  subRegion?: string | null
-  trading?: string | null
-  tradingLocation?: string | null
-  updatedAt: string
-  workflowLocation?: string | null
-  ytd?: number | null
-  ytdPlan?: number | null
-  ytdAnnualized?: number | null
-}
-
-// Color palette for desks and regions
 const DESK_COLORS: Record<string, string> = {
   "Structured Equity Products": "#2f3945",
   "Cash Financing Sol": "#4b5563",
   "Structured Index Products": "#5b6471",
   "Structured Commodity Products": "#9aa3ae",
-  "Default": "#64748b"
+  Default: "#64748b",
 }
 
 const REGION_COLORS: Record<string, string> = {
-  "EMEA": "#334155",
-  "Americas": "#475569",
-  "APAC": "#94a3b8",
+  EMEA: "#334155",
+  Americas: "#475569",
+  APAC: "#94a3b8",
 }
 
 const DEFAULT_COLOR_PALETTE = [
-  "#2f3945", "#4b5563", "#5b6471", "#9aa3ae",
-  "#64748b", "#475569", "#334155", "#1e293b",
-  "#0f172a", "#374151", "#6b7280", "#94a3b8"
+  "#2f3945",
+  "#4b5563",
+  "#5b6471",
+  "#9aa3ae",
+  "#64748b",
+  "#475569",
+  "#334155",
+  "#1e293b",
+  "#0f172a",
+  "#374151",
+  "#6b7280",
+  "#94a3b8",
 ]
 
 const DEFAULT_GROUP_LABELS: Record<PerformanceGroupingKey, string> = {
@@ -80,29 +56,112 @@ const DEFAULT_CHART_TITLES: Record<PerformanceGroupingKey, string> = {
   portfolioOwnerName: "P&L by Portfolio Owner",
 }
 
-type AggregateBucket = {
-  name: string
-  color?: string
-  mtd: number
-  mtdPlan: number
-  ytd: number
-  ytdPlan: number
-  ytdAnnualized: number
-  fyPlan: number
-  children: Map<string, AggregateBucket>
+const PERFORMANCE_MEASURE: GroupedStatMeasure = {
+  key: "performance-pnl",
+  label: "Performance PnL",
+  tableName: "pnl_eod",
+  field: "ytd",
+  aggregation: "sum",
+  result1: {
+    field: "mtd",
+    aggregation: "sum",
+  },
+  result2: {
+    field: "ytdPlan",
+    aggregation: "sum",
+  },
+  result3: {
+    field: "fyPlan",
+    aggregation: "sum",
+  },
+  additionalSelectFields: [
+    {
+      field: "mtdPlan",
+      aggregation: "sum",
+      alias: "mtdPlan",
+    },
+    {
+      field: "ytdAnnualized",
+      aggregation: "sum",
+      alias: "ytdAnnualized",
+    },
+  ],
+  orderBy: "current",
+  orderDirection: "DESC",
+  limit: 100,
 }
 
-const createBucket = (name: string, color?: string): AggregateBucket => ({
-  name,
-  color,
-  mtd: 0,
-  mtdPlan: 0,
-  ytd: 0,
-  ytdPlan: 0,
-  ytdAnnualized: 0,
-  fyPlan: 0,
-  children: new Map(),
-})
+const RELATIVE_DT = "-1m"
+
+type FilterMeta = { type: string; value: string }
+
+type GroupingConfig = {
+  groupByField: string
+  filterField?: string
+  excludeValues?: string[]
+  colorMap?: Record<string, string>
+  palette?: string[]
+  child?: {
+    groupByField: string
+    filterField?: string
+    excludeValues?: string[]
+  }
+}
+
+const GROUPING_CONFIG: Record<PerformanceGroupingKey, GroupingConfig> = {
+  desk: {
+    groupByField: "hmsDesk",
+    filterField: "hmsDesk",
+    excludeValues: ["Other", "Unknown", ""],
+    colorMap: DESK_COLORS,
+    palette: DEFAULT_COLOR_PALETTE,
+    child: {
+      groupByField: "tradingLocation",
+      filterField: "tradingLocation",
+      excludeValues: ["Unknown", "", "Other"],
+    },
+  },
+  region: {
+    groupByField: "region",
+    filterField: "region",
+    excludeValues: ["Other", "Unknown", ""],
+    colorMap: REGION_COLORS,
+    palette: DEFAULT_COLOR_PALETTE,
+    child: {
+      groupByField: "hmsDesk",
+      filterField: "hmsDesk",
+      excludeValues: ["Other", "Unknown", ""],
+    },
+  },
+  businessLine: {
+    groupByField: "businessLine",
+    filterField: "businessLine",
+    excludeValues: ["Other", "Unknown", ""],
+    palette: DEFAULT_COLOR_PALETTE,
+    child: {
+      groupByField: "hmsDesk",
+      filterField: "hmsDesk",
+      excludeValues: ["Other", "Unknown", ""],
+    },
+  },
+  hmsSL1: {
+    groupByField: "hmsSL1",
+    filterField: "hmsSL1",
+    excludeValues: ["Other", "Unknown", ""],
+    palette: DEFAULT_COLOR_PALETTE,
+    child: {
+      groupByField: "portfolioOwnerName",
+      filterField: "portfolioOwnerName",
+      excludeValues: ["", "Unknown", "Other"],
+    },
+  },
+  portfolioOwnerName: {
+    groupByField: "portfolioOwnerName",
+    filterField: "portfolioOwnerName",
+    excludeValues: ["", "Unknown", "Other"],
+    palette: DEFAULT_COLOR_PALETTE,
+  },
+}
 
 const slugify = (value: string) =>
   value
@@ -112,486 +171,295 @@ const slugify = (value: string) =>
     .replace(/^_|_$/g, "")
     .substring(0, 32)
 
-const resolveColor = (
-  name: string,
-  palette: string[],
-  paletteIndexRef: { value: number },
-  mapping: Record<string, string>,
-  cache: Map<string, string>
-) => {
-  if (cache.has(name)) {
-    return cache.get(name)!
+const normalizeValue = (value: string | null | undefined): string => value?.trim() || "Unknown"
+
+const shouldExclude = (value: string, excludes?: string[]) => {
+  if (!excludes || excludes.length === 0) {
+    return false
   }
-  const color = mapping[name] || palette[paletteIndexRef.value++ % palette.length]
-  cache.set(name, color)
-  return color
+  const normalized = value.toLowerCase()
+  return excludes.some((candidate) => candidate.toLowerCase() === normalized)
 }
 
-const bucketToNode = (
-  keyPrefix: string,
-  bucket: AggregateBucket,
-  level: number,
-  palette: string[],
-  paletteIndexRef: { value: number },
-  colorMap: Record<string, string>,
-  colorCache: Map<string, string>,
-  options?: {
-    childFilter?: (name: string) => boolean
-    childSort?: (a: PerformanceNode, b: PerformanceNode) => number
-    childLevel?: number
-    childPalette?: string[]
-    childColorMap?: Record<string, string>
-    childColorCache?: Map<string, string>
-  }
-): PerformanceNode => {
-  const color = bucket.color ?? resolveColor(bucket.name, palette, paletteIndexRef, colorMap, colorCache)
-  const node: PerformanceNode = {
-    key: keyPrefix,
-    name: bucket.name,
-    color,
-    level,
-    mtd: bucket.mtd,
-    mtdPlan: bucket.mtdPlan,
-    ytd: bucket.ytd,
-    ytdPlan: bucket.ytdPlan,
-    ytdAnnualized: bucket.ytdAnnualized,
-    rwa: bucket.ytdPlan !== 0 ? (bucket.ytd / bucket.ytdPlan) * 100 : 0,
-    aop: bucket.fyPlan !== 0 ? (bucket.ytd / bucket.fyPlan) * 100 : 0,
-    children: undefined,
-  }
+const mapFiltersForApi = (filters: Filter[]) =>
+  filters.map((filter) => ({
+    type: filter.type,
+    operator: filter.operator,
+    value: filter.value,
+    field: filter.field ?? filter.type,
+  }))
 
-  if (bucket.children.size > 0) {
-    const childPalette = options?.childPalette ?? palette
-    const childColorMap = options?.childColorMap ?? colorMap
-    const childColorCache = options?.childColorCache ?? colorCache
-    const childLevel = options?.childLevel ?? level + 1
-    const childPaletteIndex = { value: paletteIndexRef.value }
+const createScopedFilter = (field: string, value: string): Filter => ({
+  id: `performance-${field}-${value}`,
+  type: field,
+  field,
+  operator: "is",
+  value: [value],
+})
 
-    const children = Array.from(bucket.children.entries())
-      .filter(([name]) => (options?.childFilter ? options.childFilter(name) : true))
-      .map(([name, childBucket]) =>
-        bucketToNode(
-          `${keyPrefix}_${slugify(name)}`,
-          childBucket,
-          childLevel,
-          childPalette,
-          childPaletteIndex,
-          childColorMap,
-          childColorCache
-        )
-      )
-    node.children = options?.childSort ? children.sort(options.childSort) : children
-  }
+const extractMetrics = (item: GroupedStatData) => {
+  const mtd = item.counterpartyCount ?? 0
+  const ytd = item.current ?? 0
+  const ytdPlan = item.collateralAmount ?? 0
+  const fyPlan = item.result3 ?? 0
+  const mtdPlan = item.extras?.mtdPlan ?? 0
+  const ytdAnnualized = item.extras?.ytdAnnualized ?? 0
 
-  return node
+  return { mtd, mtdPlan, ytd, ytdPlan, fyPlan, ytdAnnualized }
 }
 
-/**
- * Transforms raw PnL EOD data into performance metrics for visualization
- *
- * Data Fields Used:
- * - mtd: Month-to-date P&L
- * - mtdPlan: Month-to-date plan target
- * - ytd: Year-to-date P&L
- * - ytdPlan: Year-to-date plan target
- * - ytdAnnualized: Year-to-date annualized projection
- * - fyPlan: Full year plan target
- * - pyActual: Prior year actual (for YoY comparison)
- *
- * Display Columns:
- * - MTD: Actual month-to-date performance (in millions)
- * - MTD Plan: Month-to-date target (in millions)
- * - YTD: Actual year-to-date performance (in millions)
- * - YTD Plan: Year-to-date target (in millions)
- * - YTD Annualized: Projected annual performance based on YTD (in millions)
- * - vs Plan %: (YTD / YTD Plan) * 100 - Performance vs current plan
- * - AOP %: (YTD / FY Plan) * 100 - Progress toward annual target
- *
- * Aggregation Strategy:
- * - Groups by hmsDesk (primary desk designation)
- * - Sub-groups by tradingLocation (geographic trading location)
- * - Uses SUM aggregation for all monetary values
- * - Filters out "Other" and "Unknown" categories
- * - Shows top 10 desks by AOP achievement
- * - Shows top 8 desks in P&L charts
- */
-function transformPnlDataToPerformance(data: PnlEodRow[]): PerformanceData {
-  if (!data || data.length === 0) {
-    return {
-      groupings: {
-        desk: { label: DEFAULT_GROUP_LABELS.desk, rows: [], chartTitle: DEFAULT_CHART_TITLES.desk, chartData: [] },
-        region: { label: DEFAULT_GROUP_LABELS.region, rows: [], chartTitle: DEFAULT_CHART_TITLES.region, chartData: [] },
-        businessLine: { label: DEFAULT_GROUP_LABELS.businessLine, rows: [], chartTitle: DEFAULT_CHART_TITLES.businessLine, chartData: [] },
-      },
+const resolveColorFactory = (colorMap: Record<string, string> = {}, palette: string[] = DEFAULT_COLOR_PALETTE) => {
+  const cache = new Map<string, string>()
+  let index = 0
+
+  return (name: string) => {
+    if (colorMap[name]) {
+      return colorMap[name]
     }
-  }
-
-  const deskBuckets = new Map<string, AggregateBucket>()
-  const regionBuckets = new Map<string, AggregateBucket>()
-  const businessLineBuckets = new Map<string, AggregateBucket>()
-  const hmsSl1Buckets = new Map<string, AggregateBucket>()
-  const portfolioOwnerBuckets = new Map<string, AggregateBucket>()
-
-  data.forEach((row) => {
-    const deskName = row.hmsDesk?.trim() || "Other"
-    const regionName = row.region?.trim() || row.bsRegion?.trim() || "Other"
-    const tradingLocation = row.tradingLocation?.trim() || "Unknown"
-    const businessLineName = row.businessLine?.trim() || "Other"
-    const hmsSl1Name = row.hmsSL1?.trim() || "Other"
-    const portfolioOwnerName = row.portfolioOwnerName?.trim() || "Other"
-
-    const mtd = row.mtd || 0
-    const mtdPlan = row.mtdPlan || 0
-    const ytd = row.ytd || 0
-    const ytdPlan = row.ytdPlan || 0
-    const ytdAnnualized = row.ytdAnnualized || 0
-    const fyPlan = row.fyPlan || 0
-
-    const deskBucket = deskBuckets.get(deskName) ?? createBucket(deskName, DESK_COLORS[deskName])
-    deskBucket.mtd += mtd
-    deskBucket.mtdPlan += mtdPlan
-    deskBucket.ytd += ytd
-    deskBucket.ytdPlan += ytdPlan
-    deskBucket.ytdAnnualized += ytdAnnualized
-    deskBucket.fyPlan += fyPlan
-
-    const deskChildBucket = deskBucket.children.get(tradingLocation) ?? createBucket(tradingLocation)
-    deskChildBucket.mtd += mtd
-    deskChildBucket.mtdPlan += mtdPlan
-    deskChildBucket.ytd += ytd
-    deskChildBucket.ytdPlan += ytdPlan
-    deskChildBucket.ytdAnnualized += ytdAnnualized
-    deskChildBucket.fyPlan += fyPlan
-    deskBucket.children.set(tradingLocation, deskChildBucket)
-    deskBuckets.set(deskName, deskBucket)
-
-    const regionBucket = regionBuckets.get(regionName) ?? createBucket(regionName, REGION_COLORS[regionName])
-    regionBucket.mtd += mtd
-    regionBucket.mtdPlan += mtdPlan
-    regionBucket.ytd += ytd
-    regionBucket.ytdPlan += ytdPlan
-    regionBucket.ytdAnnualized += ytdAnnualized
-    regionBucket.fyPlan += fyPlan
-
-    const regionChildBucket = regionBucket.children.get(deskName) ?? createBucket(deskName, DESK_COLORS[deskName])
-    regionChildBucket.mtd += mtd
-    regionChildBucket.mtdPlan += mtdPlan
-    regionChildBucket.ytd += ytd
-    regionChildBucket.ytdPlan += ytdPlan
-    regionChildBucket.ytdAnnualized += ytdAnnualized
-    regionChildBucket.fyPlan += fyPlan
-    regionBucket.children.set(deskName, regionChildBucket)
-    regionBuckets.set(regionName, regionBucket)
-
-    const businessLineBucket = businessLineBuckets.get(businessLineName) ?? createBucket(businessLineName)
-    businessLineBucket.mtd += mtd
-    businessLineBucket.mtdPlan += mtdPlan
-    businessLineBucket.ytd += ytd
-    businessLineBucket.ytdPlan += ytdPlan
-    businessLineBucket.ytdAnnualized += ytdAnnualized
-    businessLineBucket.fyPlan += fyPlan
-
-    const businessLineChildBucket = businessLineBucket.children.get(deskName) ?? createBucket(deskName, DESK_COLORS[deskName])
-    businessLineChildBucket.mtd += mtd
-    businessLineChildBucket.mtdPlan += mtdPlan
-    businessLineChildBucket.ytd += ytd
-    businessLineChildBucket.ytdPlan += ytdPlan
-    businessLineChildBucket.ytdAnnualized += ytdAnnualized
-    businessLineChildBucket.fyPlan += fyPlan
-    businessLineBucket.children.set(deskName, businessLineChildBucket)
-    businessLineBuckets.set(businessLineName, businessLineBucket)
-
-    const hmsSl1Bucket = hmsSl1Buckets.get(hmsSl1Name) ?? createBucket(hmsSl1Name)
-    hmsSl1Bucket.mtd += mtd
-    hmsSl1Bucket.mtdPlan += mtdPlan
-    hmsSl1Bucket.ytd += ytd
-    hmsSl1Bucket.ytdPlan += ytdPlan
-    hmsSl1Bucket.ytdAnnualized += ytdAnnualized
-    hmsSl1Bucket.fyPlan += fyPlan
-    hmsSl1Buckets.set(hmsSl1Name, hmsSl1Bucket)
-
-    const portfolioOwnerBucket = portfolioOwnerBuckets.get(portfolioOwnerName) ?? createBucket(portfolioOwnerName)
-    portfolioOwnerBucket.mtd += mtd
-    portfolioOwnerBucket.mtdPlan += mtdPlan
-    portfolioOwnerBucket.ytd += ytd
-    portfolioOwnerBucket.ytdPlan += ytdPlan
-    portfolioOwnerBucket.ytdAnnualized += ytdAnnualized
-    portfolioOwnerBucket.fyPlan += fyPlan
-    portfolioOwnerBuckets.set(portfolioOwnerName, portfolioOwnerBucket)
-  })
-
-  const deskPaletteIndex = { value: 0 }
-  const deskColorCache = new Map<string, string>()
-  const deskNodes: PerformanceNode[] = Array.from(deskBuckets.entries())
-    .filter(([name]) => name !== "Other" && name !== "Unknown")
-    .map(([name, bucket]) => {
-      const node = bucketToNode(
-        slugify(name),
-        bucket,
-        0,
-        DEFAULT_COLOR_PALETTE,
-        deskPaletteIndex,
-        DESK_COLORS,
-        deskColorCache,
-        {
-          childFilter: (childName) => childName !== "Unknown",
-          childSort: (a, b) => b.ytd - a.ytd,
-        }
-      )
-
-      node.filters = [{ type: "hmsDesk", value: name }]
-
-      if (node.children) {
-        node.children = node.children.map((child) => ({
-          ...child,
-          parentFilters: [
-            { type: "hmsDesk", value: name },
-            { type: "tradingLocation", value: child.name },
-          ],
-        }))
-      }
-
-      return node
-    })
-    .sort((a, b) => Math.abs(b.aop) - Math.abs(a.aop))
-    .slice(0, 10)
-
-  const deskChart: PnlData[] = Array.from(deskBuckets.entries())
-    .filter(([name]) => name !== "Other" && name !== "Unknown")
-    .map(([name, bucket]) => ({
-      key: slugify(name),
-      name,
-      value: bucket.ytd / 1_000_000,
-      color: deskColorCache.get(name) ?? resolveColor(name, DEFAULT_COLOR_PALETTE, deskPaletteIndex, DESK_COLORS, deskColorCache),
-    }))
-    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
-    .slice(0, 8)
-
-  const regionPaletteIndex = { value: 0 }
-  const regionColorCache = new Map<string, string>()
-  const regionNodes: PerformanceNode[] = Array.from(regionBuckets.entries())
-    .filter(([name]) => name !== "Other" && name !== "Unknown")
-    .map(([name, bucket]) => {
-      const node = bucketToNode(
-        slugify(name),
-        bucket,
-        0,
-        DEFAULT_COLOR_PALETTE,
-        regionPaletteIndex,
-        REGION_COLORS,
-        regionColorCache,
-        {
-          childFilter: (childName) => childName !== "Other" && childName !== "Unknown",
-          childSort: (a, b) => Math.abs(b.ytd) - Math.abs(a.ytd),
-          childColorMap: DESK_COLORS,
-          childColorCache: deskColorCache,
-        }
-      )
-
-      node.filters = [{ type: "region", value: name }]
-
-      if (node.children) {
-        node.children = node.children.map((child) => ({
-          ...child,
-          parentFilters: [
-            { type: "region", value: name },
-            { type: "hmsDesk", value: child.name },
-          ],
-        }))
-      }
-
-      return node
-    })
-    .sort((a, b) => Math.abs(b.ytd) - Math.abs(a.ytd))
-
-  const regionChart: PnlData[] = Array.from(regionBuckets.entries())
-    .filter(([name]) => name !== "Other" && name !== "Unknown")
-    .map(([name, bucket]) => ({
-      key: slugify(name),
-      name,
-      value: bucket.ytd / 1_000_000,
-      color: regionColorCache.get(name) ?? resolveColor(name, DEFAULT_COLOR_PALETTE, regionPaletteIndex, REGION_COLORS, regionColorCache),
-    }))
-    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
-
-  const businessLinePaletteIndex = { value: 0 }
-  const businessLineColorCache = new Map<string, string>()
-  const businessLineNodes: PerformanceNode[] = Array.from(businessLineBuckets.entries())
-    .filter(([name]) => name !== "Other" && name !== "Unknown")
-    .map(([name, bucket]) => {
-      const node = bucketToNode(
-        slugify(name),
-        bucket,
-        0,
-        DEFAULT_COLOR_PALETTE,
-        businessLinePaletteIndex,
-        {},
-        businessLineColorCache,
-        {
-          childFilter: (childName) => childName !== "Other" && childName !== "Unknown",
-          childSort: (a, b) => Math.abs(b.ytd) - Math.abs(a.ytd),
-          childColorMap: DESK_COLORS,
-          childColorCache: deskColorCache,
-        }
-      )
-
-      node.filters = [{ type: "businessLine", value: name }]
-
-      if (node.children) {
-        node.children = node.children.map((child) => ({
-          ...child,
-          parentFilters: [
-            { type: "businessLine", value: name },
-            { type: "hmsDesk", value: child.name },
-          ],
-        }))
-      }
-
-      return node
-    })
-    .sort((a, b) => Math.abs(b.ytd) - Math.abs(a.ytd))
-
-  const hmsSl1PaletteIndex = { value: 0 }
-  const hmsSl1ColorCache = new Map<string, string>()
-  const hmsSl1Nodes: PerformanceNode[] = Array.from(hmsSl1Buckets.entries())
-    .filter(([name]) => name !== "Other" && name !== "Unknown")
-    .map(([name, bucket]) =>
-      bucketToNode(
-        slugify(name),
-        bucket,
-        0,
-        DEFAULT_COLOR_PALETTE,
-        hmsSl1PaletteIndex,
-        {},
-        hmsSl1ColorCache
-      )
-    )
-    .sort((a, b) => Math.abs(b.ytd) - Math.abs(a.ytd))
-
-  const portfolioOwnerPaletteIndex = { value: 0 }
-  const portfolioOwnerColorCache = new Map<string, string>()
-  const portfolioOwnerNodes: PerformanceNode[] = Array.from(portfolioOwnerBuckets.entries())
-    .filter(([name]) => name !== "Other" && name !== "Unknown")
-    .map(([name, bucket]) =>
-      bucketToNode(
-        slugify(name),
-        bucket,
-        0,
-        DEFAULT_COLOR_PALETTE,
-        portfolioOwnerPaletteIndex,
-        {},
-        portfolioOwnerColorCache
-      )
-    )
-    .sort((a, b) => Math.abs(b.ytd) - Math.abs(a.ytd))
-
-  const businessLineChart: PnlData[] = Array.from(businessLineBuckets.entries())
-    .filter(([name]) => name !== "Other" && name !== "Unknown")
-    .map(([name, bucket]) => ({
-      key: slugify(name),
-      name,
-      value: bucket.ytd / 1_000_000,
-      color: businessLineColorCache.get(name) ?? resolveColor(name, DEFAULT_COLOR_PALETTE, businessLinePaletteIndex, {}, businessLineColorCache),
-    }))
-    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
-
-  const hmsSl1Chart: PnlData[] = hmsSl1Nodes
-    .map((node) => ({
-      key: node.key,
-      name: node.name,
-      value: node.ytd / 1_000_000,
-      color: node.color ?? DEFAULT_COLOR_PALETTE[0],
-    }))
-    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
-    .slice(0, 8)
-
-  const portfolioOwnerChart: PnlData[] = portfolioOwnerNodes
-    .map((node) => ({
-      key: node.key,
-      name: node.name,
-      value: node.ytd / 1_000_000,
-      color: node.color ?? DEFAULT_COLOR_PALETTE[0],
-    }))
-    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
-    .slice(0, 8)
-
-  return {
-    groupings: {
-      desk: {
-        label: DEFAULT_GROUP_LABELS.desk,
-        rows: deskNodes,
-        chartTitle: DEFAULT_CHART_TITLES.desk,
-        chartData: deskChart,
-      },
-      region: {
-        label: DEFAULT_GROUP_LABELS.region,
-        rows: regionNodes,
-        chartTitle: DEFAULT_CHART_TITLES.region,
-        chartData: regionChart,
-      },
-      businessLine: {
-        label: DEFAULT_GROUP_LABELS.businessLine,
-        rows: businessLineNodes,
-        chartTitle: DEFAULT_CHART_TITLES.businessLine,
-        chartData: businessLineChart,
-      },
-      hmsSL1: {
-        label: DEFAULT_GROUP_LABELS.hmsSL1,
-        rows: hmsSl1Nodes,
-        chartTitle: DEFAULT_CHART_TITLES.hmsSL1,
-        chartData: hmsSl1Chart,
-      },
-      portfolioOwnerName: {
-        label: DEFAULT_GROUP_LABELS.portfolioOwnerName,
-        rows: portfolioOwnerNodes,
-        chartTitle: DEFAULT_CHART_TITLES.portfolioOwnerName,
-        chartData: portfolioOwnerChart,
-      },
-    },
+    if (cache.has(name)) {
+      return cache.get(name) as string
+    }
+    const color = palette[index % palette.length]
+    index += 1
+    cache.set(name, color)
+    return color
   }
 }
 
-async function fetchPerformanceData(asOfDate?: string, filters: Filter[] = []): Promise<PerformanceData> {
-  const response = await fetch("/gdm-frontview/api/tables/data", {
+async function fetchGroupedStatsData(groupBy: string, filters: Filter[], asOfDate?: string) {
+  const response = await fetch("/gdm-frontview/api/grouped-stats", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      tableName: "pnl_eod",
-      filters,
+      measure: PERFORMANCE_MEASURE,
+      groupBy,
+      relativeDt: RELATIVE_DT,
       asOfDate,
-      limit: 10000, // Get enough data for aggregation
-      orderBy: "ytd",
-      orderDirection: "DESC"
+      filters: mapFiltersForApi(filters),
     }),
   })
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch performance data: ${response.status}`)
+    throw new Error(`Failed to fetch grouped stats for ${groupBy}`)
   }
 
-  const result = await response.json()
-  return transformPnlDataToPerformance(result.data)
+  return (await response.json()) as GroupedStatData[]
+}
+
+const toPerformanceNode = ({
+  key,
+  name,
+  level,
+  color,
+  metrics,
+  filters,
+  parentFilters,
+  children,
+}: {
+  key: string
+  name: string
+  level: number
+  color?: string
+  metrics: ReturnType<typeof extractMetrics>
+  filters?: FilterMeta[]
+  parentFilters?: FilterMeta[]
+  children?: PerformanceNode[]
+}): PerformanceNode => {
+  const { mtd, mtdPlan, ytd, ytdPlan, fyPlan, ytdAnnualized } = metrics
+
+  return {
+    key,
+    name,
+    color,
+    level,
+    mtd,
+    mtdPlan,
+    ytd,
+    ytdPlan,
+    ytdAnnualized,
+    rwa: ytdPlan !== 0 ? (ytd / ytdPlan) * 100 : 0,
+    aop: fyPlan !== 0 ? (ytd / fyPlan) * 100 : 0,
+    filters,
+    parentFilters,
+    children,
+  }
+}
+
+const buildChartData = (nodes: PerformanceNode[]): PnlData[] =>
+  nodes
+    .map((node) => ({
+      key: node.key,
+      name: node.name,
+      value: node.ytd / 1_000_000,
+      color: node.color ?? "#64748b",
+    }))
+    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+    .slice(0, 8)
+
+async function buildGroupingData(
+  key: PerformanceGroupingKey,
+  baseFilters: Filter[],
+  asOfDate?: string
+): Promise<PerformanceGroupData> {
+  const config = GROUPING_CONFIG[key]
+  const parentResults = await fetchGroupedStatsData(config.groupByField, baseFilters, asOfDate)
+
+  const resolveColor = resolveColorFactory(config.colorMap, config.palette ?? DEFAULT_COLOR_PALETTE)
+
+  const parentCandidates = parentResults
+    .map((item) => {
+      const name = normalizeValue(item.groupValue)
+      if (shouldExclude(name, config.excludeValues)) {
+        return null
+      }
+      const metrics = extractMetrics(item)
+      const filters: FilterMeta[] = [
+        {
+          type: config.filterField ?? config.groupByField,
+          value: name,
+        },
+      ]
+
+      return { name, metrics, filters }
+    })
+    .filter((entry): entry is { name: string; metrics: ReturnType<typeof extractMetrics>; filters: FilterMeta[] } => entry !== null)
+
+  const parentNodes = await Promise.all(
+    parentCandidates.map(async ({ name, metrics, filters }) => {
+      const color = resolveColor(name)
+      const nodeKey = `${key}_${slugify(name)}`
+
+      let children: PerformanceNode[] | undefined
+
+      if (config.child) {
+        const scopedFilter = createScopedFilter(config.filterField ?? config.groupByField, name)
+        const childResults = await fetchGroupedStatsData(config.child.groupByField, [...baseFilters, scopedFilter], asOfDate)
+        const childFilterType = config.child.filterField ?? config.child.groupByField
+
+        children = childResults
+          .map((child) => {
+            const childName = normalizeValue(child.groupValue)
+            if (shouldExclude(childName, config.child?.excludeValues)) {
+              return null
+            }
+            const childMetrics = extractMetrics(child)
+            const childFilters: FilterMeta[] = childFilterType
+              ? [
+                  {
+                    type: childFilterType,
+                    value: childName,
+                  },
+                ]
+              : []
+
+            return toPerformanceNode({
+              key: `${nodeKey}_${slugify(childName)}`,
+              name: childName,
+              level: 1,
+              metrics: childMetrics,
+              parentFilters: filters,
+              filters: childFilters,
+            })
+          })
+          .filter((childNode): childNode is PerformanceNode => childNode !== null)
+          .sort((a, b) => Math.abs(b.ytd) - Math.abs(a.ytd))
+      }
+
+      return toPerformanceNode({
+        key: nodeKey,
+        name,
+        level: 0,
+        color,
+        metrics,
+        filters,
+        children,
+      })
+    })
+  )
+
+  const sortedNodes = parentNodes.sort((a, b) => Math.abs(b.ytd) - Math.abs(a.ytd))
+
+  return {
+    label: DEFAULT_GROUP_LABELS[key],
+    rows: sortedNodes,
+    chartTitle: DEFAULT_CHART_TITLES[key],
+    chartData: buildChartData(sortedNodes),
+  }
+}
+
+async function fetchPerformanceData(asOfDate?: string, filters: Filter[] = []): Promise<PerformanceData> {
+  try {
+    const [desk, region, businessLine, hmsSl1, portfolioOwner] = await Promise.all([
+      buildGroupingData("desk", filters, asOfDate),
+      buildGroupingData("region", filters, asOfDate),
+      buildGroupingData("businessLine", filters, asOfDate),
+      buildGroupingData("hmsSL1", filters, asOfDate),
+      buildGroupingData("portfolioOwnerName", filters, asOfDate),
+    ])
+
+    return {
+      groupings: {
+        desk,
+        region,
+        businessLine,
+        hmsSL1: hmsSl1,
+        portfolioOwnerName: portfolioOwner,
+      },
+    }
+  } catch (error) {
+    console.error("Failed to load performance data", error)
+    return {
+      groupings: {
+        desk: {
+          label: DEFAULT_GROUP_LABELS.desk,
+          rows: [],
+          chartTitle: DEFAULT_CHART_TITLES.desk,
+          chartData: [],
+        },
+        region: {
+          label: DEFAULT_GROUP_LABELS.region,
+          rows: [],
+          chartTitle: DEFAULT_CHART_TITLES.region,
+          chartData: [],
+        },
+        businessLine: {
+          label: DEFAULT_GROUP_LABELS.businessLine,
+          rows: [],
+          chartTitle: DEFAULT_CHART_TITLES.businessLine,
+          chartData: [],
+        },
+        hmsSL1: {
+          label: DEFAULT_GROUP_LABELS.hmsSL1,
+          rows: [],
+          chartTitle: DEFAULT_CHART_TITLES.hmsSL1,
+          chartData: [],
+        },
+        portfolioOwnerName: {
+          label: DEFAULT_GROUP_LABELS.portfolioOwnerName,
+          rows: [],
+          chartTitle: DEFAULT_CHART_TITLES.portfolioOwnerName,
+          chartData: [],
+        },
+      },
+    }
+  }
 }
 
 export function usePerformanceData(asOfDate?: string, filters: Filter[] = []) {
-  const queryFiltersKey = filters
-    .map((filter) => ({
-      id: filter.id,
-      type: filter.type,
-      operator: filter.operator,
-      value: [...filter.value],
-      field: filter.field,
-    }))
-    .sort((a, b) => (a.type + a.value.join("|"))
-      .localeCompare(b.type + b.value.join("|")))
-
   return useQuery({
-    queryKey: ["performance", asOfDate ?? null, queryFiltersKey],
+    queryKey: [
+      "performance",
+      asOfDate ?? null,
+      filters.map((filter) => ({
+        type: filter.type,
+        operator: filter.operator,
+        value: [...filter.value],
+        field: filter.field ?? filter.type,
+      })),
+    ],
     queryFn: () => fetchPerformanceData(asOfDate, filters),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     enabled: true,
   })
 }

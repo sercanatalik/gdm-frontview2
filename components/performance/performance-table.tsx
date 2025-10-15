@@ -215,9 +215,7 @@ function buildRowElements(
 
 export function PerformanceTable({ rows, columns, showTitle = true }: PerformanceTableProps) {
   const handleRowClick = (row: PerformanceNode) => {
-    const filtersToApply = row.level === 0
-      ? row.filters ?? []
-      : row.parentFilters ?? row.filters ?? []
+    const filtersToApply = [...(row.parentFilters ?? []), ...(row.filters ?? [])]
 
     if (row.isSummary || filtersToApply.length === 0) {
       return

@@ -51,6 +51,8 @@ interface GroupedStatData {
   counterpartyCount: number
   collateralAmount: number
   percentage: number
+  result3?: number
+  extras?: Record<string, number>
 }
 
 const formatDate = (date: Date): string => date.toISOString().split('T')[0]
@@ -340,6 +342,7 @@ export async function POST(request: NextRequest) {
     }
     
     const cacheService = getClickHouseCacheService(300) // 5 minutes cache
+    const additionalAliases = measure.additionalSelectFields?.map(field => field.alias) ?? []
     
     // Convert relative dates to actual dates
     const latestDate = asOfDate || parseRelativeDate('latest')
@@ -359,34 +362,51 @@ export async function POST(request: NextRequest) {
     const cacheKeyLatest = `grouped-stats:${measure.tableName}:${groupBy}:${asOfDate || 'latest'}:${filterHash}`
    
     // Execute both queries in parallel
+    type AggregatedRow = {
+      groupValue: string
+      current: number
+      result1: number
+      result2: number
+      result3?: number
+    } & Record<string, number>
+
     const [requestedData, latestData] = await Promise.all([
-      cacheService.query<{groupValue: string, current: number, result1: number, result2: number, result3?: number}>(requestedQuery, undefined, cacheKeyRequested, 300),
-      cacheService.query<{groupValue: string, current: number, result1: number, result2: number, result3?: number}>(latestQuery, undefined, cacheKeyLatest, 300)
+      cacheService.query<AggregatedRow>(requestedQuery, undefined, cacheKeyRequested, 300),
+      cacheService.query<AggregatedRow>(latestQuery, undefined, cacheKeyLatest, 300)
     ])
+
+    const requestedRows = requestedData as AggregatedRow[]
+    const latestRows = latestData as AggregatedRow[]
     
     // Calculate total for percentage calculation
-    const totalCurrent = latestData.reduce((sum, item) => sum + item.current, 0)
+    const totalCurrent = latestRows.reduce((sum, item) => sum + item.current, 0)
     
     // Process results with "Others" aggregation
     const limit = measure.limit || 50
     let processedData: GroupedStatData[]
     
-    if (latestData.length > 11 && limit <= 12) {
+    if (latestRows.length > 11 && limit <= 12) {
       // Take top 11 items
-      const topItems = latestData.slice(0, 11)
-      const otherItems = latestData.slice(11)
+      const topItems = latestRows.slice(0, 11)
+      const otherItems = latestRows.slice(11)
       
       // Aggregate "Others"
-      const othersData = {
+      const aggregatedExtras = additionalAliases.reduce<Record<string, number>>((acc, alias) => {
+        acc[alias] = otherItems.reduce((sum, item) => sum + Number(item[alias] ?? 0), 0)
+        return acc
+      }, {})
+
+      const othersData: AggregatedRow = {
         groupValue: 'Others',
         current: otherItems.reduce((sum, item) => sum + item.current, 0),
         result1: otherItems.reduce((sum, item) => sum + item.result1, 0),
         result2: otherItems.reduce((sum, item) => sum + item.result2, 0),
-        result3: otherItems.reduce((sum, item) => sum + (item.result3 || 0), 0)
+        result3: otherItems.reduce((sum, item) => sum + (item.result3 || 0), 0),
+        ...aggregatedExtras,
       }
       
       // Find corresponding "Others" data in requested results
-      const otherRequestedItems = requestedData.filter(r => 
+      const otherRequestedItems = requestedRows.filter(r => 
         !topItems.some(t => t.groupValue === r.groupValue)
       )
       const othersPrevious = otherRequestedItems.reduce((sum, item) => sum + item.current, 0)
@@ -400,7 +420,7 @@ export async function POST(request: NextRequest) {
         if (latestItem.groupValue === 'Others') {
           previous = othersPrevious
         } else {
-          requestedItem = requestedData.find(r => r.groupValue === latestItem.groupValue)
+          requestedItem = requestedRows.find(r => r.groupValue === latestItem.groupValue)
           previous = requestedItem?.current || 0
         }
         
@@ -409,6 +429,14 @@ export async function POST(request: NextRequest) {
         const changePercent = previous !== 0 ? (change / previous) * 100 : 0
         const percentage = totalCurrent > 0 ? (current / totalCurrent) * 100 : 0
         
+        const extras = additionalAliases.reduce<Record<string, number>>((acc, alias) => {
+          const value = Number(latestItem[alias] ?? 0)
+          if (!Number.isNaN(value) && value !== 0) {
+            acc[alias] = value
+          }
+          return acc
+        }, {})
+
         return {
           groupValue: latestItem.groupValue,
           current,
@@ -417,19 +445,29 @@ export async function POST(request: NextRequest) {
           changePercent,
           counterpartyCount: latestItem.result1,
           collateralAmount: latestItem.result2,
-          percentage
+          percentage,
+          result3: latestItem.result3,
+          extras: Object.keys(extras).length > 0 ? extras : undefined,
         }
       })
     } else {
       // No aggregation needed, process normally
-      processedData = latestData.map(latestItem => {
-        const requestedItem = requestedData.find(r => r.groupValue === latestItem.groupValue)
+      processedData = latestRows.map(latestItem => {
+        const requestedItem = requestedRows.find(r => r.groupValue === latestItem.groupValue)
         const previous = requestedItem?.current || 0
         const current = latestItem.current
         const change = current - previous
         const changePercent = previous !== 0 ? (change / previous) * 100 : 0
         const percentage = totalCurrent > 0 ? (current / totalCurrent) * 100 : 0
-        
+
+        const extras = additionalAliases.reduce<Record<string, number>>((acc, alias) => {
+          const value = Number(latestItem[alias] ?? 0)
+          if (!Number.isNaN(value) && value !== 0) {
+            acc[alias] = value
+          }
+          return acc
+        }, {})
+
         return {
           groupValue: latestItem.groupValue,
           current,
@@ -438,7 +476,9 @@ export async function POST(request: NextRequest) {
           changePercent,
           counterpartyCount: latestItem.result1,
           collateralAmount: latestItem.result2,
-          percentage
+          percentage,
+          result3: latestItem.result3,
+          extras: Object.keys(extras).length > 0 ? extras : undefined,
         }
       })
     }

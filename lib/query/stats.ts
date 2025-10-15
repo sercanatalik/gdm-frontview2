@@ -71,6 +71,8 @@ export interface GroupedStatData {
   counterpartyCount: number
   collateralAmount: number
   percentage: number
+  result3?: number
+  extras?: Record<string, number>
 }
 
 
