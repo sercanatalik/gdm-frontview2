@@ -1,10 +1,25 @@
 "use server";
 
 import { anthropic } from "@ai-sdk/anthropic";
-import { generateObject, generateText } from "ai";
+import { generateObject, generateText,NoObjectGeneratedError } from "ai";
 import { Config, configSchema, Result } from "./types";
 import fs from "fs";
 import path from "path";
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+const openrouter = createOpenRouter({
+  apiKey: process.env.OPEN_ROUTERS_API_KEY || '',
+});
+
+const CONTROL_CHAR_REGEX = /[\u0000-\u001F\u007F-\u009F]/g;
+const ZERO_WIDTH_REGEX = /[\u200B-\u200D\uFEFF]/g;
+
+function cleanJsonString(text: string): string {
+  text = text.replace(/\s+/g, " ").trim();
+  text =  text.replace(CONTROL_CHAR_REGEX, "").replace(ZERO_WIDTH_REGEX, "");
+  console.log("Cleaned JSON string:", text);
+
+  return text;
+}
 
 
 /**
@@ -18,7 +33,11 @@ export async function generateChartConfig(
   userQuery: string
 ): Promise<{ config: Config }> {
   "use server";
-  return generateChartConfigService(results, userQuery);
+  const conf = await generateChartConfigService(results, userQuery);
+  console.log("Generated chart config (stringified):", JSON.stringify(conf));
+  console.log("Generated chart results:", results);
+  console.log("Generated chart userQuery:", userQuery);
+  return conf;
 }
 
 
@@ -35,11 +54,15 @@ export async function generateChartConfigService(
 ): Promise<{ config: Config }> {
   try {
     const { object: config } = await generateObject({
-      model: anthropic("claude-3-5-sonnet-20241022"),
+      model: openrouter("x-ai/grok-code-fast-1"),
+      experimental_repairText: async ({ text }) => {
+        const cleaned = cleanJsonString(text);
+        return cleaned;
+      },
       system: 'You are a data visualization expert. Use pie charts for distributions and proportions, bar charts for comparisons, line charts for trends over time, and multi-line charts for multiple groups over time. Use concise keys and ensure clarity.',
       prompt: `Given the following data from a SQL query result, generate the chart config that best visualises the data and answers the users query.
 For multiple groups use multi-lines.U se pie charts for distributions and proportions, bar charts for comparisons, line charts for trends over time, and multi-line charts for multiple groups over time.
-
+Return only the config object ins tructured output format adhering to the schema provided. Do not include any additional text or explanation. Validate JSON format remove any control characters or zero-width spaces. remove trailing commas and non-whitespace character after the JSON object.
 Here is an example complete config:
 export const chartConfig = {
   type: "pie",
@@ -60,7 +83,7 @@ Data:
 ${JSON.stringify(results, null, 2)}`,
       schema: configSchema,
     });
-
+    
     // Generate color mappings using chart theme variables
     const colors: Record<string, string> = {};
     config.yKeys.forEach((key: string, index: number) => {
@@ -70,9 +93,16 @@ ${JSON.stringify(results, null, 2)}`,
     const updatedConfig: Config = { ...config, colors };
     return { config: updatedConfig };
   } catch (error: any) {
-    console.error("Chart config generation error:", error.message);
-    throw new Error("Failed to generate chart configuration");
+     if (NoObjectGeneratedError.isInstance(error)) {
+    console.log('NoObjectGeneratedError');
+    console.log('Cause:', error.cause);
+    console.log('Text:', error.text);
+    console.log('Response:', error.response);
+    console.log('Usage:', error.usage);
   }
+    console.error("Chart configuration generation error:", error);
+    return{ config: {} as Config };
+  } ;
 }
 
 

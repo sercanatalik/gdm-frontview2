@@ -13,10 +13,9 @@ interface DynamicChartsProps {
   query: string;
   data: any[];
   timestamp: number;
-  question?: string;
 }
 
-export function DynamicCharts({ query, data, timestamp, question }: DynamicChartsProps) {
+export function DynamicCharts({ query, data, timestamp }: DynamicChartsProps) {
   const [showQuery, setShowQuery] = useState(false);
   const [showData, setShowData] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -31,7 +30,7 @@ export function DynamicCharts({ query, data, timestamp, question }: DynamicChart
       setIsLoading(true);
       setError(null);
       try {
-        const generation = await generateChartConfig(data, question);
+        const generation = await generateChartConfig(data, query);
         setChartConfig(generation.config);
       } catch (err) {
         console.error('Failed to generate chart config:', err);

@@ -1,23 +1,19 @@
-import { anthropic } from '@ai-sdk/anthropic';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import {
   experimental_createMCPClient,
   stepCountIs,
   UIMessage,
   convertToModelMessages,
-  streamText,wrapLanguageModel
+  streamText,
 } from 'ai';
-import { cacheMiddleware } from '@/lib/ai/cache-middleware';
 
 import { SYSTEM_PROMPT } from './prompt';
-
-
-const wrappedModel = wrapLanguageModel({
-  // model: anthropic('claude-3-haiku-20240307'),
-  // model: anthropic('claude-3-5-haiku-20241022'),
-  model: anthropic('claude-sonnet-4-5-20250929'),
-  middleware: cacheMiddleware,
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+const openrouter = createOpenRouter({
+  apiKey: process.env.OPEN_ROUTERS_API_KEY || '',
 });
+
+
 
 
 // Allow streaming responses up to 30 seconds
@@ -46,7 +42,7 @@ export async function POST(req: Request) {
 
 
     const result = streamText({
-      model: wrappedModel,
+      model: openrouter("anthropic/claude-haiku-4.5"),
       system: SYSTEM_PROMPT,
       messages: convertToModelMessages(messages),
       tools: toolSet,
