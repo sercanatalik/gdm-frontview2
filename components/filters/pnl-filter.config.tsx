@@ -141,7 +141,7 @@ export const pnlFilterConfig = {
   ],
 
   // Default table name
-  tableName: "pnl_eod",
+  tableName: "risk_mv",
 }
 
 // Export individual parts for flexibility

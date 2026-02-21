@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
-import { Loader2, AlertCircle, ChevronLeft, ChevronRight, Download, Image, Copy, Clock, Calendar, TrendingUp, User, Building, MapPin } from "lucide-react"
+import { Loader2, AlertCircle, ChevronLeft, ChevronRight, Download, Image, Copy, Clock, Calendar, TrendingUp, Building } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRecentTrades, useTradesMaturingSoon, type Trade } from "@/lib/query/recent-trades"
 import html2canvas from 'html2canvas-pro'
@@ -72,8 +72,8 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
     }
   }
 
-  const getInitials = (counterParty: string) => {
-    return counterParty
+  const getInitials = (name: string) => {
+    return (name || '')
       .split(' ')
       .map(word => word.charAt(0))
       .join('')
@@ -83,11 +83,11 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
 
   const getTotalStats = () => {
     const tradeCount = trades.length
-    const counterparties = new Set(trades.map(t => t.counterParty)).size
-    const instruments = new Set(trades.map(t => t.collateralDesc)).size
-    const currencies = new Set(trades.map(t => t.collatCurrency.split('_')[0])).size
+    const counterparties = new Set(trades.map(t => t.counterparty_name)).size
+    const desks = new Set(trades.map(t => t.desk)).size
+    const regions = new Set(trades.map(t => t.book_region)).size
 
-    return { tradeCount, counterparties, instruments, currencies }
+    return { tradeCount, counterparties, desks, regions }
   }
 
   const stats = getTotalStats()
@@ -154,15 +154,18 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
     if (!trades || trades.length === 0) return
 
     // Create CSV content
-    const headers = ['Counterparty', 'Instrument', 'Trade Date', 'Maturity Date', 'Collateral Amount', 'Funding Amount', 'Desk']
+    const headers = ['Counterparty', 'Desk', 'Trade Type', 'Asset Class', 'Collateral', 'Funding Amount', 'Collateral Amount', 'Spread', 'Rating', 'Region']
     const csvData = trades.map(trade => [
-      trade.counterParty,
-      trade.collateralAmount,
-      trade.tradeDate,
-      trade.maturityDt,
-      trade.collateralAmount,
-      trade.fundingAmount,
-      trade.executionDt
+      trade.counterparty_name,
+      trade.desk,
+      trade.trade_type,
+      trade.asset_class,
+      trade.collateral_desc,
+      trade.funding_amount,
+      trade.collateral_amount,
+      trade.funding_spread,
+      trade.rating,
+      trade.book_region
     ])
 
     const csvContent = [
@@ -216,9 +219,9 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
         <div className="space-y-[4px]">
           <CardTitle>{activeTab === "recent" ? "Recent Trades" : "Trades Maturing Soon"}</CardTitle>
           <p className="text-sm text-muted-foreground">
-            {activeTab === "recent" 
-              ? `This month's activity: ${stats.tradeCount} trades across ${stats.counterparties} counterparties, ${stats.instruments} instruments, and ${stats.currencies} currencies`
-              : `Upcoming maturities: ${stats.tradeCount} trades across ${stats.counterparties} counterparties, ${stats.instruments} instruments, and ${stats.currencies} currencies`
+            {activeTab === "recent"
+              ? `This month's activity: ${stats.tradeCount} trades across ${stats.counterparties} counterparties, ${stats.desks} desks, and ${stats.regions} regions`
+              : `Upcoming maturities: ${stats.tradeCount} trades across ${stats.counterparties} counterparties, ${stats.desks} desks, and ${stats.regions} regions`
             }
           </p>
         </div>
@@ -262,25 +265,25 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
         ) : (
           <>
             {currentTrades.map((trade, index) => (
-              <div 
-                key={`recent-${index}`} 
+              <div
+                key={`recent-${index}`}
                 className="flex items-center justify-between py-2 px-3 border-b last:border-0 hover:bg-muted transition-colors cursor-pointer"
                 onClick={() => handleTradeClick(trade)}
               >
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                    {getInitials(trade.counterParty)}
+                    {getInitials(trade.counterparty_name)}
                   </div>
                   <div>
-                    <div className="font-medium text-sm">{trade.counterParty}</div>
+                    <div className="font-medium text-sm">{trade.counterparty_name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {trade.collateralDesc} -- {formatDate(trade.executionDt, true)}
+                      {trade.collateral_desc} -- {trade.trade_type}
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="font-medium text-sm">
-                    {formatCurrency(trade.fundingAmount)}
+                    {formatCurrency(trade.funding_amount)}
                   </div>
                 </div>
               </div>
@@ -326,25 +329,25 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
         ) : (
           <>
             {currentTrades.map((trade, index) => (
-              <div 
-                key={`maturing-${index}`} 
+              <div
+                key={`maturing-${index}`}
                 className="flex items-center justify-between py-2 px-3 border-b last:border-0 hover:bg-muted transition-colors cursor-pointer"
                 onClick={() => handleTradeClick(trade)}
               >
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                    {getInitials(trade.counterParty)}
+                    {getInitials(trade.counterparty_name)}
                   </div>
                   <div>
-                    <div className="font-medium text-sm">{trade.counterParty}</div>
+                    <div className="font-medium text-sm">{trade.counterparty_name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {trade.instrument} • Matures {formatDate(trade.maturityDt)}
+                      {trade.collateral_desc} • Matures {formatDate(trade.maturity_dt)}
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="font-medium text-sm">
-                    {formatCurrency(trade.fundingAmount)}
+                    {formatCurrency(trade.funding_amount)}
                   </div>
                 </div>
               </div>
@@ -390,10 +393,10 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
             <DialogHeader className="pb-4">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
-                  {getInitials(selectedTrade.counterParty)}
+                  {getInitials(selectedTrade.counterparty_name)}
                 </div>
                 <div>
-                  <DialogTitle className="text-xl">{selectedTrade.instrument}</DialogTitle>
+                  <DialogTitle className="text-xl">{selectedTrade.collateral_desc}</DialogTitle>
                   <DialogDescription>Comprehensive trade information and timeline</DialogDescription>
                 </div>
               </div>
@@ -403,7 +406,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                   ACTIVE
                 </div>
                 {(() => {
-                  const daysToMaturity = getDaysToMaturity(selectedTrade.maturityDt)
+                  const daysToMaturity = getDaysToMaturity(selectedTrade.maturity_dt)
                   if (daysToMaturity <= 7) {
                     return (
                       <div className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
@@ -416,7 +419,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                 <div className="ml-auto text-right">
                   <p className="text-sm text-muted-foreground">Maturity Date</p>
                   <p className="text-lg font-semibold text-red-600">
-                    {formatDate(selectedTrade.maturityDt)}
+                    {formatDate(selectedTrade.maturity_dt)}
                   </p>
                 </div>
               </div>
@@ -429,27 +432,24 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium text-muted-foreground">Collateral Amount</span>
                 </div>
-                <p className="text-2xl font-bold">{formatLargeNumber(selectedTrade.collateralAmount)}</p>
+                <p className="text-2xl font-bold">{formatLargeNumber(selectedTrade.collateral_amount)}</p>
               </Card>
-              
+
               <Card className="p-4">
                 <div className="flex items-center space-x-2 mb-2">
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium text-muted-foreground">Funding Amount</span>
                 </div>
-                <p className="text-2xl font-bold">{formatLargeNumber(selectedTrade.fundingAmount)}</p>
+                <p className="text-2xl font-bold">{formatLargeNumber(selectedTrade.funding_amount)}</p>
               </Card>
-              
+
               <Card className="p-4">
                 <div className="flex items-center space-x-2 mb-2">
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium text-muted-foreground">P&L</span>
+                  <span className="text-sm font-medium text-muted-foreground">Spread (bps)</span>
                 </div>
-                <p className="text-2xl font-bold text-red-600">
-                  {formatLargeNumber(selectedTrade.fundingAmount - selectedTrade.collateralAmount)}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  ({(((selectedTrade.fundingAmount - selectedTrade.collateralAmount) / selectedTrade.collateralAmount) * 100).toFixed(2)}%)
+                <p className="text-2xl font-bold">
+                  {selectedTrade.funding_spread?.toFixed(2) ?? 'N/A'}
                 </p>
               </Card>
             </div>
@@ -464,25 +464,25 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                 </h3>
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Instrument ID</span>
+                    <span className="text-muted-foreground">Collateral</span>
                     <div className="flex items-center space-x-2">
-                      <span className="font-medium">{selectedTrade.instrument}</span>
+                      <span className="font-medium">{selectedTrade.collateral_desc}</span>
                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
                         <Copy className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Instrument Name</span>
-                    <span className="font-medium">{selectedTrade.instrument}</span>
+                    <span className="text-muted-foreground">Collateral Type</span>
+                    <span className="font-medium">{selectedTrade.collateral_type}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Type</span>
-                    <span className="px-2 py-1 bg-muted rounded text-sm font-medium">Swap</span>
+                    <span className="text-muted-foreground">Trade Type</span>
+                    <span className="px-2 py-1 bg-muted rounded text-sm font-medium">{selectedTrade.trade_type}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Portfolio</span>
-                    <span className="font-medium">Leverage</span>
+                    <span className="text-muted-foreground">Asset Class</span>
+                    <span className="font-medium">{selectedTrade.asset_class}</span>
                   </div>
                 </div>
               </div>
@@ -490,7 +490,7 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
               {/* Trading Information */}
               <div>
                 <h3 className="text-lg font-semibold mb-4 flex items-center">
-                  <User className="h-5 w-5 mr-2" />
+                  <Building className="h-5 w-5 mr-2" />
                   Trading Information
                 </h3>
                 <div className="space-y-3">
@@ -498,16 +498,9 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                     <span className="text-muted-foreground">Counterparty</span>
                     <div className="flex items-center space-x-2">
                       <div className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">
-                        {getInitials(selectedTrade.counterParty)}
+                        {getInitials(selectedTrade.counterparty_name)}
                       </div>
-                      <span className="font-medium">{selectedTrade.counterParty}</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Trader</span>
-                    <div className="flex items-center space-x-2">
-                      <User className="h-4 w-4" />
-                      <span className="font-medium">Sarah Johnson</span>
+                      <span className="font-medium">{selectedTrade.counterparty_name}</span>
                     </div>
                   </div>
                   <div className="flex justify-between">
@@ -518,11 +511,12 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                     </div>
                   </div>
                   <div className="flex justify-between">
+                    <span className="text-muted-foreground">Trader</span>
+                    <span className="font-medium">{selectedTrade.trader_name}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-muted-foreground">Region</span>
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4" />
-                      <span className="font-medium">EMEA</span>
-                    </div>
+                    <span className="font-medium">{selectedTrade.book_region} - {selectedTrade.city}</span>
                   </div>
                 </div>
               </div>
@@ -538,26 +532,28 @@ export function RecentTradesCard({ filters = [], className, asOfDate }: RecentTr
                 <div className="flex items-center space-x-3">
                   <Clock className="h-5 w-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Days to Maturity</p>
-                    <p className="text-lg font-semibold text-red-600">
-                      {getDaysToMaturity(selectedTrade.maturityDt)} days
+                    <p className="text-sm text-muted-foreground">Trade Date</p>
+                    <p className="text-lg font-semibold">
+                      {formatDate(selectedTrade.trade_dt)}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
                   <Calendar className="h-5 w-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Maturity Date</p>
+                    <p className="text-sm text-muted-foreground">Start Date</p>
                     <p className="text-lg font-semibold">
-                      {formatDate(selectedTrade.maturityDt)}
+                      {formatDate(selectedTrade.start_dt)}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
                   <Clock className="h-5 w-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Maturity Time</p>
-                    <p className="text-lg font-semibold">15:08</p>
+                    <p className="text-sm text-muted-foreground">Maturity Date</p>
+                    <p className="text-lg font-semibold text-red-600">
+                      {formatDate(selectedTrade.maturity_dt)}
+                    </p>
                   </div>
                 </div>
               </div>

@@ -39,7 +39,7 @@ export function CashoutChart({ className }: CashoutChartProps) {
   const asOfDate = useStore(filtersStore, (state) => state.asOfDate)
   
   // State
-  const [fieldName, setFieldName] = React.useState("fundingAmount")
+  const [fieldName, setFieldName] = React.useState("funding_amount")
   const [groupBy, setGroupBy] = React.useState("none")
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   const [showSettings, setShowSettings] = React.useState(false)

@@ -187,7 +187,7 @@ export const FutureChart = React.forwardRef<HTMLDivElement, FutureChartProps>(
   ({ fieldName, groupBy, filters, asOfDate, isFullscreen, onDataLoad }, ref) => {
     
     const { data, isLoading, error } = useFutureData({
-      table: "f_exposure",
+      table: "risk_mv",
       fieldName,
       groupBy: groupBy === "none" ? undefined : groupBy,
       asOfDate,

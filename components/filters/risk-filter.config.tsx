@@ -1,25 +1,13 @@
 import React from "react"
 import {
-  AlertTriangle,
-  Shield,
-  TrendingUp,
-  TrendingDown,
-  Activity,
   BarChart3,
-  PieChart,
   Target,
-  DollarSign,
-  Calendar,
   Building,
   User,
-  MapPin,
-  Star,
-  Zap,
   Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Info,
+  MapPin,
+  Shield,
+  Layers,
 } from "lucide-react"
 
 // Filter operators constants
@@ -39,18 +27,19 @@ export const FilterOperators = {
   AFTER_AND_EQUAL: "after & equal"
 }
 
-// Risk filter configuration
+// Risk filter configuration aligned to risk_mv table schema
 export const riskFilterConfig = {
-  // Filter types mapping to database columns
+  // Filter types mapping to risk_mv database columns
   filterTypes: {
-    "hmsDesk": "hmsDesk",
-    "hmsSL1": "hmsSL1", 
-    "hmsPortfolio": "hmsPortfolio",
-    "collatCurrency": "collatCurrency",
-    "counterParty": "counterParty",
-
-    "tradeDate": "tradeDt",
-   
+    "desk": "desk",
+    "book_name": "book_name",
+    "counterparty_name": "counterparty_name",
+    "trade_type": "trade_type",
+    "asset_class": "asset_class",
+    "collateral_type": "collateral_type",
+    "rating": "rating",
+    "book_region": "book_region",
+    "trade_dt": "trade_dt",
   },
 
   // Filter operators for different field types
@@ -70,65 +59,72 @@ export const riskFilterConfig = {
     "after & equal": ">=",
   },
 
-  // Icon mapping for filter types and values
+  // Icon mapping for filter types
   iconMapping: {
-    // Filter type icons
-    "hmsDesk": <Building className="size-4 text-blue-500" />,
-    "hmsSL1": <BarChart3 className="size-4 text-purple-500" />,
-    "hmsPortfolio": <PieChart className="size-4 text-green-500" />,
-    "collatCurrency": <DollarSign className="size-4 text-yellow-500" />,
-    "counterParty": <User className="size-4 text-orange-500" />,
-    "tradeDate": <Clock className="size-4 text-indigo-500" />,
-    "t.maturityDt": <Clock className="size-4 text-indigo-500" />,
-
+    "desk": <Building className="size-4 text-blue-500" />,
+    "book_name": <Layers className="size-4 text-purple-500" />,
+    "counterparty_name": <User className="size-4 text-orange-500" />,
+    "trade_type": <BarChart3 className="size-4 text-green-500" />,
+    "asset_class": <Target className="size-4 text-yellow-500" />,
+    "collateral_type": <Shield className="size-4 text-indigo-500" />,
+    "rating": <Shield className="size-4 text-red-500" />,
+    "book_region": <MapPin className="size-4 text-teal-500" />,
+    "trade_dt": <Clock className="size-4 text-gray-500" />,
   },
 
   // Operator configuration for different field types
   operatorConfig: {
-    "hmsDesk": {
+    "desk": {
       operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
       type: "select",
-      field: "hmsDesk",
+      field: "desk",
     },
-    "hmsSL1": {
+    "book_name": {
       operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
       type: "select",
-      field: "hmsSL1",
+      field: "book_name",
     },
-    "hmsPortfolio": {
-      operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
-      type: "select",
-      field: "hmsPortfolio",
-    },
-    "collatCurrency": {
-      operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
-      type: "select",
-      field: "collatCurrency",
-    },
-    "counterParty": {
+    "counterparty_name": {
       operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.INCLUDE, FilterOperators.DO_NOT_INCLUDE],
       type: "text",
-      field: "counterParty",
+      field: "counterparty_name",
     },
-
-
-    "tradeDate": {
-      operators: [FilterOperators.AFTER, FilterOperators.BEFORE,FilterOperators.BEFORE_AND_EQUAL,FilterOperators.AFTER_AND_EQUAL],
-      type: "date",
-      field: "tradeDate",
+    "trade_type": {
+      operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
+      type: "select",
+      field: "trade_type",
     },
-
-    "t.maturityDt": {
-      operators: [FilterOperators.BEFORE, FilterOperators.AFTER],
+    "asset_class": {
+      operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
+      type: "select",
+      field: "asset_class",
+    },
+    "collateral_type": {
+      operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
+      type: "select",
+      field: "collateral_type",
+    },
+    "rating": {
+      operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
+      type: "select",
+      field: "rating",
+    },
+    "book_region": {
+      operators: [FilterOperators.IS, FilterOperators.IS_NOT, FilterOperators.IS_ANY_OF],
+      type: "select",
+      field: "book_region",
+    },
+    "trade_dt": {
+      operators: [FilterOperators.AFTER, FilterOperators.BEFORE, FilterOperators.BEFORE_AND_EQUAL, FilterOperators.AFTER_AND_EQUAL],
       type: "date",
-      field: "t.maturityDt",
+      field: "trade_dt",
     },
   },
 
   // Date values for date fields
   dateValues: [
     "Today",
-    "Yesterday", 
+    "Yesterday",
     "This Week",
     "Last Week",
     "This Month",
@@ -140,14 +136,14 @@ export const riskFilterConfig = {
   ],
 
   // Default table name
-  tableName: "f_exposure",
+  tableName: "risk_mv",
 }
 
 // Export individual parts for flexibility
-export const { 
-  filterTypes, 
-  filterOperators, 
-  iconMapping, 
-  operatorConfig, 
-  dateValues 
+export const {
+  filterTypes,
+  filterOperators,
+  iconMapping,
+  operatorConfig,
+  dateValues
 } = riskFilterConfig

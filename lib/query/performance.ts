@@ -59,7 +59,7 @@ const DEFAULT_CHART_TITLES: Record<PerformanceGroupingKey, string> = {
 const PERFORMANCE_MEASURE: GroupedStatMeasure = {
   key: "performance-pnl",
   label: "Performance PnL",
-  tableName: "pnl_eod",
+  tableName: "risk_mv",
   field: "ytd",
   aggregation: "sum",
   result1: {

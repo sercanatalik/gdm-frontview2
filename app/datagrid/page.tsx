@@ -27,8 +27,9 @@ import { filtersStore } from "@/lib/store/filters";
 import { useStore } from "@tanstack/react-store";
 
 const TABLE_CONFIG = [
-  { name: "f_exposure", label: "Risk", filterable: true, asOfDate: true },
-  { name: "f_trade", label: "Trades", filterable: false, asOfDate: true },
+  { name: "risk_mv", label: "Risk MV", filterable: true, asOfDate: true },
+  { name: "trade", label: "Trade", filterable: false, asOfDate: false },
+  { name: "counterparty", label: "Counterparty", filterable: false, asOfDate: false },
 ] as const;
 
 const formatCellValue = (value: unknown) => {
@@ -48,7 +49,7 @@ const formatCellValue = (value: unknown) => {
 };
 
 export default function DataGridPage() {
-  const [selectedTable, setSelectedTable] = useState<string>("f_exposure");
+  const [selectedTable, setSelectedTable] = useState<string>("risk_mv");
   const [quickFilter, setQuickFilter] = useState("");
 
   const filters = useStore(filtersStore, (state) => state.filters);

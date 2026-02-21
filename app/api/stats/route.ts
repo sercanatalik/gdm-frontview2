@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getClickHouseCacheService } from '@/lib/clickhouse-cache'
+import { getTableConfig, formatDateForTable } from '@/lib/table-config'
 
 interface StatMeasure {
   key: string
@@ -72,20 +73,23 @@ const parseRelativeDate = (relativeDate: string, baseDate?: string): string => {
 // Helper function to find closest available date
 const findClosestDate = async (relativeDate: string, tableName: string): Promise<string> => {
   const cacheService = getClickHouseCacheService(300)
-  
+  const tableConfig = getTableConfig(tableName)
+  const dateCol = tableConfig.dateColumn
+  const formattedDate = formatDateForTable(relativeDate, tableName)
+
   const query = `
-    SELECT asOfDate
+    SELECT ${dateCol} as dateVal
     FROM ${tableName}
-    WHERE asOfDate <= '${relativeDate}'
-    ORDER BY asOfDate DESC
+    WHERE ${dateCol} <= '${formattedDate}'
+    ORDER BY ${dateCol} DESC
     LIMIT 1
   `
   try {
-    const result = await cacheService.query<{ asOfDate: string }>(query, undefined, `closest_date:${tableName}:${relativeDate}`, 300)
-    return result[0]?.asOfDate || relativeDate
+    const result = await cacheService.query<{ dateVal: string }>(query, undefined, `closest_date:${tableName}:${formattedDate}`, 300)
+    return result[0]?.dateVal || formattedDate
   } catch (error) {
     console.warn(`Could not find closest date for ${relativeDate} in ${tableName}, using original date`)
-    return relativeDate
+    return formattedDate
   }
 }
 
@@ -146,40 +150,39 @@ function buildQuery(measures: StatMeasure[], asOfDate: string, tableName: string
   const aggregations = measures.map(m => {
     let field = m.field
     let aggregationFunction = m.aggregation
-    
+
     // For numeric aggregations, ensure the field is treated as numeric
-    // Use toFloat64OrZero for safe conversion that handles both string and numeric types
     if (['sum', 'avg', 'max', 'min'].includes(m.aggregation)) {
       field = `toFloat64OrZero(toString(${m.field}))`
     }
-    
+
     // ClickHouse uses countDistinct (camelCase)
     if (m.aggregation === 'countDistinct') {
       aggregationFunction = 'countDistinct'
     }
-    
+
     // Handle weighted average (avgBy)
     if (m.aggregation === 'avgBy') {
       if (!m.weightField) {
         throw new Error(`weightField is required for avgBy aggregation on measure ${m.key}`)
       }
-      // Calculate weighted average: sum(value * weight) / sum(weight)
       const valueField = `toFloat64OrZero(toString(${m.field}))`
       const weightField = `toFloat64OrZero(toString(${m.weightField}))`
       return `sum(${valueField} * ${weightField}) / sum(${weightField}) as ${m.key}`
     }
-    
+
     return `${aggregationFunction}(${field}) as ${m.key}`
   }).join(', ')
-  
+
   const filterConditions = buildFilterConditions(filters)
-  
+  const tableConfig = getTableConfig(tableName)
+  const dateCol = tableConfig.dateColumn
+
   return `
     SELECT ${aggregations}
     FROM ${tableName}
-    WHERE asOfDate = '${asOfDate}'${filterConditions}
+    WHERE ${dateCol} = '${asOfDate}'${filterConditions}
   `
-
 }
 
 export async function POST(request: NextRequest) {

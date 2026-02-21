@@ -133,7 +133,7 @@ export const HistoricalChart = React.forwardRef<HTMLDivElement, HistoricalChartP
   ({ fieldName, groupBy, filters, asOfDate, isFullscreen, onDataLoad }, ref) => {
     
     const { data, isLoading, error } = useHistoricalData({
-      table: "f_exposure",
+      table: "risk_mv",
       fieldName,
       groupBy: groupBy === "none" ? undefined : groupBy,
       asOfDate,

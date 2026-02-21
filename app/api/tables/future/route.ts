@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getClickHouseCacheService } from '@/lib/clickhouse-cache'
+import { getTableConfig, formatDateForTable } from '@/lib/table-config'
 
 interface FilterCondition {
   type: string
@@ -66,24 +67,27 @@ function buildFilterConditions(filters: FilterCondition[]): string {
 // Helper function to find closest future date (greater than or equal to target)
 const findClosestFutureDate = async (targetDate: string, tableName: string): Promise<string> => {
   const cacheService = getClickHouseCacheService(300)
-  
+  const tableConfig = getTableConfig(tableName)
+  const dateCol = tableConfig.dateColumn
+  const formattedDate = formatDateForTable(targetDate, tableName)
+
   const query = `
-    SELECT DISTINCT asOfDate
+    SELECT DISTINCT ${dateCol} as dateVal
     FROM ${tableName} final
-    WHERE asOfDate >= '${targetDate}'
-    ORDER BY asOfDate ASC
+    WHERE ${dateCol} >= '${formattedDate}'
+    ORDER BY ${dateCol} ASC
     LIMIT 1
   `
   try {
-    const result = await cacheService.query<{ asOfDate: string }>(query, undefined, `closest_future_date:${tableName}:${targetDate}`, 300)
-    return result[0]?.asOfDate || targetDate
+    const result = await cacheService.query<{ dateVal: string }>(query, undefined, `closest_future_date:${tableName}:${formattedDate}`, 300)
+    return result[0]?.dateVal || formattedDate
   } catch (error) {
     console.warn(`Could not find closest future date for ${targetDate} in ${tableName}, using original date`)
-    return targetDate
+    return formattedDate
   }
 }
 
-// Helper function to build future data query using maturityDt
+// Helper function to build future data query using maturity_dt
 function buildFutureQuery(
   tableName: string,
   fieldName: string,
@@ -93,18 +97,22 @@ function buildFutureQuery(
   filters: FilterCondition[] = []
 ): string {
   const filterConditions = buildFilterConditions(filters)
+  const tableConfig = getTableConfig(tableName)
+  const dateCol = tableConfig.dateColumn
+  // Use maturity_dt for risk_mv, maturityDt for other tables
+  const maturityCol = tableName === 'risk_mv' ? 'maturity_dt' : 'maturityDt'
 
   if (groupBy) {
     // Query for stacked groups - return individual group values that will be stacked
     return `
       WITH monthly_data AS (
         SELECT
-          toStartOfMonth(maturityDt) as month,
+          toStartOfMonth(${maturityCol}) as month,
           ${groupBy},
           SUM(${fieldName}) as monthly_amount
         FROM ${tableName} final
-        WHERE maturityDt >= '${fromDate}'
-          AND asOfDate = '${asOfDate}'${filterConditions}
+        WHERE ${maturityCol} >= '${fromDate}'
+          AND ${dateCol} = '${asOfDate}'${filterConditions}
         GROUP BY month, ${groupBy}
       ),
       total_per_group AS (
@@ -137,11 +145,11 @@ function buildFutureQuery(
     return `
       WITH monthly_data AS (
         SELECT
-          toStartOfMonth(maturityDt) as month,
+          toStartOfMonth(${maturityCol}) as month,
           SUM(${fieldName}) as monthly_amount
         FROM ${tableName} final
-        WHERE maturityDt >= '${fromDate}'
-          AND asOfDate = '${asOfDate}'${filterConditions}
+        WHERE ${maturityCol} >= '${fromDate}'
+          AND ${dateCol} = '${asOfDate}'${filterConditions}
         GROUP BY month
       ),
       total_amounts AS (
@@ -172,8 +180,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { 
-      table = 'f_exposure',
-      fieldName = 'fundingAmount',
+      table = 'risk_mv',
+      fieldName = 'funding_amount',
       groupBy,
       asOfDate,
       filters = []

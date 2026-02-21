@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getClickHouseCacheService } from '@/lib/clickhouse-cache'
+import { getTableConfig, formatDateForTable } from '@/lib/table-config'
 
 interface FilterCondition {
   type: string
@@ -14,20 +15,23 @@ const formatDate = (date: Date): string => date.toISOString().split('T')[0]
 // Helper function to find closest available date
 const findClosestDate = async (targetDate: string, tableName: string): Promise<string> => {
   const cacheService = getClickHouseCacheService(300)
-  
+  const tableConfig = getTableConfig(tableName)
+  const dateCol = tableConfig.dateColumn
+  const formattedDate = formatDateForTable(targetDate, tableName)
+
   const query = `
-    SELECT asOfDate
+    SELECT ${dateCol} as dateVal
     FROM ${tableName} FINAL
-    WHERE asOfDate <= '${targetDate}'
-    ORDER BY asOfDate DESC
+    WHERE ${dateCol} <= '${formattedDate}'
+    ORDER BY ${dateCol} DESC
     LIMIT 1
   `
   try {
-    const result = await cacheService.query<{ asOfDate: string }>(query, undefined, `closest_date:${tableName}:${targetDate}`, 300)
-    return result[0]?.asOfDate || targetDate
+    const result = await cacheService.query<{ dateVal: string }>(query, undefined, `closest_date:${tableName}:${formattedDate}`, 300)
+    return result[0]?.dateVal || formattedDate
   } catch (error) {
     console.warn(`Could not find closest date for ${targetDate} in ${tableName}, using original date`)
-    return targetDate
+    return formattedDate
   }
 }
 
@@ -93,29 +97,31 @@ function buildHistoricalQuery(
   filters: FilterCondition[] = []
 ): string {
   const filterConditions = buildFilterConditions(filters)
+  const tableConfig = getTableConfig(tableName)
+  const dateCol = tableConfig.dateColumn
 
   if (groupBy) {
     // Query for grouped data
     return `
       SELECT
-        asOfDate,
+        ${dateCol} as asOfDate,
         ${groupBy},
         SUM(${fieldName}) as ${fieldName}
       FROM ${tableName} FINAL
-      WHERE asOfDate <= '${baseDate}'${filterConditions}
-      GROUP BY asOfDate, ${groupBy}
-      ORDER BY asOfDate, ${groupBy} 
+      WHERE ${dateCol} <= '${baseDate}'${filterConditions}
+      GROUP BY ${dateCol}, ${groupBy}
+      ORDER BY ${dateCol}, ${groupBy}
     `
   } else {
     // Query for ungrouped data
     return `
       SELECT
-        asOfDate,
+        ${dateCol} as asOfDate,
         SUM(${fieldName}) as ${fieldName}
       FROM ${tableName} FINAL
-      WHERE asOfDate <= '${baseDate}'${filterConditions}
-      GROUP BY asOfDate
-      ORDER BY asOfDate
+      WHERE ${dateCol} <= '${baseDate}'${filterConditions}
+      GROUP BY ${dateCol}
+      ORDER BY ${dateCol}
     `
   }
 }
@@ -125,8 +131,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { 
-      table = 'f_exposure',
-      fieldName = 'fundingAmount',
+      table = 'risk_mv',
+      fieldName = 'funding_amount',
       groupBy,
       asOfDate,
       filters = []

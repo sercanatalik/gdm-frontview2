@@ -22,8 +22,9 @@ export const MONOCHROME_COLORS = [
 
 // Field and GroupBy options
 export const FIELD_OPTIONS = [
-  { value: "fundingAmount", label: "Cash Out" },
-  { value: "collateralAmount", label: "Notional Amount" },
+  { value: "funding_amount", label: "Funding Amount" },
+  { value: "collateral_amount", label: "Collateral Amount" },
+  { value: "funding_spread", label: "Funding Spread" },
 ]
 
 // Utilities

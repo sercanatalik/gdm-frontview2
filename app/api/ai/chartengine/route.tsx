@@ -3,34 +3,34 @@ import { generateChartConfig } from '@/lib/ai/actions';
 import { Config, Result } from '@/lib/ai/types';
 
 const DEFAULT_QUERY = `WITH latest_date AS (
-  SELECT MAX(asOfDate) AS max_date FROM f_risk FINAL
+  SELECT MAX(as_of_date) AS max_date FROM risk_mv FINAL
 )
 SELECT
-  counterParty,
-  sum(fundingAmount) as total_funding_amount,
+  counterparty_name,
+  sum(funding_amount) as total_funding_amount,
   count(*) as position_count,
-  round(avg(fundingAmount), 2) as avg_funding_amount
-FROM f_risk FINAL
-WHERE asOfDate = (SELECT max_date FROM latest_date)
-GROUP BY counterParty
+  round(avg(funding_amount), 2) as avg_funding_amount
+FROM risk_mv FINAL
+WHERE as_of_date = (SELECT max_date FROM latest_date)
+GROUP BY counterparty_name
 ORDER BY total_funding_amount DESC
 LIMIT 10`;
 
 const DEFAULT_RESULTS: Result[] = [
   {
-    counterParty: 'Hobbs-Garcia',
+    counterparty_name: 'Hobbs-Garcia',
     total_funding_amount: 4572937476.76,
     position_count: 176,
     avg_funding_amount: 25982599.3,
   },
   {
-    counterParty: 'Jenkins and Sons',
+    counterparty_name: 'Jenkins and Sons',
     total_funding_amount: 4334692452.15,
     position_count: 156,
     avg_funding_amount: 27786490.08,
   },
   {
-    counterParty: 'Walton, Davidson and Thomas',
+    counterparty_name: 'Walton, Davidson and Thomas',
     total_funding_amount: 4093317076.27,
     position_count: 157,
     avg_funding_amount: 26072083.29,

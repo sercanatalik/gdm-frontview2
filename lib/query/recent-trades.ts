@@ -8,18 +8,36 @@ interface FilterCondition {
 }
 
 export interface Trade {
+  trade_id: number
+  as_of_date: string
+  book_name: string
+  trade_type: string
+  counterparty_name: string
+  start_dt: string
+  maturity_dt: string
+  trade_dt: string
+  funding_amount: number
+  collateral_amount: number
+  collateral_desc: string
+  collateral_type: string
+  funding_spread: number
+  asset_class: string
+  desk: string
+  trader_name: string
+  book_region: string
+  region_code: string
+  city: string
+  counterparty_type: string
+  counterparty_region: string
+  country: string
+  rating: string
+  created_at: string
+  // legacy aliases for backward compatibility
   counterParty: string
-  collateralAmount: number
   fundingAmount: number
-  collateralDesc: string
-  tradeDate: string
+  collateralAmount: number
   maturityDt: string
-  hmsDesk: string
   collatCurrency: string
-  primaryTrader: string
-  hmsSL1: string
-  executionDt:string
-
 }
 
 interface RecentTradesParams {
@@ -45,11 +63,11 @@ async function fetchRecentTrades(params: RecentTradesParams): Promise<Trade[]> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      tableName: params.tableName  || 'f_exposure',
+      tableName: params.tableName  || 'risk_mv',
       limit: params.limit || 50,
       filters: params.filters || [],
       asOfDate: params.asOfDate,
-      orderBy: 'tradeDt',
+      orderBy: 'trade_dt',
       orderDirection: 'DESC'
       
     }),
@@ -91,17 +109,17 @@ async function fetchMaturingTrades(params: MaturingTradesParams): Promise<Trade[
   futureDate.setDate(futureDate.getDate() + daysAhead)
 
   const maturityFilter: FilterCondition = {
-    field: 'maturityDt',
+    field: 'maturity_dt',
     operator: '>=',
     value: [today.toISOString().split('T')[0]],
-    type: 'maturityDt'
+    type: 'maturity_dt'
   }
 
   const maturityEndFilter: FilterCondition = {
-    field: 'maturityDt',
+    field: 'maturity_dt',
     operator: '<=',
     value: [futureDate.toISOString().split('T')[0]],
-    type: 'maturityDt'
+    type: 'maturity_dt'
   }
 
   const combinedFilters = [
@@ -116,11 +134,11 @@ async function fetchMaturingTrades(params: MaturingTradesParams): Promise<Trade[
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      tableName: params.table || 'f_exposure',
+      tableName: params.table || 'risk_mv',
       limit: params.limit || 500,
       filters: combinedFilters,
       asOfDate: params.asOfDate,
-      orderBy: 'maturityDt',
+      orderBy: 'maturity_dt',
       orderDirection: 'ASC'
     }),
   })

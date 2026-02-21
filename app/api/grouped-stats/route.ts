@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getClickHouseCacheService } from '@/lib/clickhouse-cache'
+import { getTableConfig, formatDateForTable } from '@/lib/table-config'
 
 interface GroupedStatMeasure {
   key: string
@@ -207,7 +208,8 @@ function buildGroupedQuery(measure: GroupedStatMeasure, groupBy: string, asOfDat
   }
   
   const filterConditions = buildFilterConditions(filters)
-  const asOfDateField = measure.asOfDateField || 'asOfDate'
+  const tableConfig = getTableConfig(measure.tableName)
+  const asOfDateField = measure.asOfDateField || tableConfig.dateColumn
   const orderBy = measure.orderBy || 'current'
   const orderDirection = measure.orderDirection || 'DESC'
   const limit = measure.limit || 50
@@ -348,10 +350,13 @@ export async function POST(request: NextRequest) {
     const latestDate = asOfDate || parseRelativeDate('latest')
     const requestedDate = parseRelativeDate(relativeDt, asOfDate)
     
-    // Find the closest available dates
-    const asOfDateField = measure.asOfDateField || 'asOfDate'
-    const actualRequestedDate = await findClosestDate(requestedDate, measure.tableName, asOfDateField)
-    const actualLatestDate = await findClosestDate(latestDate, measure.tableName, asOfDateField)
+    // Find the closest available dates - use table config for date column
+    const tableConfig = getTableConfig(measure.tableName)
+    const asOfDateField = measure.asOfDateField || tableConfig.dateColumn
+    const formattedLatest = formatDateForTable(latestDate, measure.tableName)
+    const formattedRequested = formatDateForTable(requestedDate, measure.tableName)
+    const actualRequestedDate = await findClosestDate(formattedRequested, measure.tableName, asOfDateField)
+    const actualLatestDate = await findClosestDate(formattedLatest, measure.tableName, asOfDateField)
     
     // Build queries for both dates with filters
     const requestedQuery = buildGroupedQuery(measure, groupBy, actualRequestedDate, filters)

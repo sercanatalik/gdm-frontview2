@@ -14,19 +14,28 @@ import { filtersStore, filtersActions } from "@/lib/store/filters"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "../ui/scroll-area"
 
+// Map table names to their date column
+const DATE_COLUMN_MAP: Record<string, string> = {
+  risk_mv: 'as_of_date',
+}
+
+function getDateColumn(tableName: string): string {
+  return DATE_COLUMN_MAP[tableName] || 'asOfDate'
+}
+
 interface AsOfDateSelectProps {
   tableName?: string
   className?: string
 }
 
-export function AsOfDateSelect({ 
-  tableName = "f_exposure", 
-  className = "" 
+export function AsOfDateSelect({
+  tableName = "risk_mv",
+  className = ""
 }: AsOfDateSelectProps) {
   const [dates, setDates] = React.useState<string[]>([])
   const [isLoading, setIsLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
-  
+
   const asOfDate = useStore(filtersStore, (state) => state.asOfDate)
 
   // Fetch available dates
@@ -34,9 +43,10 @@ export function AsOfDateSelect({
     const fetchDates = async () => {
       setIsLoading(true)
       setError(null)
-      
+
+      const dateCol = getDateColumn(tableName)
       try {
-        const response = await fetch(`/gdm-frontview/api/tables/distinct?table=${tableName}&column=asOfDate`)
+        const response = await fetch(`/gdm-frontview/api/tables/distinct?table=${tableName}&column=${dateCol}`)
         
         if (!response.ok) {
           throw new Error(`Failed to fetch dates: ${response.statusText}`)

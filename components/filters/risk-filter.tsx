@@ -39,7 +39,7 @@ interface RiskFilterProps {
 
 // Main component
 export function RiskFilter({ 
-  tableName = "f_exposure",
+  tableName = "risk_mv",
   filterTypes = {},
   filterOperators = {},
   iconMapping = {},

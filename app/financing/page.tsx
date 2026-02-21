@@ -17,12 +17,12 @@ import { formatters } from "@/lib/query/stats";
 const LAZY_LOAD_DELAY = 1500;
 
 const GROUPED_CARD_BASE_MEASURE = {
-  field: "fundingAmount",
-  tableName: "f_exposure",
+  field: "funding_amount",
+  tableName: "risk_mv",
   aggregation: "sum",
   formatter: formatters.currency,
-  result1: { field: "counterParty", aggregation: "countDistinct" },
-  result2: { field: "collateralAmount", aggregation: "sum" },
+  result1: { field: "counterparty_name", aggregation: "countDistinct" },
+  result2: { field: "collateral_amount", aggregation: "sum" },
 } as const;
 
 type GroupedCardConfig = {
@@ -33,18 +33,16 @@ type GroupedCardConfig = {
 };
 
 const PRIMARY_GROUPED_CARD_CONFIGS: GroupedCardConfig[] = [
-  { id: "desk", label: "By Desk", groupBy: "hmsDesk" },
-  { id: "sl1", label: "By Ccy", groupBy: "hmsSL1" },
-  { id: "location", label: "By Ccy", groupBy: "tradingLocation" },
-  { id: "collateral", label: "By Ccy", groupBy: "collatCurrency" },
+  { id: "desk", label: "By Desk", groupBy: "desk" },
+  { id: "asset_class", label: "By Asset Class", groupBy: "asset_class" },
+  { id: "book_region", label: "By Region", groupBy: "book_region" },
+  { id: "collateral_type", label: "By Collateral", groupBy: "collateral_type" },
 ];
 
 const LAZY_GROUPED_CARD_CONFIGS: GroupedCardConfig[] = [
-  { id: "desk", label: "By Desk", groupBy: "hmsDesk" },
-  { id: "sl1", label: "By Ccy", groupBy: "hmsSL1" },
-  { id: "location", label: "By Ccy", groupBy: "tradingLocation" },
-  { id: "collateral", label: "By Ccy", groupBy: "collatCurrency" },
-  
+  { id: "counterparty", label: "By Counterparty", groupBy: "counterparty_name" },
+  { id: "rating", label: "By Rating", groupBy: "rating" },
+  { id: "trade_type", label: "By Trade Type", groupBy: "trade_type" },
 ];
 
 const buildGroupedMeasure = (config: GroupedCardConfig) => ({

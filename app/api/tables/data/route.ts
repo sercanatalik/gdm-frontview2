@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getClickHouseCacheService } from '@/lib/clickhouse-cache'
+import { getTableConfig, formatDateForTable } from '@/lib/table-config'
 
 interface FilterCondition {
   type: string
@@ -106,7 +107,10 @@ export async function POST(request: NextRequest) {
 
     // Build query conditions
     const filterConditions = buildFilterConditions(filters)
-    const asOfDateCondition = asOfDate ? ` AND asOfDate = '${asOfDate}'` : ''
+    const tableConfig = getTableConfig(tableName)
+    const dateCol = tableConfig.dateColumn
+    const formattedDate = asOfDate ? formatDateForTable(asOfDate, tableName) : ''
+    const asOfDateCondition = asOfDate ? ` AND ${dateCol} = '${formattedDate}'` : ''
     const limitClause = limit ? ` LIMIT ${limit}` : ''
     const offsetClause = offset > 0 ? ` OFFSET ${offset}` : ''
 
